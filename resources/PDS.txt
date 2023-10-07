@@ -1,0 +1,68 @@
+Project Directory Structure (PDS)
+---------------------------------
+
+nsclinkhub/
+│
+├── chrome-extension/                # Chrome Extension files
+│   ├── popup/                       # Popup interface
+│   │   ├── popup.html               # HTML for the popup
+│   │   ├── popup.js                 # JavaScript for the popup
+│   │   ├── ...
+│   │
+│   ├── background/                  # Background scripts
+│   │   ├── background.js            # JavaScript for the background
+│   │   ├── ...
+│   │
+│   ├── manifest.json                # Manifest file for the Chrome extension
+│   ├── ...
+│
+├── src/                              # Source code
+│   ├── api/                          # API code
+│   │   ├── app.py                    # Main Flask application
+│   │   ├── routes/                   # Routes for managing resources
+│   │   │   ├── resources.py          # Example resource route
+│   │   │   ├── users.py              # Example user route
+│   │   │   ├── ...
+│   │   │
+│   │   ├── config.py                 # Configuration settings for the API
+│   │   ├── ...
+│   │
+│   ├── linkhub/                      # LinkHub core code
+│   │   ├── engine/                   # Core functionality
+│   │   ├── __init__.py               # Initialization for the LinkHub package
+│   │   ├── models.py                 # SQLAlchemy models for the database
+│   │   ├── ...
+│   │
+│   ├── web/                          # Web application code
+│   │   ├── static/                   # Static files (CSS, JS, images)
+│   │   ├── templates/                # HTML templates
+│   │   ├── app.py                    # Main Flask application for the web app
+│   │   ├── ...
+│   │
+│   ├── ...
+│
+├── docs/                             # Documentation
+│   ├── user-guide.md                 # User documentation
+│   ├── api-reference.md              # API documentation
+│   ├── ...
+│
+├── tests/                            # Tests
+│   ├── unit/                         # Unit tests
+│   ├── integration/                  # Integration tests
+│   ├── ...
+│
+├── config/                           # Configuration files
+│   ├── config.json                   # Example configuration in JSON format
+│   ├── ...
+│
+├── requirements.txt                  # Project dependencies
+├── README.md                         # Project README file
+├── ...
+│
+└── resources/                        # Project resources and assets
+    ├── logos/                       # Logos and branding assets
+    │   ├── logo.png                 # Example logo file
+    │   ├── ...
+    ├── example.pdf                  # Example resource file
+    ├── ...
+
