@@ -15,7 +15,7 @@ Author: Paul John
 from uuid import uuid4
 from datetime import datetime
 
-from sqlalchemy import Column
+from sqlalchemy import Column, func
 from sqlalchemy import DateTime, String
 from sqlalchemy.orm import declarative_base
 
@@ -58,7 +58,7 @@ class LinkHubBase:
                     continue
                 setattr(self, key, value)
         else:
-            self.created_at = datetime.utnow()
+            self.created_at = datetime.utcnow()
             self.updated_at = datetime.utcnow()
 
     def __repr__(self):
