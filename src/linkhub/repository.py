@@ -20,6 +20,7 @@ Usage Example:
 
 Author: Paul John
 """
+from linkhub.linkhub_base import LinkHubBase, Base
 
 
 class Repository(LinkHubBase, Base):

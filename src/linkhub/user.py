@@ -14,6 +14,7 @@ Key Features:
 
 Author: Paul John
 """
+from linkhub.linkhub_base import LinkHubBase, Base
 
 
 class User(LinkHubBase, Base):

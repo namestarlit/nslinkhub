@@ -13,6 +13,7 @@ Key Features:
 
 Author: Paul John
 """
+from linkhub.linkhub_base import LinkHubBase, Base
 
 
 class Resource(LinkHubBase, Base):
