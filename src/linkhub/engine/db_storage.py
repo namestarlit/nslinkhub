@@ -111,7 +111,7 @@ class DBStorage:
 
         except Exception as e:
             # Handle exceptions. log the errors
-            raise e
+            pass
 
     def new(self, obj):
         """Adds the object to the current database session
