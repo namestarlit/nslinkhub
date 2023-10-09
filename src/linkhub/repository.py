@@ -9,17 +9,18 @@ within them.
 
 Key Features:
 - Creation and management of repositories to organize resources.
-- Repository names provide meaningful categorization (e.g., 'Web Development,' 'Data Science').
+- Repository names provide meaningful categorization (e.g., 'Web Development).
 - Resources can be associated with specific repositories.
 - Supports efficient organization and retrieval of resources.
 
 Usage Example:
 1. Create a repository for 'Game Development.'
 2. Add links to game development tutorials and resources to the repository.
-3. Quickly access and manage all game development-related resources from one location.
+3. Quickly access and manage all game development-related resources.
 
 Author: Paul John
 """
 
-# Rest of the code goes here
 
+class Repository(LinkHubBase, Base):
+    pass

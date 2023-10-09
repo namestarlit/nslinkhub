@@ -14,3 +14,7 @@ Key Features:
 
 Author: Paul John
 """
+
+
+class User(LinkHubBase, Base):
+    pass

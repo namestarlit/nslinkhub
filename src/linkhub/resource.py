@@ -14,5 +14,6 @@ Key Features:
 Author: Paul John
 """
 
-# Rest of the code goes here
 
+class Resource(LinkHubBase, Base):
+    pass

@@ -20,7 +20,7 @@ from this module:
 
 This will give you access to the database session and operations.
 
-Author: [Your Name]
+Author: Paul John
 """
 
 # Import the DBStorage class from the engine module
