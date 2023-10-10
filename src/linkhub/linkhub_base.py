@@ -14,7 +14,6 @@ Author: Paul John
 """
 from uuid import uuid4
 from datetime import datetime
-
 from sqlalchemy import Column, func
 from sqlalchemy import DateTime, String
 from sqlalchemy.orm import declarative_base

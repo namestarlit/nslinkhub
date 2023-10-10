@@ -15,7 +15,6 @@ Key Features:
 Author: Paul John
 """
 from os import getenv
-
 from sqlalchemy import create_engine, URL
 from sqlalchemy.orm import sessionmaker, scoped_session
 
@@ -23,6 +22,7 @@ from linkhub.user import User
 from linkhub.linkhub_base import Base
 from linkhub.resource import Resource
 from linkhub.repository import Repository
+
 
 def import_models():
     """Dynamic import of models"""
