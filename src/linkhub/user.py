@@ -24,9 +24,9 @@ from linkhub.linkhub_base import LinkHubBase, Base
 class User(LinkHubBase, Base):
     """Defines a User class for managing user data"""
     __tablename__ = "users"
-    username = Column(String(25), unique=True, nullable=False)
-    email = Column(String(60), unique=True, nullable=False)
-    __password = Column("password", String(60), nullable=False)
+    username = Column(String(20), unique=True, nullable=False)
+    email = Column(String(32), unique=True, nullable=False)
+    __password = Column("password", String(64), nullable=False)
     bio = Column(String(256), nullable=True)
     repositories = relationship('Repository', backref='user')
 
