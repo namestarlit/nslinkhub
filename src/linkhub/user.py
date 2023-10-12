@@ -24,14 +24,23 @@ from linkhub.linkhub_base import LinkHubBase, Base
 class User(LinkHubBase, Base):
     """Defines a User class for managing user data"""
     __tablename__ = "users"
-    username = Column(String(20), unique=True, nullable=False)
-    email = Column(String(32), unique=True, nullable=False)
+    username = Column(String(60), unique=True, nullable=False)
+    email = Column(String(100), unique=True, nullable=False)
     __password = Column("password", String(64), nullable=False)
-    bio = Column(String(256), nullable=True)
+    bio = Column(String(255), nullable=True)
     repositories = relationship('Repository', backref='user')
 
-    def __init__(self, username, email, password, bio=None):
-        """Initializes an instance of User class"""
+    def __init__(self, username, email, password, bio=None, *args, **kwargs):
+        """Initializes an instance of User class
+        Args:
+            username (str): The username of the user
+            email (str): The email of the user
+            password (str): The password hash of the user password
+            bio (str): The short description of the user
+            *args: Additional non-keyword arguments.
+            **kwargs: Additional keyword arguments.
+        """
+        super().__init__(*args, **kwargs)
         self.username = username
         self.email = email
         self.bio = bio

@@ -27,7 +27,7 @@ Base = declarative_base()
 class LinkHubBase:
     """Defines a LinkHubBase class for common functionality across modules"""
     # Define common columns of tables across classes
-    id = Column(String(60), primary_key=True, default=str(uuid4()))
+    id = Column(String(36), primary_key=True, default=str(uuid4()))
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=func.now())
 
