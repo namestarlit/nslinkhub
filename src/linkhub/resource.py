@@ -13,11 +13,10 @@ Key Features:
 
 Author: Paul John
 """
-from sqlalchmey.orm import Table
-from sqlalchemy.orm import Foreignkey
+from sqlalchemy import Table
 from sqlalchemy.orm import relationship
+from sqlalchemy import Column, String, ForeignKey
 
-from linkhub.tag import Tag
 from linkhub.linkhub_base import LinkHubBase, Base
 
 
@@ -35,9 +34,9 @@ class Resource(LinkHubBase, Base):
     __tablename__ = 'resources'
     title = Column(String(128), nullable=False)
     url = Column(String(255), nullable=False)
-    repository_id = Column(String(36), ForeignKey('repository.id'))
+    repository_id = Column(String(36), ForeignKey('repositories.id'))
     tags = relationship('Tag', secondary=resource_tag_association,
-                        backref='resources')
+                        backref='resources', cascade="all, delete-orphan")
 
     def __init__(self, title, url, *args, **kwargs):
         """Initializes an instance of Resource class

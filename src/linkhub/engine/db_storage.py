@@ -22,14 +22,16 @@ from linkhub.user import User
 from linkhub.linkhub_base import Base
 from linkhub.resource import Resource
 from linkhub.repository import Repository
+from linkhub.tag import Tag
 
 
 def import_models():
     """Dynamic import of models"""
     return {
+            'Tag': Tag,
             'User': User,
-            'Repository': Repository,
-            'Resource': Resource
+            'Resource': Resource,
+            'Repository': Repository
             }
 
 

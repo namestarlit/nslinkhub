@@ -15,9 +15,10 @@ Key Features:
 Author: Paul John
 """
 import bcrypt
+from sqlalchemy import Column
+from sqlalchemy import String
 from sqlalchemy.orm import relationship
 
-from linkhub.repository import Repository
 from linkhub.linkhub_base import LinkHubBase, Base
 
 

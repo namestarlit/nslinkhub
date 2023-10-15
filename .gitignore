@@ -1,2 +1,3 @@
 *.env
 __pycache__/
+.lite_workspace.lua

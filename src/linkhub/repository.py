@@ -20,12 +20,10 @@ Usage Example:
 
 Author: Paul John
 """
-from sqlalchemy.orm import Table
-from sqlalchemy.orm import ForeignKey
+from sqlalchemy import Column, Table
 from sqlalchemy.orm import relationship
+from sqlalchemy import String, ForeignKey
 
-from linkhub.tag import Tag
-from linkhub.resource import Resource
 from linkhub.linkhub_base import LinkHubBase, Base
 
 
@@ -46,7 +44,7 @@ class Repository(LinkHubBase, Base):
     user_id = Column(String(36), ForeignKey('users.id'))
     resources = relationship('Resource', backref='repository')
     tags = relationship('Tag', secondary=repository_tag_association,
-                        backref='repositories')
+                        backref='repositories', cascade="all, delete-orphan")
 
     def __init__(self, name, description=None, *args, **kwargs):
         """Initializes an instance of Repository class
