@@ -193,3 +193,18 @@ class DBStorage:
         with self.__session as session:
             repository = session.query(Repository).filter_by(name=name).first()
             return repository
+
+    def delete_unused_tags(self):
+        with self.__session as session:
+            try:
+                unused_tags = session.query(Tag) \
+                        .filter(
+                                ~Tag.repositories.any(),
+                                ~Tag.resources.any()
+                                ).all()
+
+                for tag in unused_tags:
+                    self.delete(tag)
+            except Exception as e:
+                # Handle exceptions or log them as needed
+                print(f"Error deleting unused tags: {str(e)}")

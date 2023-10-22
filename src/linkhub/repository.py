@@ -32,9 +32,8 @@ from linkhub.linkhub_base import LinkHubBase, Base
 repository_tag_association = Table(
         'repository_tag_association',
         Base.metadata,
-        Column('repository_id', String(36), ForeignKey('repositories.id',
-                                                       ondelete='CASCADE')),
-        Column('tag_id', String(36), ForeignKey('tags.id', ondelete='CASCADE'))
+        Column('repository_id', String(36), ForeignKey('repositories.id')),
+        Column('tag_id', String(36), ForeignKey('tags.id'))
         )
 
 
@@ -48,6 +47,8 @@ class Repository(LinkHubBase, Base):
     user = relationship('User', back_populates='repositories')
     resources = relationship('Resource', back_populates='repository',
                              cascade='all, delete-orphan')
+    tags = relationship('Tag', secondary='repository_tag_association',
+                        back_populates='tags')
 
     def __init__(self, name, user: User, *args, **kwargs):
         """Initializes an instance of Repository class

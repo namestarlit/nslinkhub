@@ -25,6 +25,12 @@ class Tag(LinkHubBase, Base):
     """Defines a Tag class for managing tags"""
     __tablename__ = 'tags'
     name = Column(String(32), unique=True, index=True, nullable=False)
+    repositories = relationship('Repository',
+                                secondary='repository_tag_association',
+                                back_populates='tags')
+    resources = relationship('Resource',
+                             secondary='resource_tag_association',
+                             back_populates='tags')
 
     def __init__(self, name, *args, **kwargs):
         """Initializes an instance of a Tag class.

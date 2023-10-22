@@ -40,6 +40,8 @@ class Resource(LinkHubBase, Base):
                            ForeignKey('repositories.id', ondelete='CASCADE'),
                            nullable=False)
     repository = relationship('Repository', back_populates='resources')
+    tags = relationship('Tag', secondary='resource_tag_association',
+                        back_populates='resources')
 
     def __init__(self, title, url, repository: Repository, *args, **kwargs):
         """Initializes an instance of Resource class
