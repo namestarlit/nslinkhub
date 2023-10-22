@@ -29,11 +29,13 @@ from linkhub.linkhub_base import LinkHubBase, Base
 
 
 # Create an association table for repository and tags
-repository_tag_association = Table(
-        'repository_tag_association',
+repository_tags = Table(
+        'repository_tags',
         Base.metadata,
-        Column('repository_id', String(36), ForeignKey('repositories.id')),
-        Column('tag_id', String(36), ForeignKey('tags.id'))
+        Column('repository_id', String(36),
+               ForeignKey('repositories.id', ondelete='CASCADE')),
+        Column('tag_id', String(36),
+               ForeignKey('tags.id', ondelete='CASCADE'))
         )
 
 
@@ -47,8 +49,9 @@ class Repository(LinkHubBase, Base):
     user = relationship('User', back_populates='repositories')
     resources = relationship('Resource', back_populates='repository',
                              cascade='all, delete-orphan')
-    tags = relationship('Tag', secondary='repository_tag_association',
-                        back_populates='tags')
+    tags = relationship('Tag', secondary='repository_tags',
+                        back_populates='repositories',
+                        cascade='all, delete')
 
     def __init__(self, name, user: User, *args, **kwargs):
         """Initializes an instance of Repository class

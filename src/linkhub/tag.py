@@ -16,9 +16,9 @@ from sqlalchemy import Column
 from sqlalchemy import String
 from sqlalchemy.orm import relationship
 
+from linkhub.resource import resource_tags
+from linkhub.repository import repository_tags
 from linkhub.linkhub_base import LinkHubBase, Base
-from linkhub.resource import resource_tag_association
-from linkhub.repository import repository_tag_association
 
 
 class Tag(LinkHubBase, Base):
@@ -26,11 +26,13 @@ class Tag(LinkHubBase, Base):
     __tablename__ = 'tags'
     name = Column(String(32), unique=True, index=True, nullable=False)
     repositories = relationship('Repository',
-                                secondary='repository_tag_association',
-                                back_populates='tags')
+                                secondary='repository_tags',
+                                back_populates='tags',
+                                passive_deletes=True)
     resources = relationship('Resource',
-                             secondary='resource_tag_association',
-                             back_populates='tags')
+                             secondary='resource_tags',
+                             back_populates='tags',
+                             passive_deletes=True)
 
     def __init__(self, name, *args, **kwargs):
         """Initializes an instance of a Tag class.

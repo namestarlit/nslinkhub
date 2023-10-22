@@ -70,15 +70,6 @@ class LinkHubBase:
                 .format(self.__class__.__name__,
                         self.id, self.created_at, self.updated_at))
 
-    def save(self):
-        """Updates the 'updated_at' attribute and saves the object."""
-        self.updated_at = datetime.utcnow()
-        linkhub.storage.save(self)
-
-    def delete(self):
-        """Deletes the current instance from the storage."""
-        linkhub.storage.delete(self)
-
     def to_dict(self):
         """Returns a dictionary of all the key/value pairs."""
         # Copy the instance's dictionary
@@ -99,22 +90,23 @@ class LinkHubBase:
 
         return new_dict
 
-    def to_json(self):
-        """Returns a simple JSON representation of an object.
+    def to_optimized_dict(self):
+        """Returns a simple dictionary representation of an object.
 
         This method removes all the objects related to the object
-        and returns just the bare, simple data.
+        and returns just the bare, simple dictionary with essential data.
         """
         obj_dict = self.to_dict()
 
         # Collect keys to remove
         keys_to_remove = []
         for key, value in obj_dict.items():
-            if (isinstance(value, (list, dict)) or hasattr(value, 'to_json')):
+            if (isinstance(value, (list, dict))
+                    or hasattr(value, 'to_optimized_dict')):
                 keys_to_remove.append(key)
 
         # Remove the collected keys
         for key in keys_to_remove:
             obj_dict.pop(key, None)
 
-        return json.dumps(obj_dict)
+        return obj_dict

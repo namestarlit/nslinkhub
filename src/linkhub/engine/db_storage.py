@@ -19,11 +19,11 @@ import inspect
 from sqlalchemy import create_engine, URL
 from sqlalchemy.orm import sessionmaker, scoped_session
 
+from linkhub.tag import Tag
 from linkhub.user import User
 from linkhub.linkhub_base import Base
 from linkhub.resource import Resource
 from linkhub.repository import Repository
-from linkhub.tag import Tag
 
 
 def import_models():
@@ -67,10 +67,11 @@ class DBStorage:
 
     def reload(self):
         """Creates all tables in the database and a database session"""
-        Base.metadata.create_all(self.__engine)
-        Session = sessionmaker(bind=self.__engine, expire_on_commit=False)
-        Session = scoped_session(Session)
-        self.__session = Session()
+        if self.__session is None:
+            Base.metadata.create_all(self.__engine)
+            Session = sessionmaker(bind=self.__engine, expire_on_commit=False)
+            Session = scoped_session(Session)
+            self.__session = Session()
 
     def all(self, cls=None):
         """Retrives objects of a class or all classes
@@ -114,7 +115,7 @@ class DBStorage:
 
         except Exception as e:
             # Handle exceptions. log the errors
-            print("Error:", e)
+            print(f"Error: {e}")
 
     def new(self, obj):
         """Adds the object to the current database session
@@ -125,10 +126,8 @@ class DBStorage:
         if obj:
             self.__session.add(obj)
 
-    def save(self, obj=None):
+    def save(self):
         """Commits all changes of the current database session"""
-        if obj:
-            self.new(obj)
         self.__session.commit()
 
     def delete(self, obj=None):
@@ -142,7 +141,7 @@ class DBStorage:
 
     def close(self):
         """Closes a database session"""
-        self.__session.remove()
+        self.__session.close()
 
     def get(self, cls=None, id=None):
         """Retrives object by ID
@@ -195,16 +194,16 @@ class DBStorage:
             return repository
 
     def delete_unused_tags(self):
-        with self.__session as session:
-            try:
-                unused_tags = session.query(Tag) \
-                        .filter(
-                                ~Tag.repositories.any(),
-                                ~Tag.resources.any()
-                                ).all()
+        try:
+            with self.__session as session:
+                unused_tags = (
+                        session.query(Tag)
+                        .filter(~Tag.repositories.any(), ~Tag.resources.any())
+                        .all()
+                        )
 
                 for tag in unused_tags:
+                    print(tag)
                     self.delete(tag)
-            except Exception as e:
-                # Handle exceptions or log them as needed
-                print(f"Error deleting unused tags: {str(e)}")
+        except Exception as e:
+            print(f"Error: {e}")
