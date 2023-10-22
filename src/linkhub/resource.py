@@ -17,6 +17,7 @@ from sqlalchemy import Table
 from sqlalchemy.orm import relationship
 from sqlalchemy import Column, String, ForeignKey
 
+from linkhub.repository import Repository
 from linkhub.linkhub_base import LinkHubBase, Base
 
 
@@ -34,19 +35,32 @@ class Resource(LinkHubBase, Base):
     __tablename__ = 'resources'
     title = Column(String(128), nullable=False)
     url = Column(String(255), nullable=False)
-    repository_id = Column(String(36), ForeignKey('repositories.id'))
-    tags = relationship('Tag', secondary=resource_tag_association,
-                        backref='resources', cascade="all, delete-orphan")
+    description = Column(String(255), nullable=True)
+    repository_id = Column(String(36),
+                           ForeignKey('repositories.id', ondelete='CASCADE'),
+                           nullable=False)
+    repository = relationship('Repository', back_populates='resources')
 
-    def __init__(self, title, url, *args, **kwargs):
+    def __init__(self, title, url, repository: Repository, *args, **kwargs):
         """Initializes an instance of Resource class
 
         Args:
             title (str): The title of the resource/link
-            url (str): The URL to the resource
+            url (str): The URL to the
+            repository (cls: Repository): An instance of a Repository class
             *args: Additional non-keyword arguments.
             **kwargs: Additional keyword arguments.
-            """
+        """
+        # Check if repository is None or a Repository instance
+        if not isinstance(repository, Repository):
+            raise TypeError("repository must be a Repository instance")
+
         super().__init__(*args, **kwargs)
         self.title = title
         self.url = url
+        self.repository = repository
+
+    def __str__(self):
+        """String representation of the Resource class"""
+        return ("[Resource] (id='{}', title='{}', URL='{}')"
+                .format(self.id, self.title, self.url))

@@ -12,6 +12,8 @@ Key Features:
 
 Author: Paul John
 """
+import json
+import inspect
 from uuid import uuid4
 from datetime import datetime
 from sqlalchemy import Column, func
@@ -27,7 +29,7 @@ Base = declarative_base()
 class LinkHubBase:
     """Defines a LinkHubBase class for common functionality across modules"""
     # Define common columns of tables across classes
-    id = Column(String(36), primary_key=True, default=str(uuid4()))
+    id = Column(String(36), primary_key=True, index=True, default=str(uuid4()))
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=func.now())
 
@@ -44,20 +46,22 @@ class LinkHubBase:
         self.id = str(uuid4())
 
         # Handle additional keyword arguments
-        if kwargs:
-            ISO_FORMAT = '%Y-%m-%dT%H:%M:%S.%f'
-            for key, value in kwargs.items():
-                if key == 'created_at' or key == 'updated_at':
-                    try:
-                        value = datetime.strptime(value, ISO_FORMAT)
-                    except ValueError:
-                        # Handle datetime string parsing error
-                        pass
-                if key == '__class__':
-                    continue
-                setattr(self, key, value)
-        else:
+        ISO_FORMAT = '%Y-%m-%dT%H:%M:%S.%f'
+        for key, value in kwargs.items():
+            if key == 'created_at' or key == 'updated_at':
+                try:
+                    value = datetime.strptime(value, ISO_FORMAT)
+                except ValueError:
+                    # Handle datetime string parsing error
+                    pass
+            if key == '__class__':
+                continue
+            setattr(self, key, value)
+
+        # Ensure 'created_at' and 'updated_at' are set to current time.
+        if self.created_at is None:
             self.created_at = datetime.utcnow()
+        if self.updated_at is None:
             self.updated_at = datetime.utcnow()
 
     def __repr__(self):
@@ -66,15 +70,10 @@ class LinkHubBase:
                 .format(self.__class__.__name__,
                         self.id, self.created_at, self.updated_at))
 
-    def __str__(self):
-        """String representation of the BaseModel class"""
-        return ("[{}] ({}) {}"
-                .format(self.__class__.__name__, self.id, self.__dict__))
-
     def save(self):
         """Updates the 'updated_at' attribute and saves the object."""
         self.updated_at = datetime.utcnow()
-        linkhub.storage.save()
+        linkhub.storage.save(self)
 
     def delete(self):
         """Deletes the current instance from the storage."""
@@ -92,10 +91,30 @@ class LinkHubBase:
             new_dict['updated_at'] = new_dict['updated_at'].isoformat()
 
         # Set the '__class__' key
-        new_dict['__class__'] = self.__class__.__name__
+        # new_dict['__class__'] = self.__class__.__name__
 
         # Delete unwanted keys
-        for key in ['password', '_sa_instance_state']:
+        for key in ['_User__email', '_User__password', '_sa_instance_state']:
             new_dict.pop(key, None)
 
         return new_dict
+
+    def to_json(self):
+        """Returns a simple JSON representation of an object.
+
+        This method removes all the objects related to the object
+        and returns just the bare, simple data.
+        """
+        obj_dict = self.to_dict()
+
+        # Collect keys to remove
+        keys_to_remove = []
+        for key, value in obj_dict.items():
+            if (isinstance(value, (list, dict)) or hasattr(value, 'to_json')):
+                keys_to_remove.append(key)
+
+        # Remove the collected keys
+        for key in keys_to_remove:
+            obj_dict.pop(key, None)
+
+        return json.dumps(obj_dict)

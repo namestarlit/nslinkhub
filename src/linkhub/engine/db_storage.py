@@ -15,6 +15,7 @@ Key Features:
 Author: Paul John
 """
 from os import getenv
+import inspect
 from sqlalchemy import create_engine, URL
 from sqlalchemy.orm import sessionmaker, scoped_session
 
@@ -91,8 +92,8 @@ class DBStorage:
                         objects.extend(session.query(cls_obj).all())
                 elif isinstance(cls, str):
                     # Map class name to class object using model_mapping
-                    if cls in model_mapping:
-                        cls = model_mapping[cls]
+                    if cls in self.model_mapping:
+                        cls = self.model_mapping[cls]
                         objects = session.query(cls).all()
                     else:
                         raise ValueError(f"Class name: {cls} not found in"
@@ -113,7 +114,7 @@ class DBStorage:
 
         except Exception as e:
             # Handle exceptions. log the errors
-            pass
+            print("Error:", e)
 
     def new(self, obj):
         """Adds the object to the current database session
@@ -124,8 +125,10 @@ class DBStorage:
         if obj:
             self.__session.add(obj)
 
-    def save(self):
+    def save(self, obj=None):
         """Commits all changes of the current database session"""
+        if obj:
+            self.new(obj)
         self.__session.commit()
 
     def delete(self, obj=None):
@@ -158,6 +161,8 @@ class DBStorage:
             key = "{}.{}".format(cls.__name__, id)
 
         objs = self.all(cls)
+        if objs is None:
+            return None
         return objs.get(key)
 
     def count(self, cls=None):
@@ -165,3 +170,26 @@ class DBStorage:
         if cls is None:
             return len(self.all())
         return len(self.all(cls))
+
+    def get_repo_by_name(self, name):
+        """Retrieve a repository by its name.
+
+        Args:
+            name (str): The name of the repository to retrieve.
+
+        Returns:
+            Repository: The repository object with the specified name
+            or None if not found.
+
+        Raises:
+            TypeError: If the name is not a string.
+        """
+        if name is None:
+            return None
+
+        if not isinstance(name, str):
+            raise TypeError('Repository name must be a string')
+
+        with self.__session as session:
+            repository = session.query(Repository).filter_by(name=name).first()
+            return repository

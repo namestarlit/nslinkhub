@@ -20,18 +20,11 @@ from linkhub.linkhub_base import LinkHubBase, Base
 from linkhub.resource import resource_tag_association
 from linkhub.repository import repository_tag_association
 
+
 class Tag(LinkHubBase, Base):
     """Defines a Tag class for managing tags"""
     __tablename__ = 'tags'
-    name = Column(String(32), unique=True, nullable=False)
-
-    # Define the relationship to resources and repositories
-    resources = relationship('Resource',
-                             secondary=resource_tag_association,
-                             backref='tags')
-    repositories = relationship('Repository',
-                                secondary=repository_tag_association,
-                                backref='tags')
+    name = Column(String(32), unique=True, index=True, nullable=False)
 
     def __init__(self, name, *args, **kwargs):
         """Initializes an instance of a Tag class.
@@ -43,3 +36,7 @@ class Tag(LinkHubBase, Base):
         """
         super().__init__(*args, **kwargs)
         self.name = name
+
+    def __str__(self):
+        """String representation of the Tag class"""
+        return "[Tag] (id='{}', name='{}')".format(self.id, self.name)

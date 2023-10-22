@@ -14,6 +14,7 @@ Key Features:
 
 Author: Paul John
 """
+import re
 import bcrypt
 from sqlalchemy import Column
 from sqlalchemy import String
@@ -25,13 +26,14 @@ from linkhub.linkhub_base import LinkHubBase, Base
 class User(LinkHubBase, Base):
     """Defines a User class for managing user data"""
     __tablename__ = "users"
-    username = Column(String(60), unique=True, nullable=False)
-    email = Column(String(100), unique=True, nullable=False)
-    __password = Column("password", String(64), nullable=False)
+    username = Column(String(60), unique=True, index=True, nullable=False)
+    __email = Column('email', String(100), unique=True, nullable=False)
+    __password = Column('password', String(64), nullable=False)
     bio = Column(String(255), nullable=True)
-    repositories = relationship('Repository', backref='user')
+    repositories = relationship('Repository', back_populates='user',
+                                cascade='all, delete-orphan')
 
-    def __init__(self, username, email, password, bio=None, *args, **kwargs):
+    def __init__(self, username, email, password, *args, **kwargs):
         """Initializes an instance of User class
         Args:
             username (str): The username of the user
@@ -44,8 +46,29 @@ class User(LinkHubBase, Base):
         super().__init__(*args, **kwargs)
         self.username = username
         self.email = email
-        self.bio = bio
         self.password = password
+
+    def __str__(self):
+        """String representation of the User class"""
+        return "[User] (id='{}', username='{}')".format(self.id, self.username)
+
+    @property
+    def email(self):
+        """Getter for the email property"""
+        return self.__email
+
+    @email.setter
+    def email(self, new_email):
+        """Setter for the email property, with email format validation"""
+        if not self.is_valid_email(new_email):
+            raise ValueError("Invalid email format")
+        self.__email = new_email
+
+    def is_valid_email(self, email):
+        """Check if the provided email has a valid format"""
+        # A basic email format validation using regular expressions
+        email_pattern = r'^[\w\.-]+@[\w\.-]+\.\w+$'
+        return re.match(email_pattern, email) is not None
 
     @property
     def password(self):
