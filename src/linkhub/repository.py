@@ -33,9 +33,9 @@ repository_tags = Table(
         'repository_tags',
         Base.metadata,
         Column('repository_id', String(36),
-               ForeignKey('repositories.id', ondelete='CASCADE')),
+               ForeignKey('repositories.id')),
         Column('tag_id', String(36),
-               ForeignKey('tags.id', ondelete='CASCADE'))
+               ForeignKey('tags.id'))
         )
 
 
@@ -48,10 +48,10 @@ class Repository(LinkHubBase, Base):
                      nullable=False)
     user = relationship('User', back_populates='repositories')
     resources = relationship('Resource', back_populates='repository',
-                             cascade='all, delete-orphan')
+                             cascade='all, delete-orphan',
+                             passive_deletes=True)
     tags = relationship('Tag', secondary='repository_tags',
-                        back_populates='repositories',
-                        cascade='all, delete')
+                        back_populates='repositories')
 
     def __init__(self, name, user: User, *args, **kwargs):
         """Initializes an instance of Repository class

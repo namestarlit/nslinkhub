@@ -27,12 +27,10 @@ class Tag(LinkHubBase, Base):
     name = Column(String(32), unique=True, index=True, nullable=False)
     repositories = relationship('Repository',
                                 secondary='repository_tags',
-                                back_populates='tags',
-                                passive_deletes=True)
+                                back_populates='tags')
     resources = relationship('Resource',
                              secondary='resource_tags',
-                             back_populates='tags',
-                             passive_deletes=True)
+                             back_populates='tags')
 
     def __init__(self, name, *args, **kwargs):
         """Initializes an instance of a Tag class.

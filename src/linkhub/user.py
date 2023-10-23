@@ -31,7 +31,8 @@ class User(LinkHubBase, Base):
     __password = Column('password', String(64), nullable=False)
     bio = Column(String(255), nullable=True)
     repositories = relationship('Repository', back_populates='user',
-                                cascade='all, delete-orphan')
+                                cascade='all, delete-orphan',
+                                passive_deletes=True)
 
     def __init__(self, username, email, password, *args, **kwargs):
         """Initializes an instance of User class

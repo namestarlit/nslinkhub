@@ -26,9 +26,9 @@ resource_tags = Table(
         'resource_tags',
         Base.metadata,
         Column('resource_id', String(36),
-               ForeignKey('resources.id', ondelete='CASCADE')),
+               ForeignKey('resources.id')),
         Column('tag_id', String(36),
-               ForeignKey('tags.id', ondelete='CASCADE'))
+               ForeignKey('tags.id'))
         )
 
 
@@ -43,8 +43,7 @@ class Resource(LinkHubBase, Base):
                            nullable=False)
     repository = relationship('Repository', back_populates='resources')
     tags = relationship('Tag', secondary='resource_tags',
-                        back_populates='resources',
-                        cascade='all, delete')
+                        back_populates='resources')
 
     def __init__(self, title, url, repository: Repository, *args, **kwargs):
         """Initializes an instance of Resource class
