@@ -42,7 +42,7 @@ repository_tags = Table(
 class Repository(LinkHubBase, Base):
     """Defines 'Repository' class for organizing and managing resources"""
     __tablename__ = 'repositories'
-    name = Column(String(60), unique=True, index=True, nullable=False)
+    name = Column(String(60), index=True, nullable=False)
     description = Column(String(255), nullable=True)
     user_id = Column(String(36), ForeignKey('users.id', ondelete='CASCADE'),
                      nullable=False)

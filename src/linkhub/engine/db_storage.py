@@ -225,7 +225,7 @@ class DBStorage:
             repository = (
                     self.__session.query(Repository)
                     .filter_by(name=name)
-                    .first()
+                    .all()
                     )
             return repository
         except Exception as e:
