@@ -84,34 +84,33 @@ class DBStorage:
         objs_dict = {}
 
         try:
-            with self.__session as session:
-                if cls is None:
-                    # Return objects from all classes
-                    cls_objs = list(self.model_mapping.values())
-                    objects = []
-                    for cls_obj in cls_objs:
-                        objects.extend(session.query(cls_obj).all())
-                elif isinstance(cls, str):
-                    # Map class name to class object using model_mapping
-                    if cls in self.model_mapping:
-                        cls = self.model_mapping[cls]
-                        objects = session.query(cls).all()
-                    else:
-                        raise ValueError(f"Class name: {cls} not found in"
-                                         " model_mapping")
-                elif inspect.isclass(cls):
-                    # cls is already a class object, retrive objects
-                    objects = session.query(cls).all()
+            if cls is None:
+                # Return objects from all classes
+                cls_objs = list(self.model_mapping.values())
+                objects = []
+                for cls_obj in cls_objs:
+                    objects.extend(self.__session.query(cls_obj).all())
+            elif isinstance(cls, str):
+                # Map class name to class object using model_mapping
+                if cls in self.model_mapping:
+                    cls = self.model_mapping[cls]
+                    objects = self.__session.query(cls).all()
                 else:
-                    raise ValueError("Invalid input for cls. Please provide"
-                                     " a class name or class object.")
+                    raise ValueError(f"Class name: {cls} not found in"
+                                     " model_mapping")
+            elif inspect.isclass(cls):
+                # cls is already a class object, retrive objects
+                objects = self.__session.query(cls).all()
+            else:
+                raise ValueError("Invalid input for cls. Please provide"
+                                 " a class name or class object.")
 
-                # Append all the objects to the objs_dict
-                for obj in objects:
-                    key = "{}.{}".format(obj.__class__.__name__, obj.id)
-                    objs_dict[key] = obj
+            # Append all the objects to the objs_dict
+            for obj in objects:
+                key = "{}.{}".format(obj.__class__.__name__, obj.id)
+                objs_dict[key] = obj
 
-                return objs_dict
+            return objs_dict
 
         except Exception as e:
             # Handle exceptions. log the errors
@@ -121,10 +120,13 @@ class DBStorage:
         """Adds the object to the current database session
 
         Args:
-            obj: instance of a class (object)
+            obj: instance of a class (object) or a list of objects
         """
         if obj:
-            self.__session.add(obj)
+            if isinstance(obj, list):
+                self.__session.add_all(obj)
+            else:
+                self.__session.add(obj)
 
     def save(self):
         """Commits all changes of the current database session"""
@@ -195,15 +197,13 @@ class DBStorage:
 
     def delete_unused_tags(self):
         try:
-            with self.__session as session:
-                unused_tags = (
-                        session.query(Tag)
-                        .filter(~Tag.repositories.any(), ~Tag.resources.any())
-                        .all()
-                        )
+            unused_tags = (
+                    self.__session.query(Tag)
+                    .filter(~Tag.repositories.any(), ~Tag.resources.any())
+                    .all()
+                    )
 
-                for tag in unused_tags:
-                    print(tag)
-                    self.delete(tag)
+            for tag in unused_tags:
+                self.delete(tag)
         except Exception as e:
             print(f"Error: {e}")
