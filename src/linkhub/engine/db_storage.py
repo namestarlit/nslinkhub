@@ -172,7 +172,37 @@ class DBStorage:
             return len(self.all())
         return len(self.all(cls))
 
-    def get_repo_by_name(self, name):
+    def get_user_by_username(self, username=None):
+        """Retrieve a user by their username.
+
+        Args:
+            username (str): The username of the user to retrieve.
+
+        Returns:
+            User: The user object with the specified username
+            or None if not found.
+
+        Raises:
+            TypeError: If the username is not a string.
+        """
+        if username is None:
+            return None
+
+        if not isinstance(username, str):
+            raise TypeError('username must be a string')
+
+        try:
+            user = (
+                    self.__session.query(User)
+                    .filter_by(username=username)
+                    .first()
+                    )
+            return user
+        except Exception as e:
+            print(f"Error: {e}")
+
+
+    def get_repo_by_name(self, name=None):
         """Retrieve a repository by its name.
 
         Args:
@@ -191,9 +221,15 @@ class DBStorage:
         if not isinstance(name, str):
             raise TypeError('Repository name must be a string')
 
-        with self.__session as session:
-            repository = session.query(Repository).filter_by(name=name).first()
+        try:
+            repository = (
+                    self.__session.query(Repository)
+                    .filter_by(name=name)
+                    .first()
+                    )
             return repository
+        except Exception as e:
+            print(f"Error: {e}")
 
     def delete_unused_tags(self):
         try:
