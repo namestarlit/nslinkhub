@@ -14,8 +14,8 @@ Key Features:
 
 Author: Paul John
 """
-from os import getenv
 import inspect
+from os import getenv
 from sqlalchemy import create_engine, URL
 from sqlalchemy.orm import sessionmaker, scoped_session
 
@@ -201,36 +201,6 @@ class DBStorage:
         except Exception as e:
             print(f"Error: {e}")
 
-
-    def get_repo_by_name(self, name=None):
-        """Retrieve a repository by its name.
-
-        Args:
-            name (str): The name of the repository to retrieve.
-
-        Returns:
-            Repository: The repository object with the specified name
-            or None if not found.
-
-        Raises:
-            TypeError: If the name is not a string.
-        """
-        if name is None:
-            return None
-
-        if not isinstance(name, str):
-            raise TypeError('Repository name must be a string')
-
-        try:
-            repository = (
-                    self.__session.query(Repository)
-                    .filter_by(name=name)
-                    .all()
-                    )
-            return repository
-        except Exception as e:
-            print(f"Error: {e}")
-
     def delete_unused_tags(self):
         try:
             unused_tags = (
@@ -243,3 +213,7 @@ class DBStorage:
                 self.delete(tag)
         except Exception as e:
             print(f"Error: {e}")
+
+# ToDO: sorted(self, objects, sort_key) - method to sort objects
+#       paginate(self, objects, page_number, page_size) - methods to paginate
+#       objects
