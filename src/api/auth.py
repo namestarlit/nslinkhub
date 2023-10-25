@@ -1,4 +1,24 @@
-"""This module contains a Authentication class"""
+"""
+Authentication and Authorization Module
+
+This module contains the `Auth` class, which provides authentication
+and authorization methods for the LinkHub API.
+
+Classes:
+- Auth: Authentication and Authorization class
+
+Methods and Decorators:
+- basic_auth_required: Decorator for basic authentication.
+- verify_credentials: Method to verify username and password validity.
+- token_required: Decorator for token-based authentication.
+- generate_auth_token: Method to generate a JWT token for user authentication.
+
+This module includes methods for basic authentication and
+token-based authentication, as well as token generation.
+
+Author: Paul John
+
+"""
 import jwt
 import datetime
 from functools import wraps

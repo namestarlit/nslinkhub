@@ -1,3 +1,34 @@
+"""
+LinkHub API Initialization
+
+This module initializes the LinkHub API application. It connects and configures
+various components of the API, including authentication, configuration
+settings, blueprints, error routes, and CORS support.
+
+Components:
+- `app`: The Flask application instance.
+- `swagger`: Swagger integration for API documentation.
+- `auth`: Authentication object for user and token verification.
+- `endpoints`: Blueprint for API endpoints.
+- `error`: Module for handling error routes.
+- CORS configuration: Allows all origins for cross-origin requests.
+
+Initialization Steps:
+1. Create a Flask application instance.
+2. Disable strict slashes globally.
+3. Instantiate Swagger for API documentation.
+4. Set configuration from the `Config` class.
+5. Instantiate the `Auth` object for authentication.
+6. Register the `endpoints` blueprint to the application.
+7. Import and configure the `error` module for handling errors.
+8. Configure CORS to allow requests from all origins.
+
+This module serves as the entry point for initializing the LinkHub API
+application and connecting its components.
+
+Author: Paul John
+
+"""
 from flask import Flask
 from flasgger import Swagger
 from flask_cors import CORS

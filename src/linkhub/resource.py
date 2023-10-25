@@ -12,6 +12,7 @@ Key Features:
 - Streamlined functionality for working with link data.
 
 Author: Paul John
+
 """
 from sqlalchemy import Table
 from sqlalchemy.orm import relationship

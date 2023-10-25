@@ -11,6 +11,7 @@ Key Features:
 - Encourages consistent data modeling and database operations.
 
 Author: Paul John
+
 """
 from uuid import uuid4
 from datetime import datetime

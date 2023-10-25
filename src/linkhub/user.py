@@ -13,6 +13,7 @@ Key Features:
 - Facilitates user data management within the LinkHub platform.
 
 Author: Paul John
+
 """
 import re
 import bcrypt

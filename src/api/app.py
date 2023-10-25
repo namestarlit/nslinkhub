@@ -1,5 +1,26 @@
 """
-Main LinkHub API application
+Main LinkHub API Application
+
+This module represents the main application for the LinkHub API.
+
+Functions:
+- set_custom_headers(response): Sets custom headers for API responses.
+- app_teardown(exception): Closes the database session at application teardown.
+- after_request(response): Executes after each API request to set custom headers.
+
+Configuration Options:
+- LINKHUB_API_HOST:
+  The host IP for the API. Defaults to '0.0.0.0' if not specified in the environment.
+- LINKHUB_API_PORT:
+  The port number for the API. Defaults to '5000' if not specified in the environment.
+
+This module serves as the main entry point for the LinkHub API application.
+It defines functions for setting custom headers, closing the database session,
+and customizing API responses. It also provides configuration options for host
+and port settings.
+
+Author: Paul John
+
 """
 import os
 from flask import g

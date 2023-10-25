@@ -19,6 +19,7 @@ Usage Example:
 3. Quickly access and manage all game development-related resources.
 
 Author: Paul John
+
 """
 from sqlalchemy import Column, Table
 from sqlalchemy.orm import relationship

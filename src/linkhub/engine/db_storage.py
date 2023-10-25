@@ -13,6 +13,7 @@ Key Features:
 - Enables efficient management of the LinkHub database.
 
 Author: Paul John
+
 """
 import inspect
 from os import getenv

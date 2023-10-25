@@ -11,6 +11,7 @@ Key Features:
 - Provides a flexible way to categorize and organize content.
 
 Author: Paul John
+
 """
 from sqlalchemy import Column
 from sqlalchemy import String
