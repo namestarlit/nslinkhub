@@ -1,5 +1,7 @@
 from flask import Flask
+from flasgger import Swagger
 from flask_cors import CORS
+
 from api.auth import Auth
 from api.config import Config
 
@@ -8,6 +10,10 @@ from api.config import Config
 app = Flask(__name__)
 # Set strict slashes to false globally
 app.url_map.strict_slashes = False
+
+# Insitantiate Swagger
+swagger = Swagger(app)
+
 # Set configuration from Configuration class
 app.config.from_object(Config)
 # Institatiate authentication object
