@@ -6,13 +6,15 @@ This module represents the main application for the LinkHub API.
 Functions:
 - set_custom_headers(response): Sets custom headers for API responses.
 - app_teardown(exception): Closes the database session at application teardown.
-- after_request(response): Executes after each API request to set custom headers.
+- after_request(response): Executes after each API request to set API headers
 
 Configuration Options:
 - LINKHUB_API_HOST:
-  The host IP for the API. Defaults to '0.0.0.0' if not specified in the environment.
+  The host IP for the API. Defaults to '0.0.0.0' if not specified
+  in the environment.
 - LINKHUB_API_PORT:
-  The port number for the API. Defaults to '5000' if not specified in the environment.
+  The port number for the API. Defaults to '5000' if not specified
+  in the environment.
 
 This module serves as the main entry point for the LinkHub API application.
 It defines functions for setting custom headers, closing the database session,
@@ -51,6 +53,7 @@ def app_teardown(exception):
 @app.after_request
 def after_request(response):
     return set_custom_headers(response)
+
 
 if __name__ == '__main__':
     # Get host IP and port number

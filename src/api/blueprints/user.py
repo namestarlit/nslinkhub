@@ -9,14 +9,17 @@ Endpoints:
 - POST /users:
   Creates a new user and adds them to the database.
 - GET /users/{username}:
-  Returns a user with public information: username, id, created_at, updated_at, and bio.
+  Returns a user with public information: username, id, created_at,
+  updated_at, and bio.
 - PUT /users/{username}:
   Update/replace user information.
 - DELETE /users/{username}:
-  Delete a user and all their associated data, including repositories and resources.
+  Delete a user and all their associated data, including repositories
+  and resources.
 
 /users/{username}/repos
-- GET: Returns a list of all repositories owned by the user with the given username.
+- GET: Returns a list of all repositories owned by the user with
+  the given username.
 - POST: Create new repositories owned by the user.
 
 Submodules:

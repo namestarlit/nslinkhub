@@ -6,7 +6,8 @@ repositories in the LinkHub API.
 
 Endpoints:
 - GET /repos/{owner}/{repo_name}/tags:
-  Returns a list of tags associated with a given repository owned by a given owner.
+  Returns a list of tags associated with a given repository owned
+  by a given owner.
 - POST /repos/{owner}/{repo_name}/tags:
   Creates a new tag for the specified repository.
 - DELETE /repos/{owner}/{repo_name}/{tag_id}:

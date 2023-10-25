@@ -1,3 +1,4 @@
 *.env
 __pycache__/
 .lite_workspace.lua
+setup.cfg

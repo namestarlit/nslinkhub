@@ -6,7 +6,8 @@ resources in the LinkHub API.
 
 Endpoints:
 - GET /repos/{owner}/{repo_name}/resources/{resource_id}/tags:
-  Returns a list of all the tags associated with a resource with the provided ID.
+  Returns a list of all the tags associated with a resource with the
+  provided ID.
 - POST /repos/{owner}/{repo_name}/resources/{resource_id}/tags:
   Creates/adds tags to a resource given the resource ID.
 - DELETE /repos/{owner}/{repo_name}/resources/{resource_id}/tags/{tag_id}:
