@@ -15,5 +15,8 @@ from api.blueprints import endpoints
 # Register blueprints to app instance
 app.register_blueprint(endpoints)
 
+# Import routes module
+from api.routes import error
+
 # Configure CORS to allow all origins
 CORS(app, resources={r'/*': {'origins': '*'}})
