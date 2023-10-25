@@ -1,4 +1,4 @@
-"""This modele contains flask configuration"""
+"""This module contains flask configuration"""
 from os import getenv
 
 

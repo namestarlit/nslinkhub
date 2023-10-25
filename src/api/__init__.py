@@ -4,11 +4,14 @@ from api.auth import Auth
 from api.config import Config
 
 
+# Instantiate flask app object
 app = Flask(__name__)
 # Set strict slashes to false globally
 app.url_map.strict_slashes = False
 # Set configuration from Configuration class
 app.config.from_object(Config)
+# Institatiate authentication object
+auth = Auth()
 
 # Import endpoints blueprint
 from api.blueprints import endpoints

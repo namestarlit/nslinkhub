@@ -2,6 +2,7 @@
 
 It contains routes for handling erros
 """
+from flask import jsonify
 from api import app
 
 
@@ -9,4 +10,3 @@ from api import app
 def not_found(error):
     """Handle 404 error"""
     return jsonify({'error': 'Not found'}), 404
-

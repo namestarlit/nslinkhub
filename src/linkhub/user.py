@@ -92,7 +92,11 @@ class User(LinkHubBase, Base):
 
     def check_password(self, password):
         """Verify a provided password against the stored hash"""
-        return bcrypt.checkpw(password.encode('utf-8'), self.__password)
+        if self.__password:
+            hashed_password = self.__password.encode('utf-8')
+            password = password.encode('utf-8')
+            return bcrypt.checkpw(password, hashed_password)
+        return False
 
     def change_password(self, new_password):
         """Change the user's password to a new one"""
