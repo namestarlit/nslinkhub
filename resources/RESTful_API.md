@@ -63,3 +63,23 @@ and other client errors.
 
 The key is to make error responses as informative as possible while maintaining security
 and adhering to RESTful API standards.
+
+Error Format:
+Using different response formats for different types of errors is a valid approach.
+It helps distinguish between client errors (e.g., bad requests) and authorization errors
+(e.g., missing or incorrect tokens) while providing appropriate feedback to the client.
+
+Your approach is clear and user-friendly. Here's a summary of your approach:
+
+1. For client errors (e.g., bad requests), return a JSON response with an 'error' object
+   that includes a status code (e.g., 400) and a detailed error message.
+
+2. For authorization errors (e.g., missing or incorrect tokens), return a simpler response
+   with a 'message' key. This approach is more straightforward for authentication issues.
+
+This approach aligns with the best practices of using appropriate HTTP status codes
+and providing informative error messages. It also makes it easier for clients to differentiate
+between different types of issues and handle them accordingly.
+
+In summary, your approach is reasonable and user-friendly, and it allows
+you to handle errors effectively in your API.
