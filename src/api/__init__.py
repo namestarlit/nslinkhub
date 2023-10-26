@@ -26,9 +26,11 @@ Initialization Steps:
 This module serves as the entry point for initializing the LinkHub API
 application and connecting its components.
 
-Author: Paul John
-
 """
+
+__author__ = 'Paul John'
+__version__ = '23.10'
+
 from flask import Flask
 from flasgger import Swagger
 from flask_cors import CORS

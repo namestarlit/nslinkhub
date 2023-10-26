@@ -3,9 +3,10 @@ from flask import Blueprint
 # Instantiate API endpoints blueprint
 endpoints = Blueprint('endpoints', __name__, url_prefix='/api')
 
-from api.blueprints.init import *
-from api.blueprints.user import *
-from api.blueprints.resource import *
-from api.blueprints.repository import *
-from api.blueprints.resource_tags import *
-from api.blueprints.repository_tags import *
+# Import endpoints blueprint routes from modules
+from api.blueprints import init
+from api.blueprints import user
+from api.blueprints import resource
+from api.blueprints import repository
+from api.blueprints import resource_tags
+from api.blueprints import repository_tags
