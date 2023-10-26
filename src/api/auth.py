@@ -57,6 +57,14 @@ class Auth:
                 auth_header = request.headers['Authorization']
                 if auth_header.startswith('Bearer '):
                     token = auth_header.split('Bearer ')[1]
+                else:
+                    error_info = {
+                            'code': 400,
+                            'message': ('Incorrect token format. '
+                                        'Format: Bearer your_token_here')
+                            }
+
+                    return jsonify({'error': error_info}), 400
 
             if not token:
                 return jsonify({'message': 'Token is missing'}), 401
@@ -92,7 +100,7 @@ class Auth:
         payload = {
                 'sub': user_id,
                 'iat': issued_at,
-                'exp': issued_at + datetime.timedelta(seconds=expiration)
+                'exp': issued_at + datetime.timedelta(hours=24)
                 }
         secret_key = current_app.config['SECRET_KEY']
         token = jwt.encode(payload, secret_key, algorithm='HS256')

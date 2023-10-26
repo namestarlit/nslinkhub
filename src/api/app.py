@@ -34,7 +34,7 @@ from linkhub import storage
 def set_custom_headers(response):
     # Set the custom headers
     response.headers['X-API-Version'] = '23.10'
-    response.headers['Cache-Control'] = 'public, max-age=15'
+    response.headers['Cache-Control'] = 'public, max-age=15, must-revalidate'
 
     # Check if user_id is available in g, set it to None otherwise
     user_id = g.user_id if hasattr(g, 'user_id') else None

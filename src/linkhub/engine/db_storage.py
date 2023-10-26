@@ -17,6 +17,7 @@ Author: Paul John
 """
 import inspect
 from os import getenv
+from sqlalchemy import text
 from sqlalchemy import create_engine, URL
 from sqlalchemy.orm import sessionmaker, scoped_session
 
@@ -201,6 +202,30 @@ class DBStorage:
             return user
         except Exception as e:
             print(f"Error: {e}")
+
+    def get_user_by_email(self, email=None):
+        """Retrieve a user by their email.
+
+        Args:
+            email (str): The email of the user to retrieve.
+
+        Returns:
+            User: The user object with the specified email or None if not found
+
+        Raises:
+            TypeError: If the email is not a string.
+        """
+        if email is None:
+            return None
+
+        if not isinstance(email, str):
+            raise TypeError('Email must be a string')
+
+        query = text("SELECT * FROM users WHERE email = :email")
+        result = self.__session.execute(query, {"email": email})
+        user = result.fetchone()
+
+        return user
 
     def delete_unused_tags(self):
         try:
