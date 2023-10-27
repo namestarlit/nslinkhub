@@ -30,10 +30,11 @@ Author: Paul John
 
 """
 from flask import jsonify
-from flask import request, abort, url_for
-from email_validator import validate_email, EmailNotValidError
+from flask import request, abort
 
 from api import auth
+from api import util
+from api import validate
 from linkhub import storage
 from linkhub.user import User
 from api.blueprints import endpoints
@@ -46,10 +47,11 @@ def get_users():
     try:
         users = storage.all(User).values()
     except Exception:
-        abort(500)
-    users_list = []
+        abort(500, 'Internal Server Error')
 
     # Append users to users list
+    users_list = []
+
     for user in users:
         users_list.append(user.to_optimized_dict())
 
@@ -63,11 +65,16 @@ def get_user_by_username(username):
     try:
         user = storage.get_user_by_username(username)
     except Exception:
-        abort(500)
+        abort(500, 'Internal Server Error')
+
     if user is None:
         abort(404, 'User Not Found')
 
-    return jsonify({'User': user.to_optimized_dict()}), 200
+    # Add Last-Modified header to the response
+    response = jsonify({'User': user.to_optimized_dict()})
+    response.headers['Last-Modified'] = util.last_modified(user.updated_at)
+
+    return response, 200
 
 
 @endpoints.route('/users', methods=['POST'])
@@ -90,44 +97,95 @@ def create_user():
     if error_info is not None:
         return jsonify({'error': error_info}), 400
 
-    # Check email validity and if it does not exist
+    # Check email validity and if it already exists
     email = user.get('email')
-    try:
-        emailinfo = validate_email(email, check_deliverability=False)
-        user['email'] = emailinfo.normalized
-    except EmailNotValidError as e:
+    if not validate.is_email_valid(email):
         error_info = {'code': 400, 'message': 'invalid email address'}
         return jsonify({'error': error_info}), 400
-
-    # Check if user's email already exists
-    if user.get_user_by_email(user['email']) is not None:
+    if not validate.is_email_available(email):
         return jsonify({'message': 'email already exists'}), 409
 
-    # Check is username already exists
+    # Check if username already exists
     username = user.get('username')
-    if storage.get_user_by_username(username) is not None:
+    if not validate.is_username_available(username):
         return jsonify({'message': 'username exists, '
                         'please choose another username'}), 409
 
-    # Check if the email already exists
-    email = user.get('email')
-    print(email)
-    print(storage.get_user_by_email(email))
-    if storage.get_user_by_email(email) is not None:
-        return jsonify({'message': 'Email already exists'}), 409
-
-    # Create new user
     try:
+        # Create new user
         new_user = User(**user)
         storage.new(new_user)
         storage.save()
     except Exception as e:
-        abort(500)
+        abort(500, 'Internal Server Error')
 
-    # Set Location Header to the URL of the newly created user
+    # Add Location Header to the response
     response = jsonify({'User': new_user.to_optimized_dict()})
-    location_url = url_for('endpoints.get_user_by_username',
-                           username=username, _external=True)
+    location_url = util.location_url(
+            'endpoints.get_user_by_username', username=new_user.username
+            )
     response.headers['Location'] = location_url
 
     return response, 201
+
+
+@endpoints.route('/users/<username>', methods=['PUT'])
+@auth.token_required
+def update_user(username):
+    """Updates user by their username"""
+    user_info = request.get_json()
+
+    # Handle possible exceptions
+    error_info = None
+    if not user_info:
+        abort(415, 'Not JSON')
+
+    try:
+        # Get user if they exist
+        user = storage.get_user_by_username(username)
+    except Exception:
+        abort(500, 'Internal Server Error')
+
+    if user is None:
+        abort(404, 'User not found')
+
+    # Check if the user owns the account
+    if not auth.is_authorized(user.id):
+        abort(403, 'Forbidden')
+
+        # check if new username already exists
+    if 'username' in user_info:
+        new_username = user_info.get('username')
+        if username != new_username:
+            if not validate.is_username_available(new_username):
+                return jsonify(
+                            {'message': 'desired username already '
+                             'exists. Please choose a another one'}), 409
+
+    # check if new email already exists
+    if 'email' in user_info:
+        new_email = user_info.get('email')
+        if user.email != new_email:
+            if not validate.is_email_valid(new_email):
+                error_info = {'code': 400, 'message': 'invalid email address'}
+                return jsonify({'error': error_info}), 400
+            if not validate.is_email_available(new_email):
+                return jsonify({'message': 'new email already exist'}), 409
+
+    try:
+        # Update user info
+        for key, value in user_info.items():
+            if key not in ['id', 'created_at', 'updated_at']:
+                setattr(user, key, value)
+        user.save()
+    except Exception as e:
+        abort(500, 'Internal Server Error')
+
+    # Add Location header to the response
+    response = jsonify({'User': user.to_optimized_dict()})
+    location_url = util.location_url(
+            'endpoints.get_user_by_username', username=user.username
+            )
+    response.headers['Location'] = location_url
+
+    return response, 200

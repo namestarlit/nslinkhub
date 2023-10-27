@@ -36,7 +36,9 @@ from flasgger import Swagger
 from flask_cors import CORS
 
 from api.auth import Auth
+from api.utils import Util
 from api.config import Config
+from api.validation import Validate
 
 
 # Instantiate flask app object
@@ -49,8 +51,10 @@ swagger = Swagger(app)
 
 # Set configuration from Configuration class
 app.config.from_object(Config)
-# Institatiate authentication object
+# Institatiate authentication and validation objects
 auth = Auth()
+validate = Validate()
+util = Util()
 
 # Import endpoints blueprint
 from api.blueprints import endpoints

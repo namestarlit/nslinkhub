@@ -19,17 +19,56 @@ token-based authentication, as well as token generation.
 Author: Paul John
 
 """
+import os
 import jwt
 import datetime
 from functools import wraps
-from flask import current_app
-from flask import request, jsonify, g
+from flask import current_app, g
+from flask import request, jsonify, abort
 
 from linkhub import storage
 
 
 class Auth:
     """Authentication and Authorization class"""
+
+    __ADMINS = os.getenv('ADMINS').split(':')
+
+    @property
+    def admins(self):
+        """Retrives admins"""
+        return self.__ADMINS
+
+    def is_authorized(self, owner_id):
+        """Checks if the user is authorized
+
+        Checks if the current user owns a resource
+        associated with a provided user_id or is in the admins group
+
+        Args:
+            user_id (str): The user_id associated with a resource
+
+        Returns:
+            bool: True if condition passed, otherwise False
+
+        """
+        # Get user-agent
+        user_agent = g.user_id if hasattr(g, 'user_id') else None
+
+        # Return False is User-Agent is None
+        if user_agent is None:
+            return False
+
+        # Return True if User-Agent owns the resource
+        if user_agent == owner_id:
+            return True
+
+        # Return True if user is an admin
+        if user_agent in self.admins:
+            return True
+
+        return False
+
     def basic_auth_required(self, f):
         """A wraper for basic_auth_required method"""
         @wraps(f)

@@ -69,6 +69,11 @@ class LinkHubBase:
                 .format(self.__class__.__name__,
                         self.id, self.created_at, self.updated_at))
 
+    def save(self):
+        """Updates updated_at time on save"""
+        self.updated_at = datetime.utcnow()
+        linkhub.storage.save()
+
     def to_dict(self):
         """Returns a dictionary of all the key/value pairs."""
         # Copy the instance's dictionary

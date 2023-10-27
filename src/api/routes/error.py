@@ -26,3 +26,13 @@ def unsupported_media_type(error):
             }
 
     return jsonify({'error': error_info}), 415
+
+
+@app.errorhandler(403)
+def forbidden(error):
+    """Handles Authorization error; Forbidden"""
+    error_info = {
+            'code': 403,
+            'message': 'Forbidden'
+            }
+    return jsonify({'error': error_info}), 403
