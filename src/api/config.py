@@ -24,3 +24,11 @@ class Config:
     """A Flask configuration class."""
     # Get secret key otherwise assign a default value.
     SECRET_KEY = getenv('SECRET_KEY', 'you-will-never-guess')
+
+    # Email Server configuration
+    MAIL_SERVER = getenv('MAIL_SERVER')
+    MAIL_PORT = int(getenv('MAIL_PORT', 465))
+    MAIL_USE_SSL = getenv('MAIL_USE_SSL', 'True').lower() == 'true'
+    MAIL_USERNAME = getenv('MAIL_USERNAME')
+    MAIL_PASSWORD = getenv('MAIL_PASSWORD')
+    ADMINS = getenv('ADMIN_EMAILS', '').split(', ')
