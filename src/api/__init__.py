@@ -32,8 +32,9 @@ __author__ = 'Paul John'
 __version__ = '23.10'
 
 from flask import Flask
-from flasgger import Swagger
+from flask_mail import Mail
 from flask_cors import CORS
+from flasgger import Swagger
 
 from api.auth import Auth
 from api.utils import Util
@@ -45,16 +46,26 @@ from api.validation import Validate
 app = Flask(__name__)
 # Set strict slashes to false globally
 app.url_map.strict_slashes = False
+# Set configuration from Configuration class
+app.config.from_object(Config)
+
+# Instantiate Mail
+mail = Mail(app)
 
 # Insitantiate Swagger
 swagger = Swagger(app)
 
-# Set configuration from Configuration class
-app.config.from_object(Config)
-# Institatiate authentication and validation objects
+# Configure CORS to allow all origins
+CORS(app, resources={r'/*': {'origins': '*'}})
+
+# Institatiate authentication, validation and logging objects
 auth = Auth()
 validate = Validate()
 util = Util()
+
+# Instatiate Logging object
+from api.logging import Logging
+log = Logging()
 
 # Import endpoints blueprint
 from api.blueprints import endpoints
@@ -63,6 +74,3 @@ app.register_blueprint(endpoints)
 
 # Import routes module
 from api.routes import error
-
-# Configure CORS to allow all origins
-CORS(app, resources={r'/*': {'origins': '*'}})
