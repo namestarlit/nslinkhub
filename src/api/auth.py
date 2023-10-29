@@ -92,6 +92,7 @@ class Auth:
         """A wraper for token_required method"""
         @wraps(f)
         def decorated(*args, **kwargs):
+            token = None
             if "Authorization" in request.headers:
                 auth_header = request.headers['Authorization']
                 if auth_header.startswith('Bearer '):
@@ -105,7 +106,7 @@ class Auth:
 
                     return jsonify({'error': error_info}), 400
 
-            if not token:
+            if token is None:
                 return jsonify({'message': 'Token is missing'}), 401
             try:
                 secret_key = current_app.config['SECRET_KEY']
@@ -144,3 +145,15 @@ class Auth:
         secret_key = current_app.config['SECRET_KEY']
         token = jwt.encode(payload, secret_key, algorithm='HS256')
         return token
+
+    def secured(self, f):
+        """A wraper for secured methods [only-admins methods]"""
+        @wraps(f)
+        def decorated(*args, **kwargs):
+            user_agent = g.user_id if hasattr(g, 'user_id') else None
+
+            if user_agent is not None:
+                if user_agent in self.admins:
+                    return f(*args, **kwargs)
+            abort(403, 'Forbidden')
+        return decorated

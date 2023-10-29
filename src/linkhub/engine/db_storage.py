@@ -115,8 +115,10 @@ class DBStorage:
             return objs_dict
 
         except Exception as e:
-            # Handle exceptions. log the errors
-            print(f"Error: {e}")
+            # Note: Handle exceptions in production.
+            # where you use linkhub package
+            # like logging the exceptions raised
+            raise e
 
     def new(self, obj):
         """Adds the object to the current database session
@@ -201,7 +203,7 @@ class DBStorage:
                     )
             return user
         except Exception as e:
-            print(f"Error: {e}")
+            raise e
 
     def get_user_by_email(self, email=None):
         """Retrieve a user by their email.
@@ -221,9 +223,12 @@ class DBStorage:
         if not isinstance(email, str):
             raise TypeError('Email must be a string')
 
-        query = text("SELECT * FROM users WHERE email = :email")
-        result = self.__session.execute(query, {"email": email})
-        user = result.fetchone()
+        try:
+            query = text("SELECT * FROM users WHERE email = :email")
+            result = self.__session.execute(query, {"email": email})
+            user = result.fetchone()
+        except Exception as e:
+            raise e
 
         return user
 
@@ -238,7 +243,7 @@ class DBStorage:
             for tag in unused_tags:
                 self.delete(tag)
         except Exception as e:
-            print(f"Error: {e}")
+            raise e
 
 # ToDO: sorted(self, objects, sort_key) - method to sort objects
 #       paginate(self, objects, page_number, page_size) - methods to paginate

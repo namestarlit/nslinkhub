@@ -32,6 +32,7 @@ Author: Paul John
 from flask import jsonify
 from flask import request, abort
 
+from api import log
 from api import auth
 from api import util
 from api import validate
@@ -117,6 +118,7 @@ def create_user():
         storage.new(new_user)
         storage.save()
     except Exception as e:
+        log.logerror(e, send_email=True)
         abort(500, 'Internal Server Error')
 
     # Add Location Header to the response
@@ -144,6 +146,7 @@ def update_user(username):
         # Get user if they exist
         user = storage.get_user_by_username(username)
     except Exception:
+        log.logerror(e, send_email=True)
         abort(500, 'Internal Server Error')
 
     if user is None:
@@ -153,7 +156,7 @@ def update_user(username):
     if not auth.is_authorized(user.id):
         abort(403, 'Forbidden')
 
-        # check if new username already exists
+    # check if new username already exists
     if 'username' in user_info:
         new_username = user_info.get('username')
         if username != new_username:
@@ -179,6 +182,7 @@ def update_user(username):
                 setattr(user, key, value)
         user.save()
     except Exception as e:
+        log.logerror(e, send_email=True)
         abort(500, 'Internal Server Error')
 
     # Add Location header to the response
@@ -189,3 +193,29 @@ def update_user(username):
     response.headers['Location'] = location_url
 
     return response, 200
+
+
+@endpoints.route('/users/<username>', methods=['DELETE'])
+@auth.token_required
+def delete_user(username):
+    """Deletes a user from linkhub"""
+    try:
+        user = storage.get_user_by_username(username)
+    except Exception as e:
+        log.logerror(e, send_email=True)
+        abort(500, 'Internal Server Error')
+
+    # Handle possible errors and authorization
+    if user is None:
+        abort(404, 'Not Found')
+    if not auth.is_authorized(user.id):
+        abort(403, 'Forbidden')
+
+    try:
+        storage.delete(user)
+        storage.save()
+    except Exception as e:
+        log.logerror(e, send_email=True)
+        abort(500, 'Internal Server Error')
+
+    return jsonify({}), 200

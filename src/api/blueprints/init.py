@@ -41,7 +41,6 @@ def get_token():
 
 
 @endpoints.route('/status', methods=['GET'])
-@auth.token_required
 def api_status():
     """Get API Status"""
     return jsonify({'status': 'OK'}), 200
