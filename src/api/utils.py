@@ -1,5 +1,27 @@
 """
-Defines Util class that contains helping methods
+Utility Functions for the LinkHub API
+
+The Util class provides a set of utility methods that are used across
+various route functions in the LinkHub API. These methods help with common
+tasks such as formatting date for headers and generating location URLs.
+
+Purpose:
+- Date Formatting: The 'last_modified' method formats a datetime object
+  for use in Last-Modified headers in HTTP responses.
+- URL Generation: The 'location_url' method generates URLs for use
+  in the Location header of HTTP responses.
+
+Key Methods:
+- 'last_modified': Formats a datetime object for Last-Modified headers.
+- 'location_url': Generates URLs for Location headers.
+
+Usage:
+- Create an instance of the 'Util' class to access its utility methods.
+- Utilize 'last_modified' to format datetime objects for headers.
+- Use 'location_url' to generate URLs for Location headers.
+
+Author: Paul John
+
 """
 from datetime import datetime
 from flask import url_for

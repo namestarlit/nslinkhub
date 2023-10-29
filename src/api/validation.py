@@ -1,11 +1,23 @@
 """
-Checks validity and availability of linkhub resources
+Resource Validation and Availability Checks for LinkHub
 
-Contains a Class with methods to check the availability
-of different LinkHub resources fields like username, email
-and repository names. Also the validity of fields like email.
+The 'Validate' class provides a set of methods for checking the validity and
+availability of various LinkHub resources, such as email addresses, usernames,
+and repository names. These methods ensure that the resources are valid and
+available for use within the LinkHub application.
+
+Key Methods:
+- 'is_email_valid': Checks the validity and optionally deliverability
+   of an email address.
+- 'is_username_available': Verifies if a username is available
+   and not already in use.
+- 'is_email_available': Determines if an email address is available
+   for registration.
+- 'is_repo_available': Checks the availability of a repository name
+   for a specific user.
 
 Author: Paul John
+
 """
 from linkhub import storage
 from email_validator import validate_email

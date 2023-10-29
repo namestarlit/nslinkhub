@@ -1,5 +1,35 @@
 """
-Logging mechanism
+Logging mechanism for LinkHub API
+
+The logging module in the LinkHub API is responsible for handling application
+logs, both locally and via email. It provides a structured approach to logging
+errors and events in the application.
+
+Purpose:
+- Local Error Logging: It captures and stores error messages and events
+  in a local log file.
+- Email Error Notifications: It sends error notifications via email to
+  designated recipients.
+- Centralized Logging: All log messages are consistently formatted for
+  easy analysis.
+
+Key Features:
+- Local Error Logging: Errors and events are logged locally with
+  timestamps and details.
+- Email Notifications: It sends error notifications via email
+  when requested.
+- Log File Rotation: The local log file is rotated to manage log
+  size efficiently.
+- Structured Log Format: Log messages include timestamps, log levels,
+  and source code references.
+
+Usage:
+- The 'Logging' class is initialized to set up logging configurations.
+- The 'logerror' method is used to log errors and optionally send
+  them via email.
+
+Author: Paul John
+
 """
 import os
 import logging
