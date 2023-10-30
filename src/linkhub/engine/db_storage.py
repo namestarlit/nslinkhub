@@ -232,7 +232,39 @@ class DBStorage:
 
         return user
 
+    def get_repo_by_name(self, username=None, repo_name=None):
+        """Retrives a repository owned by a user by name
+
+        Args:
+            username (str): Repository owner's username
+            repo_name (str): The name of the repository to retrive
+
+        Returns:
+            Repository: Repository object if available, else None
+        """
+        if username is None or repo_name is None:
+            return None
+        if not isinstance(username, str):
+            raise ValueError('username must be a string')
+        if not isinstance(repo_name, str):
+            raise ValueError('repository name must be a string')
+
+        try:
+            # Get user
+            user = self.get_user_by_username(username)
+            if user is None:
+                return None
+
+            for repo in user.repositories:
+                if repo.name == repo_name:
+                    return repo
+                break
+            return None
+        except Exception as e:
+            raise e
+
     def delete_unused_tags(self):
+        """Delete all tags not linked to any resource or repository"""
         try:
             unused_tags = (
                     self.__session.query(Tag)

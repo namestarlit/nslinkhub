@@ -46,13 +46,29 @@ class User(LinkHubBase, Base):
             **kwargs: Additional keyword arguments.
         """
         super().__init__(*args, **kwargs)
-        self.username = username
+        self.username = set_username(username)
         self.email = email
         self.password = password
 
     def __str__(self):
         """String representation of the User class"""
         return "[User] (id='{}', username='{}')".format(self.id, self.username)
+
+    def set_username(self, username):
+        """Setter for the username property
+
+        Args:
+            username (str): User's username
+        """
+        if not self.is_valid_username(username):
+            raise ValueError('Invalid username')
+        self.username = username
+
+    def is_valid_username(self, username):
+        """Check if the provided username is of valid format"""
+        # Only allow alphanumeric characters and underscores
+        pattern = "^[a-z0-9_]+$"
+        return bool(re.match(pattern, username))
 
     @property
     def email(self):
@@ -63,14 +79,14 @@ class User(LinkHubBase, Base):
     def email(self, new_email):
         """Setter for the email property, with email format validation"""
         if not self.is_valid_email(new_email):
-            raise ValueError("Invalid email format")
+            raise ValueError('Invalid email format')
         self.__email = new_email
 
     def is_valid_email(self, email):
         """Check if the provided email has a valid format"""
         # A basic email format validation using regular expressions
         email_pattern = r'^[\w\.-]+@[\w\.-]+\.\w+$'
-        return re.match(email_pattern, email) is not None
+        return bool(re.match(email_pattern, email))
 
     @property
     def password(self):

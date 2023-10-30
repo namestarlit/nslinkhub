@@ -21,6 +21,7 @@ Usage Example:
 Author: Paul John
 
 """
+import re
 from sqlalchemy import Column, Table
 from sqlalchemy.orm import relationship
 from sqlalchemy import String, ForeignKey
@@ -69,9 +70,25 @@ class Repository(LinkHubBase, Base):
             raise TypeError("user must be a User instance")
 
         super().__init__(*args, **kwargs)
-        self.name = name
+        self.name = set_name(name)
         self.user = user
 
     def __str__(self):
         """String representation of the Repository class"""
         return "[Repository] (id='{}', name='{}')".format(self.id, self.name)
+
+    def set_name(self, repo_name):
+        """Setter method for the repository's name property
+
+        Args:
+            repo_name (str): The name of the repository
+        """
+        if not self.is_valid_repo_name(repo_name):
+            raise ValueError('Invalid repository name')
+        self.name = repo_name
+
+    def is_valid_repo_name(self, repo_name):
+        """Check if the provided repository name is of valid format"""
+        # Allow alphanumeric characters, hyphens, and underscores
+        pattern = "^[a-z0-9-]+$"
+        return bool(re.match(pattern, repo_name))

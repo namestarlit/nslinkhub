@@ -14,6 +14,7 @@ Key Features:
 Author: Paul John
 
 """
+import re
 from sqlalchemy import Table
 from sqlalchemy.orm import relationship
 from sqlalchemy import Column, String, ForeignKey
@@ -62,10 +63,22 @@ class Resource(LinkHubBase, Base):
 
         super().__init__(*args, **kwargs)
         self.title = title
-        self.url = url
+        self.url = set_url(url)
         self.repository = repository
 
     def __str__(self):
         """String representation of the Resource class"""
         return ("[Resource] (id='{}', title='{}', URL='{}')"
                 .format(self.id, self.title, self.url))
+
+    def set_url(self, url):
+        """Setter method for the url property, with URL format validation"""
+        if not self.is_valid_url(url):
+            raise ValueError('Invalid URL format')
+        self.url = url
+
+    def is_valid_url(self, url):
+        """Check if the provided URL has a valid format"""
+        # A basic URL format validation using regular expression
+        url_pattern = r'^(https?|ftp)://[^\s/$.?#].[^\s]*$'
+        return bool(re.match(url_pattern, url))
