@@ -58,6 +58,32 @@ class Util:
         except ValueError:
             abort(412, "Precondition Failed: Invalid date format")
 
+    def is_modified_since(self, last_modified, modified_since):
+        """Check if a resource has been modified
+
+        Compares a resource's updated_at date with the provided
+        date argument.
+
+        Args:
+            last_modified (str): The Date a resource was last modifed
+            modified_since (str): The Date argument provided
+
+        Returns:
+            bool: True if last_modified > modified_since, False otherwise
+
+        """
+        # Format last_modified date to GMT format
+        last_modified = self.last_modified(last_modified)
+
+        # Parse dates to datetime objects
+        last_modified = self.parse_datetime(last_modified)
+        modified_since = self.parse_datetime(modified_since)
+
+        # Compare datetime objects
+        if last_modified <= modified_since:
+            return False
+        return True
+
     def location_url(self, route_name, **kwargs):
         """Creates a URL to use in Location header
 

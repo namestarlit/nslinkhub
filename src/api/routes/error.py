@@ -11,7 +11,7 @@ def not_found(error):
     """Handle 404 error"""
     error_info = {
             'code': 404,
-            'message': 'Not Found'
+            'message': f'{error.description}'
             }
 
     return jsonify({'error': error_info}), 404
@@ -37,6 +37,17 @@ def forbidden(error):
             }
 
     return jsonify({'error': error_info}), 403
+
+
+@app.errorhandler(405)
+def method_not_allowed(error):
+    """Handles Method Not Allowed error"""
+    error_info = {
+            'code': 405,
+            'message': 'Method Not Allowed'
+            }
+
+    return jsonify({'error': error_info}), 405
 
 
 @app.errorhandler(429)

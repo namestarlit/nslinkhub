@@ -15,10 +15,13 @@ Key Methods:
    for registration.
 - 'is_repo_available': Checks the availability of a repository name
    for a specific user.
+- 'is_url_valid': Checks if the URL format of a provided URL is valid
 
 Author: Paul John
 
 """
+import re
+from api import log
 from linkhub import storage
 from email_validator import validate_email
 from email_validator import EmailNotValidError
@@ -49,6 +52,47 @@ class Validate:
         else:
             return True
 
+    def is_url_valid(self, url):
+        """Checks if the url is of valid format
+
+        Args:
+            url (str): The url to check it's validity
+
+        Returns:
+            bool: True if valid, False otherwise
+        """
+        # Define a regular expression pattern for a valid URL
+        url_pattern = r'^(https?|ftp)://[^\s/$.?#].[^\s]*$'
+
+        # Use re.match to check if the link matches the pattern
+        return bool(re.match(url_pattern, url))
+
+    def is_username_valid(self, username):
+        """Checks if a username is of valid format
+
+        Args:
+            username (str): The username to check
+
+        Returns:
+            bool: True if valid, False otherwise
+        """
+        # Only allow alphanumeric characters and underscores
+        pattern = "^[a-z0-9_]+$"
+        return bool(re.match(pattern, username))
+
+    def is_repo_name_valid(self, repo_name):
+        """checks if the repository name is of valid format
+
+        Args:
+            repo_name (str): The repository name to check
+
+        Returns:
+            bool: True if valid, False otherwise
+        """
+        # Allow alphanumeric characters, hyphens, and underscores
+        pattern = "^[a-z0-9-]+$"
+        return bool(re.match(pattern, repo_name))
+
     def is_username_available(self, username):
         """Checks if a username is available
 
@@ -65,7 +109,8 @@ class Validate:
         try:
             user = storage.get_user_by_username(username)
         except Exception as e:
-            raise e
+            log.logerror(e, send_email=True)
+            abort(500, 'Internal Server Error')
         else:
             if user is None:
                 return True
@@ -87,7 +132,8 @@ class Validate:
         try:
             user = storage.get_user_by_email(email)
         except Exception as e:
-            raise e
+            log.logerror(e, send_email=True)
+            abort(500, 'Internal Server Error')
         else:
             if user is None:
                 return True
@@ -109,16 +155,16 @@ class Validate:
         """
         try:
             user = storage.get_user_by_username(username)
-        except Exception as e:
-            raise e
-        else:
-            if user is not None:
-                for repo in user.repositories:
-                    if repo.name == repo_name:
-                        return False
-                    break
-
-            # Return False if user doesn't exist
+            # Check if user doesn't exist
             if user is None:
                 return False
+
+            # Check if repository exists
+            for repo in user.repositories:
+                if repo.name == repo_name:
+                    return False
+
             return True
+        except Exception as e:
+            log.logerror(e, send_email=True)
+            abort(500, 'Internal Server Error')

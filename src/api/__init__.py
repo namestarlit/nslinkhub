@@ -44,7 +44,6 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 from api.auth import Auth
 from api.utils import Util
 from api.config import Config
-from api.validation import Validate
 
 
 # Instantiate flask app object
@@ -74,14 +73,17 @@ limiter = Limiter(
         headers_enabled=True
         )
 
-# Institatiate authentication, validation and logging objects
+# Instantiate auth and util objects
 auth = Auth()
-validate = Validate()
 util = Util()
 
-# Instatiate Logging object
+# Institatiate logging object
 from api.logging import Logging
 log = Logging()
+
+# Instantiate validate object
+from api.validation import Validate
+validate = Validate()
 
 # Import endpoints blueprint
 from api.blueprints import endpoints

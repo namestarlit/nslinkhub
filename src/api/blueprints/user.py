@@ -50,6 +50,10 @@ def get_users():
         log.logerror(e, send_email=True)
         abort(500, 'Internal Server Error')
 
+    # Check if users don't exist
+    if not users:
+        return jsonify({}), 200
+
     # Append users to users list
     users_list = []
 
@@ -74,15 +78,10 @@ def get_user_by_username(username):
 
     # Check the If-Modified-Since header
     if 'If-Modified-Since' in request.headers:
-        modified_since_header = request.headers['If-Modified-Since']
-        last_modified_header = util.last_modified(user.updated_at)
+        modified_since = request.headers['If-Modified-Since']
 
-        # Parse headers into datetime objects
-        modified_since = util.parse_datetime(modified_since_header)
-        last_modified = util.parse_datetime(last_modified_header)
-
-        # Compare to see if the are any changes
-        if last_modified <= modified_since:
+        # check if a resource has been modified
+        if not util.is_modified_since(user.updated_at, modified_since):
             return make_response('', 304)
 
     # Add Last-Modified header to the response
@@ -120,8 +119,13 @@ def create_user():
     if not validate.is_email_available(email):
         return jsonify({'message': 'email already exists'}), 409
 
-    # Check if username already exists
+    # check if the username is available and valid
     username = user.get('username')
+    if not validate.is_username_valid(username):
+        return jsonify(
+                {'message': 'invalid username format: '
+                 'username can only contain lowercase letters, '
+                 'numbers and underscores (_)'}), 409
     if not validate.is_username_available(username):
         return jsonify({'message': 'username exists, '
                         'please choose another username'}), 409
@@ -164,20 +168,25 @@ def update_user(username):
         abort(500, 'Internal Server Error')
 
     if user is None:
-        abort(404, 'User not found')
+        abort(404, 'User Not found')
 
     # Check if the user owns the account
     if not auth.is_authorized(user.id):
         abort(403, 'Forbidden')
 
-    # check if new username already exists
+    # check if username is available and valid
     if 'username' in user_info:
         new_username = user_info.get('username')
         if username != new_username:
+            if not validate.is_username_valid(new_username):
+                return jsonify(
+                        {'message': 'invalid username format: '
+                         'username can only contain lowercase letters, '
+                         'numbers and underscores (_)'}), 409
             if not validate.is_username_available(new_username):
                 return jsonify(
-                            {'message': 'desired username already '
-                             'exists. Please choose a another one'}), 409
+                        {'message': 'username already exists. '
+                         'Please choose a another one'}), 409
 
     # check if new email already exists
     if 'email' in user_info:
@@ -221,7 +230,7 @@ def delete_user(username):
 
     # Handle possible errors and authorization
     if user is None:
-        abort(404, 'Not Found')
+        abort(404, 'User Not Found')
     if not auth.is_authorized(user.id):
         abort(403, 'Forbidden')
 
