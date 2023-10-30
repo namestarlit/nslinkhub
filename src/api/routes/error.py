@@ -35,4 +35,16 @@ def forbidden(error):
             'code': 403,
             'message': 'Forbidden'
             }
+
     return jsonify({'error': error_info}), 403
+
+
+@app.errorhandler(429)
+def ratelimit_handler(error):
+    """Handles Too many request error on rate limit breach"""
+    error_info = {
+            'code': 429,
+            'message': f"ratelimit exceeded {error.description}"
+            }
+
+    return jsonify({'error': error_info}), 429

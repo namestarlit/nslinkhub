@@ -24,7 +24,7 @@ Author: Paul John
 
 """
 from datetime import datetime
-from flask import url_for
+from flask import url_for, abort
 
 
 class Util:
@@ -42,6 +42,21 @@ class Util:
         last_modified = datetime.strftime(updated_at, GMT_FORMAT)
 
         return last_modified
+
+    def parse_datetime(self, date_str):
+        """Parses a date string and returns a datetime object
+
+        Args:
+            date_str (str): Date string to parse
+
+        Returns:
+            datetime: Parsed datetime object
+        """
+        try:
+            GMT_FORMAT = '%a, %d %b %Y %H:%M:%S GMT'
+            return datetime.strptime(date_str, GMT_FORMAT)
+        except ValueError:
+            abort(412, "Precondition Failed: Invalid date format")
 
     def location_url(self, route_name, **kwargs):
         """Creates a URL to use in Location header

@@ -29,8 +29,8 @@ Submodules:
 Author: Paul John
 
 """
-from flask import jsonify
 from flask import request, abort
+from flask import jsonify, make_response
 
 from api import log
 from api import auth
@@ -42,12 +42,12 @@ from api.blueprints import endpoints
 
 
 @endpoints.route('/users', methods=['GET'])
-@auth.token_required
 def get_users():
     """Retrives a list of all users from linkhub database"""
     try:
         users = storage.all(User).values()
-    except Exception:
+    except Exception as e:
+        log.logerror(e, send_email=True)
         abort(500, 'Internal Server Error')
 
     # Append users to users list
@@ -65,11 +65,25 @@ def get_user_by_username(username):
     """Retrives a user by their username"""
     try:
         user = storage.get_user_by_username(username)
-    except Exception:
+    except Exception as e:
+        log.logerror(e, send_email=True)
         abort(500, 'Internal Server Error')
 
     if user is None:
         abort(404, 'User Not Found')
+
+    # Check the If-Modified-Since header
+    if 'If-Modified-Since' in request.headers:
+        modified_since_header = request.headers['If-Modified-Since']
+        last_modified_header = util.last_modified(user.updated_at)
+
+        # Parse headers into datetime objects
+        modified_since = util.parse_datetime(modified_since_header)
+        last_modified = util.parse_datetime(last_modified_header)
+
+        # Compare to see if the are any changes
+        if last_modified <= modified_since:
+            return make_response('', 304)
 
     # Add Last-Modified header to the response
     response = jsonify({'User': user.to_optimized_dict()})

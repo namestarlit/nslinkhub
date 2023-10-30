@@ -31,10 +31,15 @@ application and connecting its components.
 __author__ = 'Paul John'
 __version__ = '23.10'
 
+from os import getenv
 from flask import Flask
 from flask_mail import Mail
 from flask_cors import CORS
 from flasgger import Swagger
+
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 from api.auth import Auth
 from api.utils import Util
@@ -57,6 +62,17 @@ swagger = Swagger(app)
 
 # Configure CORS to allow all origins
 CORS(app, resources={r'/*': {'origins': '*'}})
+
+# Instantiate Rate Limit object
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1)
+limiter = Limiter(
+        get_remote_address,
+        app=app,
+        default_limits=["120 per minute"],
+        storage_uri=getenv("RATELIMIT_STORAGE_URI", "memory://"),
+        strategy='fixed-window-elastic-expiry',
+        headers_enabled=True
+        )
 
 # Institatiate authentication, validation and logging objects
 auth = Auth()

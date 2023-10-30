@@ -33,6 +33,31 @@ Endpoints:
 Author: Paul John
 
 """
+from flask import jsonify
+from flask import request, abort
 
-# Your module code here
+from api import log
+from api import auth
+from api import util
+from api import validate
+from linkhub import storage
+from api.blueprints import endpoints
+from linkhub.repository import Repository
 
+
+@endpoints.route('/repositories', methods=['GET'])
+def get_repositories():
+    """Retrives a list of all repositories from linkhub"""
+    try:
+        repositories = storage.all(Repository).values()
+    except Exception as e:
+        log.logerror(e, send_email=True)
+        abort(500, 'Internal Server Error')
+
+    # Append repositories to repositories list
+    repositories_list = []
+
+    for repository in repositories:
+        repositories_list.append(repository.to_optimized_dict())
+
+    return jsonify({'Repositories': repositories_list}), 200
