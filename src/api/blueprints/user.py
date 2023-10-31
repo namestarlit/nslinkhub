@@ -17,11 +17,6 @@ Endpoints:
   Delete a user and all their associated data, including repositories
   and resources.
 
-/users/{username}/repos
-- GET: Returns a list of all repositories owned by the user with
-  the given username.
-- POST: Create new repositories owned by the user.
-
 Submodules:
 - auth: Contains authentication and authorization related methods.
 - storage: Contains database data management methods to work with database.
@@ -92,6 +87,7 @@ def get_user_by_username(username):
 
 
 @endpoints.route('/users', methods=['POST'])
+@auth.secured
 @auth.token_required
 def create_user():
     """Creates a new user"""

@@ -316,3 +316,31 @@ def get_repositories():
         repositories_list.append(repository.to_optimized_dict())
 
     return jsonify({'Repositories': repositories_list}), 200
+
+
+@endpoints.route('/repositories/<repository_id>', methods=['GET'])
+def get_repository_by_id(repository_id):
+    """Get repository by ID"""
+    try:
+        # Get repository if exists
+        repo = storage.get(Repository, repository_id)
+    except Exception as e:
+        log.logerror(e, send_email=True)
+        abort(500, 'Internal Server Error')
+
+    if repo is None:
+        abort(404, 'Repository Not Found')
+
+    # Check the If-Modified-Since header
+    if 'If-Modified-Since' in request.headers:
+        modified_since = request.headers['If-Modified-Since']
+
+        # check if a resource has been modified
+        if not util.is_modified_since(repo.updated_at, modified_since):
+            return make_response('', 304)
+
+    # Add Last-Modified Header to the response
+    response = jsonify({'Repository': repo.to_optimized_dict()})
+    response.headers['Last-Modified'] = util.last_modified(repo.updated_at)
+
+    return response, 200

@@ -26,8 +26,22 @@ from flask import request
 from flask import jsonify
 
 from api import auth
-from api.blueprints import endpoints
+from api import limiter
 from linkhub import storage
+from api.blueprints import endpoints
+
+
+@endpoints.route('/user/register', methods=['POST'])
+@limiter.limit("2 per month")
+def register_user():
+    """Register a new user to LinkHub"""
+    # Impelment user registration logic
+    # 1. Create User
+    # 2. Generate user token
+    # 3. Send token to their email address (this plays as part of the email verification)
+    # 4. User used the token to access the API
+
+    return jsonify({'message': 'This method is yet to be implemented'}), 202
 
 
 @endpoints.route('/token', methods=['GET'])
