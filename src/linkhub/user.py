@@ -46,7 +46,7 @@ class User(LinkHubBase, Base):
             **kwargs: Additional keyword arguments.
         """
         super().__init__(*args, **kwargs)
-        self.username = set_username(username)
+        self.set_username(username)
         self.email = email
         self.password = password
 

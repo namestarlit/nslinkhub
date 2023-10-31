@@ -63,7 +63,7 @@ class Resource(LinkHubBase, Base):
 
         super().__init__(*args, **kwargs)
         self.title = title
-        self.url = set_url(url)
+        self.set_url(url)
         self.repository = repository
 
     def __str__(self):

@@ -70,7 +70,7 @@ class Repository(LinkHubBase, Base):
             raise TypeError("user must be a User instance")
 
         super().__init__(*args, **kwargs)
-        self.name = set_name(name)
+        self.set_name(name)
         self.user = user
 
     def __str__(self):
