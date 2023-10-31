@@ -90,7 +90,7 @@ class Validate:
             bool: True if valid, False otherwise
         """
         # Allow alphanumeric characters, hyphens, and underscores
-        pattern = "^[a-z0-9-]+$"
+        pattern = "^[a-zA-Z0-9-]+$"
         return bool(re.match(pattern, repo_name))
 
     def is_username_available(self, username):
@@ -159,9 +159,12 @@ class Validate:
             if user is None:
                 return False
 
+            # Convert repo_name to lowercase
+            repo_name_lower = repo_name.lower()
+
             # Check if repository exists
             for repo in user.repositories:
-                if repo.name == repo_name:
+                if repo.name.lower() == repo_name_lower:
                     return False
 
             return True

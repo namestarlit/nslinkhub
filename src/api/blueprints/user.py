@@ -153,17 +153,17 @@ def create_user():
 @auth.token_required
 def update_user(username):
     """Updates user by their username"""
+    # Get user data
     user_info = request.get_json()
 
     # Handle possible exceptions
-    error_info = None
     if not user_info:
         abort(415, 'Not JSON')
 
     try:
         # Get user if they exist
         user = storage.get_user_by_username(username)
-    except Exception:
+    except Exception as e:
         log.logerror(e, send_email=True)
         abort(500, 'Internal Server Error')
 

@@ -6,26 +6,15 @@ from flask import jsonify
 from api import app
 
 
-@app.errorhandler(404)
-def not_found(error):
-    """Handle 404 error"""
+@app.errorhandler(400)
+def bad_request(error):
+    """Handles Bad Request error"""
     error_info = {
-            'code': 404,
+            'code': 400,
             'message': f'{error.description}'
             }
 
-    return jsonify({'error': error_info}), 404
-
-
-@app.errorhandler(415)
-def unsupported_media_type(error):
-    """Handles unsupporeted media type error"""
-    error_info = {
-            'code': 415,
-            'message': 'The API only accepts data in JSON format'
-            }
-
-    return jsonify({'error': error_info}), 415
+    return jsonify({'error': error_info}), 400
 
 
 @app.errorhandler(403)
@@ -39,6 +28,17 @@ def forbidden(error):
     return jsonify({'error': error_info}), 403
 
 
+@app.errorhandler(404)
+def not_found(error):
+    """Handle 404 error"""
+    error_info = {
+            'code': 404,
+            'message': f'{error.description}'
+            }
+
+    return jsonify({'error': error_info}), 404
+
+
 @app.errorhandler(405)
 def method_not_allowed(error):
     """Handles Method Not Allowed error"""
@@ -48,6 +48,17 @@ def method_not_allowed(error):
             }
 
     return jsonify({'error': error_info}), 405
+
+
+@app.errorhandler(415)
+def unsupported_media_type(error):
+    """Handles unsupporeted media type error"""
+    error_info = {
+            'code': 415,
+            'message': 'The API only accepts data in JSON format'
+            }
+
+    return jsonify({'error': error_info}), 415
 
 
 @app.errorhandler(429)

@@ -81,9 +81,9 @@ def get_user_repos(owner):
     return jsonify({'Repositories': repos_list}), 200
 
 
-@endpoints.route('/users/<owner>/repos/<repo_name>', methods=['GET'])
+@endpoints.route('/repos/<owner>/<repo_name>', methods=['GET'])
 @auth.token_required
-def get_user_repo_by_name(owner, repo_name):
+def get_repository_by_name(owner, repo_name):
     """Retrives user's repository by name"""
     try:
         user = storage.get_user_by_username(owner)
@@ -161,7 +161,8 @@ def create_repository(owner):
         return jsonify(
                 {'message': 'invalid repository name: '
                  'repository name can only contain lowercase letters, '
-                 'numbers, and hypen (-)'}), 409
+                 'uppercase letters, numbers, and hypen (-)'}
+                ), 409
     if not validate.is_repo_available(user.username, repo_name):
         return jsonify({'message': 'repository name already exists'}), 409
 
@@ -177,12 +178,122 @@ def create_repository(owner):
     # Add Location Header to the reponse
     response = jsonify({'Repository': new_repo.to_optimized_dict()})
     location_url = util.location_url(
-            'endpoints.get_user_repo_by_name',
+            'endpoints.get_repository_by_name',
             owner=user.username, repo_name=new_repo.name
             )
     response.headers['Location'] = location_url
 
     return response, 201
+
+
+@endpoints.route('/repos/<owner>/<repo_name>', methods=['PUT'])
+@auth.token_required
+def update_repository(owner, repo_name):
+    """Updates repository information"""
+    # Get repository data
+    repo_info = request.get_json()
+
+    # Handle possible errors
+    if not repo_info:
+        abort(415, 'Not JSON')
+
+    try:
+        # Get user if they exist
+        user = storage.get_user_by_username(owner)
+    except Exception as e:
+        log.logerror(e, send_email=True)
+        abort(500, 'Internal Server Error')
+
+    if user is None:
+        abort(404, 'User Not Found')
+
+    # Check if user is the owner of the repository or admin
+    if not auth.is_authorized(user.id):
+        abort(403, 'Forbidden')
+
+    try:
+        # Get the repository if it exists
+        repo = storage.get_repo_by_name(user.username, repo_name)
+    except Exception as e:
+        log.logerror(e, send_email=True)
+        abort(500, 'Internal Server Error')
+
+    if repo is None:
+        abort(404, 'Repository Not Found')
+
+    # Check if repository name is available and valid
+    if 'name' in repo_info:
+        new_repo_name = repo_info.get('name')
+        if repo_name != new_repo_name:
+            if not validate.is_repo_name_valid(new_repo_name):
+                return jsonify(
+                        {'message': 'invalid repository name: '
+                         'repository name can only contain lowercase letters, '
+                         'uppercase letters, numbers, and hypen (-)'}
+                        ), 409
+            if not validate.is_repo_available(user.username, new_repo_name):
+                return jsonify(
+                        {'message': 'repository name already exists'}
+                        ), 409
+
+    try:
+        # Update repository info
+        for key, value in repo_info.items():
+            if key not in ['id', 'created_at', 'updated_at']:
+                setattr(repo, key, value)
+        repo.save()
+    except Exception as e:
+        log.logerror(e, send_email=True)
+        abort(500, 'Internal Server Error')
+
+    # Add Location header to the response
+    response = jsonify({'Repository': repo.to_optimized_dict()})
+    location_url = util.location_url(
+            'endpoints.get_repository_by_name',
+            owner=user.username, repo_name=repo.name
+            )
+    response.headers['Location'] = location_url
+
+    return response, 200
+
+
+@endpoints.route('/repos/<owner>/<repo_name>', methods=['DELETE'])
+@auth.token_required
+def delete_repository(owner, repo_name):
+    """Deletes a repository"""
+    try:
+        # Get user if exists
+        user = storage.get_user_by_username(owner)
+    except Exception as e:
+        log.logerror(e, send_email=True)
+        abort(500, 'Internal Server Error')
+
+    if user is None:
+        abort(404, 'User Not Found')
+
+    # Check if user is authorized
+    if not auth.is_authorized(user.id):
+        abort(403, 'Forbidden')
+
+    try:
+        # Get repository if exists
+        repo = storage.get_repo_by_name(user.username, repo_name)
+    except Exception as e:
+        log.logerror(e, send_email=True)
+        abort(500, 'Internal Server Error')
+
+    if repo is None:
+        abort(404, 'Repository Not Found')
+
+    try:
+        # Delete repository
+        storage.delete(repo)
+        storage.save()
+    except Exception as e:
+        log.logerror(e, send_email=True)
+        abort(500, 'Internal Server Error')
+
+    return jsonify({}), 200
 
 
 @endpoints.route('/repositories', methods=['GET'])
