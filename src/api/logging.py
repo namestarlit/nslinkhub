@@ -72,9 +72,11 @@ class Logging:
         return logger
 
     def logerror(self, error, send_email=False):
-        # Log the error locally.
+        """logs error to log file and sends over an email"""
         # Convert the exception to a string with the full stack trace
         error_message = f"{str(error)}\n\n{traceback.format_exc()}"
+
+        # Log the error locally.
         self.logger.error(error_message)
 
         if send_email:
@@ -83,9 +85,6 @@ class Logging:
                 subject = 'LinkHub API Failure'
                 sender = 'no-reply@linkhub.com'
                 recipients = current_app.config['ADMINS']
-
-                # Convert the exception to a string with the full stack trace
-                error_message = f"{str(error)}\n\n{traceback.format_exc()}"
 
                 msg = Message(subject, sender=sender, recipients=recipients)
                 msg.body = error_message
