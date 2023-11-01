@@ -171,3 +171,29 @@ class Validate:
         except Exception as e:
             log.logerror(e, send_email=True)
             abort(500, 'Internal Server Error')
+
+    def is_resource_available(self, repo_id, resource_url):
+        """Checks if a resource already exists in a repository
+
+        Args:
+            repo_id (str): The resource's Repository ID
+            resource_id (str): The resource URL to check
+
+        Returns:
+            bool: True if does not exist, False otherwise
+
+        """
+        try:
+            # Get repository
+            repo = storage.get('Repository', repo_id)
+            if repo is None:
+                return False
+
+            for resource in repo.resources:
+                if resource.url == resource_url:
+                    return False
+
+            return True
+        except Exception as e:
+            log.logerror(e, send_email=True)
+            abort(500, 'Internal Server Error')

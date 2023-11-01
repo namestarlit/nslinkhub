@@ -104,8 +104,8 @@ class DBStorage:
                 # cls is already a class object, retrive objects
                 objects = self.__session.query(cls).all()
             else:
-                raise ValueError("Invalid input for cls. Please provide"
-                                 " a class name or class object.")
+                raise TypeError("Invalid input for cls. Please provide"
+                                " a class name or class object.")
 
             # Append all the objects to the objs_dict
             for obj in objects:
@@ -245,9 +245,9 @@ class DBStorage:
         if username is None or repo_name is None:
             return None
         if not isinstance(username, str):
-            raise ValueError('username must be a string')
+            raise TypeError('username must be a string')
         if not isinstance(repo_name, str):
-            raise ValueError('repository name must be a string')
+            raise TypeError('repository name must be a string')
 
         try:
             # Get user
@@ -258,7 +258,38 @@ class DBStorage:
             for repo in user.repositories:
                 if repo.name == repo_name:
                     return repo
-                break
+
+            return None
+        except Exception as e:
+            raise e
+
+    def get_resource_by_id(self, repo_id=None, resource_id=None):
+        """Retrives a repository resource by ID
+
+        Args:
+            repo_id (str): The ID of the repository with the resource
+            resource_id (str): The ID of the resource to get
+
+        Returns:
+            Resource: Resource object
+        """
+        if repo_id is None or resource_id is None:
+            return None
+        if not isinstance(repo_id, str):
+            raise TypeError('Repository ID must be a string')
+        if not isinstance(resource_id, str):
+            raise TypeError('Resource ID must be a string')
+
+        try:
+            # Get repository
+            repo = self.get(Repository, repo_id)
+            if repo is None:
+                return None
+
+            for resource in repo.resources:
+                if resource.id == resource_id:
+                    return resource
+
             return None
         except Exception as e:
             raise e

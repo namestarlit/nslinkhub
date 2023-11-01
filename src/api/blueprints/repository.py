@@ -78,7 +78,7 @@ def get_user_repos(owner):
     for repo in user_repos:
         repos_list.append(repo.to_optimized_dict())
 
-    return jsonify({'Repositories': repos_list}), 200
+    return jsonify({'owner': user.username, 'repositories': repos_list}), 200
 
 
 @endpoints.route('/repos/<owner>/<repo_name>', methods=['GET'])
@@ -113,7 +113,7 @@ def get_repository_by_name(owner, repo_name):
             return make_response('', 304)
 
     # Add Last-Modified Header to the response
-    response = jsonify({'Repository': repo.to_optimized_dict()})
+    response = jsonify({'owner': user.username, 'repository': repo.to_optimized_dict()})
     response.headers['Last-Modified'] = util.last_modified(repo.updated_at)
 
     return response, 200
@@ -127,12 +127,16 @@ def create_repository(owner):
     Args:
         owner (str): repository owner's username
     """
-    repo_info = request.get_json()
+    # Get repository data
+    repo_data = request.get_json()
 
     # Handle possible errors
     error_info = None
 
-    if 'name' not in repo_info:
+    if not repo_data:
+        abort(415, 'Not a JSON')
+
+    if 'name' not in repo_data:
         error_info = {
                 'code': 400,
                 'message': 'repository name not provided'
@@ -156,7 +160,7 @@ def create_repository(owner):
         abort(403, 'Forbidden')
 
     # check if repository name is available and valid
-    repo_name = repo_info.get('name')
+    repo_name = repo_data.get('name')
     if not validate.is_repo_name_valid(repo_name):
         return jsonify(
                 {'message': 'invalid repository name: '
@@ -168,7 +172,7 @@ def create_repository(owner):
 
     try:
         # Create the repository
-        new_repo = Repository(user=user, **repo_info)
+        new_repo = Repository(user=user, **repo_data)
         storage.new(new_repo)
         storage.save()
     except Exception as e:
@@ -191,10 +195,10 @@ def create_repository(owner):
 def update_repository(owner, repo_name):
     """Updates repository information"""
     # Get repository data
-    repo_info = request.get_json()
+    repo_data = request.get_json()
 
     # Handle possible errors
-    if not repo_info:
+    if not repo_data:
         abort(415, 'Not JSON')
 
     try:
@@ -222,8 +226,8 @@ def update_repository(owner, repo_name):
         abort(404, 'Repository Not Found')
 
     # Check if repository name is available and valid
-    if 'name' in repo_info:
-        new_repo_name = repo_info.get('name')
+    if 'name' in repo_data:
+        new_repo_name = repo_data.get('name')
         if repo_name != new_repo_name:
             if not validate.is_repo_name_valid(new_repo_name):
                 return jsonify(
@@ -238,7 +242,7 @@ def update_repository(owner, repo_name):
 
     try:
         # Update repository info
-        for key, value in repo_info.items():
+        for key, value in repo_data.items():
             if key not in ['id', 'created_at', 'updated_at']:
                 setattr(repo, key, value)
         repo.save()
@@ -315,7 +319,7 @@ def get_repositories():
     for repository in repositories:
         repositories_list.append(repository.to_optimized_dict())
 
-    return jsonify({'Repositories': repositories_list}), 200
+    return jsonify({'repositories': repositories_list}), 200
 
 
 @endpoints.route('/repositories/<repository_id>', methods=['GET'])
@@ -340,7 +344,7 @@ def get_repository_by_id(repository_id):
             return make_response('', 304)
 
     # Add Last-Modified Header to the response
-    response = jsonify({'Repository': repo.to_optimized_dict()})
+    response = jsonify({'repository': repo.to_optimized_dict()})
     response.headers['Last-Modified'] = util.last_modified(repo.updated_at)
 
     return response, 200

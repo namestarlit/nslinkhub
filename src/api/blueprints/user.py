@@ -55,7 +55,7 @@ def get_users():
     for user in users:
         users_list.append(user.to_optimized_dict())
 
-    return jsonify({'Users': users_list}), 200
+    return jsonify({'users': users_list}), 200
 
 
 @endpoints.route('/users/<username>', methods=['GET'])
@@ -80,7 +80,7 @@ def get_user_by_username(username):
             return make_response('', 304)
 
     # Add Last-Modified header to the response
-    response = jsonify({'User': user.to_optimized_dict()})
+    response = jsonify({'user': user.to_optimized_dict()})
     response.headers['Last-Modified'] = util.last_modified(user.updated_at)
 
     return response, 200
@@ -91,24 +91,25 @@ def get_user_by_username(username):
 @auth.token_required
 def create_user():
     """Creates a new user"""
-    user = request.get_json()
+    # Get  user data
+    user_data = request.get_json()
 
     # Handle possible exceptions/errors
     error_info = None
-    if not user:
+    if not user_data:
         abort(415, 'Not a JSON')
-    if 'username' not in user:
+    if 'username' not in user_data:
         error_info = {'code': 400, 'message': 'username not provided'}
-    if 'email' not in user:
+    if 'email' not in user_data:
         error_info = {'code': 400, 'message': 'email not provided'}
-    if 'password' not in user:
+    if 'password' not in user_data:
         error_info = {'code': 400, 'message': 'password not provided'}
 
     if error_info is not None:
         return jsonify({'error': error_info}), 400
 
     # Check email validity and if it already exists
-    email = user.get('email')
+    email = user_data.get('email')
     if not validate.is_email_valid(email):
         error_info = {'code': 400, 'message': 'invalid email address'}
         return jsonify({'error': error_info}), 400
@@ -116,7 +117,7 @@ def create_user():
         return jsonify({'message': 'email already exists'}), 409
 
     # check if the username is available and valid
-    username = user.get('username')
+    username = user_data.get('username')
     if not validate.is_username_valid(username):
         return jsonify(
                 {'message': 'invalid username format: '
@@ -128,7 +129,7 @@ def create_user():
 
     try:
         # Create new user
-        new_user = User(**user)
+        new_user = User(**user_data)
         storage.new(new_user)
         storage.save()
     except Exception as e:
@@ -150,10 +151,10 @@ def create_user():
 def update_user(username):
     """Updates user by their username"""
     # Get user data
-    user_info = request.get_json()
+    user_data = request.get_json()
 
     # Handle possible exceptions
-    if not user_info:
+    if not user_data:
         abort(415, 'Not JSON')
 
     try:
@@ -171,8 +172,8 @@ def update_user(username):
         abort(403, 'Forbidden')
 
     # check if username is available and valid
-    if 'username' in user_info:
-        new_username = user_info.get('username')
+    if 'username' in user_data:
+        new_username = user_data.get('username')
         if username != new_username:
             if not validate.is_username_valid(new_username):
                 return jsonify(
@@ -185,8 +186,8 @@ def update_user(username):
                          'Please choose a another one'}), 409
 
     # check if new email already exists
-    if 'email' in user_info:
-        new_email = user_info.get('email')
+    if 'email' in user_data:
+        new_email = user_data.get('email')
         if user.email != new_email:
             if not validate.is_email_valid(new_email):
                 error_info = {'code': 400, 'message': 'invalid email address'}
@@ -196,7 +197,7 @@ def update_user(username):
 
     try:
         # Update user info
-        for key, value in user_info.items():
+        for key, value in user_data.items():
             if key not in ['id', 'created_at', 'updated_at']:
                 setattr(user, key, value)
         user.save()
