@@ -70,3 +70,14 @@ def ratelimit_handler(error):
             }
 
     return jsonify({'error': error_info}), 429
+
+
+@app.errorhandler(500)
+def internal_server_error(error):
+    """Handles Internal Server Error"""
+    error_info = {
+            'code': 500,
+            'message': 'Internal Server Error: API got an unexpected error :('
+            }
+
+    return jsonify({'error': error_info}), 500

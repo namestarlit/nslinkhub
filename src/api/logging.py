@@ -73,7 +73,9 @@ class Logging:
 
     def logerror(self, error, send_email=False):
         # Log the error locally.
-        self.logger.error(str(error))
+        # Convert the exception to a string with the full stack trace
+        error_message = f"{str(error)}\n\n{traceback.format_exc()}"
+        self.logger.error(error_message)
 
         if send_email:
             # Send error over email
