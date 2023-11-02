@@ -13,6 +13,7 @@ Key Features:
 Author: Paul John
 
 """
+import re
 from sqlalchemy import Column
 from sqlalchemy import String
 from sqlalchemy.orm import relationship
@@ -42,8 +43,19 @@ class Tag(LinkHubBase, Base):
             **kwargs: Additional keyword arguments.
         """
         super().__init__(*args, **kwargs)
-        self.name = name
+        self.set_name(name)
 
     def __str__(self):
         """String representation of the Tag class"""
         return "[Tag] (id='{}', name='{}')".format(self.id, self.name)
+
+    def set_name(self, name):
+        """Setter for tag name property"""
+        if not self.is_valid_tag_name(name):
+            raise ValueError('invalid tag name')
+        self.name = name
+
+    def is_valid_tag_name(self, tag_name):
+        """Validate a tag name using a regular expression"""
+        pattern = r"^[a-z0-9]+$"
+        return bool(re.match(pattern, tag_name))

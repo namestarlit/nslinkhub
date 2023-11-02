@@ -308,6 +308,24 @@ class DBStorage:
         except Exception as e:
             raise e
 
+    def get_tag_by_name(self, name=None):
+        """Retrives a tag object by name"""
+        if name is None:
+            return None
+
+        if not isinstance(name, str):
+            raise TypeError('tag name must be a string')
+
+        try:
+            tag = (
+                    self.__session.query(Tag)
+                    .filter_by(name=name)
+                    .first()
+                    )
+            return tag
+        except Exception as e:
+            raise e
+
 # ToDO: sorted(self, objects, sort_key) - method to sort objects
 #       paginate(self, objects, page_number, page_size) - methods to paginate
 #       objects

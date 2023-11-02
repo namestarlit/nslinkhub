@@ -23,6 +23,8 @@ Author: Paul John
 import re
 from api import log
 from linkhub import storage
+from linkhub.resource import Resource
+from linkhub.repository import Repository
 from email_validator import validate_email
 from email_validator import EmailNotValidError
 
@@ -44,6 +46,11 @@ class Validate:
             bool: True if email is valid, False otherwise
 
         """
+        if not isinstance(email, str):
+            raise TypeError('email address must be a string')
+        if not isinstance(deliverability, bool):
+            raise TypeError('deliverability must be a True or False')
+
         try:
             emailinfo = validate_email(email,
                                        check_deliverability=deliverability)
@@ -61,6 +68,9 @@ class Validate:
         Returns:
             bool: True if valid, False otherwise
         """
+        if not isinstance(url, str):
+            raise TypeError('url must be a string')
+
         # Define a regular expression pattern for a valid URL
         url_pattern = r'^(https?|ftp)://[^\s/$.?#].[^\s]*$'
 
@@ -76,6 +86,9 @@ class Validate:
         Returns:
             bool: True if valid, False otherwise
         """
+        if not isinstance(username, str):
+            raise TypeError('username must be a string')
+
         # Only allow alphanumeric characters and underscores
         pattern = "^[a-z0-9_]+$"
         return bool(re.match(pattern, username))
@@ -89,9 +102,20 @@ class Validate:
         Returns:
             bool: True if valid, False otherwise
         """
+        if not isinstance(repo_name, str):
+            raise TypeError('repository name must be a string')
+
         # Allow alphanumeric characters, hyphens, and underscores
         pattern = "^[a-zA-Z0-9-]+$"
         return bool(re.match(pattern, repo_name))
+
+    def is_tag_name_valid(self, tag_name):
+        """Validate a tag name using a regular expression"""
+        if not isinstance(tag_name, str):
+            raise TypeError('tag name must be a string')
+
+        pattern = r"^[a-z0-9]+$"
+        return bool(re.match(pattern, tag_name))
 
     def is_username_available(self, username):
         """Checks if a username is available
@@ -106,6 +130,9 @@ class Validate:
             bool: True if does not exist, False otherwise
 
         """
+        if not isinstance(username, str):
+            raise TypeError('username must be a string')
+
         try:
             user = storage.get_user_by_username(username)
         except Exception as e:
@@ -129,6 +156,9 @@ class Validate:
             bool: True if email doesn't exist, False otherwise
 
         """
+        if not isinstance(email, str):
+            raise TypeError('email address must be a string')
+
         try:
             user = storage.get_user_by_email(email)
         except Exception as e:
@@ -153,6 +183,11 @@ class Validate:
             bool: True if repository doesn't exist, False otherwise
 
         """
+        if not isinstance(username, str):
+            raise TypeError('username must be a string')
+        if not isinstance(repo_name, str):
+            raise TypeError('repository name must be a string')
+
         try:
             user = storage.get_user_by_username(username)
             # Check if user doesn't exist
@@ -183,14 +218,70 @@ class Validate:
             bool: True if does not exist, False otherwise
 
         """
+        if not isinstance(repo_id, str):
+            raise TypeError('Repository ID must be a string')
+        if not isinstance(resource_url, str):
+            raise TypeError('Resource URL must be a string')
+
         try:
             # Get repository
-            repo = storage.get('Repository', repo_id)
+            repo = storage.get(Repository, repo_id)
             if repo is None:
                 return False
 
             for resource in repo.resources:
                 if resource.url == resource_url:
+                    return False
+
+            return True
+        except Exception as e:
+            log.logerror(e, send_email=True)
+            abort(500, 'Internal Server Error')
+
+    def is_repo_tag_available(self, repository, tag_name):
+        """checks is a tag already exists in a repository
+
+        Args:
+            repository (Repository): Repository class object
+            tag_name (str): tag name to check
+
+        Returns:
+            bool: True if doesn't exist, False otherwise
+        """
+        if not isinstance(repository, Repository):
+            raise TypeError('repository must be a instance of Repository'
+                            ' class')
+        if not isinstance(tag_name, str):
+            raise TypeError('tag name must be a string')
+
+        try:
+            for tag in repository.tags:
+                if tag.name == tag_name:
+                    return False
+
+            return True
+        except Exception as e:
+            log.logerror(e, send_email=True)
+            abort(500, 'Internal Server Error')
+
+    def is_resource_tag_available(self, resource, tag_name):
+        """checks is a tag already exists in a resource
+
+        Args:
+            resource (Resource): Resource class object
+            tag_name (str): tag name to check
+
+        Returns:
+            bool: True if doesn't exist, False otherwise
+        """
+        if not isinstance(resource, Resource):
+            raise TypeError('Resource must be an instance of Resource class')
+        if not isinstance(tag_name, str):
+            raise TypeError('tag name must be a string')
+
+        try:
+            for tag in resource.tags:
+                if tag.name == tag_name:
                     return False
 
             return True
