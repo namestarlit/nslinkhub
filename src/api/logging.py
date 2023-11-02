@@ -62,8 +62,7 @@ class Logging:
                                            backupCount=10
                                            )
         file_handler.setFormatter(logging.Formatter(
-            '%(asctime)s %(levelname)s: %(message)s '
-            '[in %(pathname)s:%(lineno)d]')
+            '%(asctime)s %(levelname)s: %(message)s')
                                       )
         file_handler.setLevel(logging.INFO)
         logger.addHandler(file_handler)
