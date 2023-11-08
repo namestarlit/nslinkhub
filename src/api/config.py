@@ -27,8 +27,19 @@ class Config:
 
     # Email Server configuration
     MAIL_SERVER = getenv('MAIL_SERVER')
-    MAIL_PORT = int(getenv('MAIL_PORT', 465))
+    MAIL_PORT = getenv('MAIL_PORT')
     MAIL_USE_SSL = getenv('MAIL_USE_SSL', 'True').lower() == 'true'
     MAIL_USERNAME = getenv('MAIL_USERNAME')
     MAIL_PASSWORD = getenv('MAIL_PASSWORD')
     ADMINS = getenv('ADMIN_EMAILS', '').split(', ')
+
+    # JSON Pretty-Printing and formatting
+    JSONIFY_PRETTYPRINT_REGULAR = True
+
+    # Swagger configuration
+    SWAGGER = {
+        'title': 'LinkHub API',
+        'version': '23.10',
+        'description': 'LinkHub API Documentation',
+        'openapi': '3.0.2'
+    }

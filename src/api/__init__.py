@@ -67,7 +67,7 @@ app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1)
 limiter = Limiter(
         get_remote_address,
         app=app,
-        default_limits=["120 per minute"],
+        default_limits=["15 per second"],
         storage_uri=getenv("RATELIMIT_STORAGE_URI", "memory://"),
         strategy='fixed-window-elastic-expiry',
         headers_enabled=True

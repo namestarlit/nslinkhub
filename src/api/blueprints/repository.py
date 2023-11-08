@@ -180,7 +180,7 @@ def create_repository(owner):
         abort(500, 'Internal Server Error')
 
     # Add Location Header to the reponse
-    response = jsonify({'Repository': new_repo.to_optimized_dict()})
+    response = jsonify({'repository': new_repo.to_optimized_dict()})
     location_url = util.location_url(
             'endpoints.get_repository_by_name',
             owner=user.username, repo_name=new_repo.name
@@ -251,7 +251,7 @@ def update_repository(owner, repo_name):
         abort(500, 'Internal Server Error')
 
     # Add Location header to the response
-    response = jsonify({'Repository': repo.to_optimized_dict()})
+    response = jsonify({'repository': repo.to_optimized_dict()})
     location_url = util.location_url(
             'endpoints.get_repository_by_name',
             owner=user.username, repo_name=repo.name

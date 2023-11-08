@@ -25,6 +25,7 @@ Author: Paul John
 
 """
 from flask import request, abort
+from flasgger.utils import swag_from
 from flask import jsonify, make_response
 
 from api import log
@@ -37,6 +38,7 @@ from api.blueprints import endpoints
 
 
 @endpoints.route('/users', methods=['GET'])
+@swag_from('docs/users.yml')
 def get_users():
     """Retrives a list of all users from linkhub database"""
     try:
@@ -137,7 +139,7 @@ def create_user():
         abort(500, 'Internal Server Error')
 
     # Add Location Header to the response
-    response = jsonify({'User': new_user.to_optimized_dict()})
+    response = jsonify({'user': new_user.to_optimized_dict()})
     location_url = util.location_url(
             'endpoints.get_user_by_username', username=new_user.username
             )
@@ -206,7 +208,7 @@ def update_user(username):
         abort(500, 'Internal Server Error')
 
     # Add Location header to the response
-    response = jsonify({'User': user.to_optimized_dict()})
+    response = jsonify({'user': user.to_optimized_dict()})
     location_url = util.location_url(
             'endpoints.get_user_by_username', username=user.username
             )

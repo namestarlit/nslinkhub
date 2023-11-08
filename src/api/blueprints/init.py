@@ -27,6 +27,7 @@ from flask import jsonify
 
 from api import auth
 from api import limiter
+from api import validate
 from linkhub import storage
 from api.blueprints import endpoints
 
@@ -37,11 +38,59 @@ def register_user():
     """Register a new user to LinkHub"""
     # Impelment user registration logic
     # 1. Create User
-    # 2. Generate user token
-    # 3. Send token to their email address (this plays as part of the email verification)
-    # 4. User used the token to access the API
+    # Get  user data
+    user_data = request.get_json()
 
-    return jsonify({'message': 'This method is yet to be implemented'}), 202
+    # Handle possible exceptions/errors
+    error_info = None
+    if not user_data:
+        abort(415, 'Not a JSON')
+    if 'username' not in user_data:
+        error_info = {'code': 400, 'message': 'username not provided'}
+    if 'email' not in user_data:
+        error_info = {'code': 400, 'message': 'email not provided'}
+    if 'password' not in user_data:
+        error_info = {'code': 400, 'message': 'password not provided'}
+
+    if error_info is not None:
+        return jsonify({'error': error_info}), 400
+
+    # Check email validity and if it already exists
+    email = user_data.get('email')
+    if not validate.is_email_valid(email):
+        error_info = {'code': 400, 'message': 'invalid email address'}
+        return jsonify({'error': error_info}), 400
+    if not validate.is_email_available(email):
+        return jsonify({'message': 'email already exists'}), 409
+
+    # check if the username is available and valid
+    username = user_data.get('username')
+    if not validate.is_username_valid(username):
+        return jsonify(
+                {'message': 'invalid username format: '
+                 'username can only contain lowercase letters, '
+                 'numbers and underscores (_)'}), 409
+    if not validate.is_username_available(username):
+        return jsonify({'message': 'username exists, '
+                        'please choose another username'}), 409
+
+    try:
+        # Create new user
+        new_user = User(**user_data)
+        storage.new(new_user)
+        storage.save()
+    except Exception as e:
+        log.logerror(e, send_email=True)
+        abort(500, 'Internal Server Error')
+
+    # Add Location Header to the response
+    response = jsonify({'user': new_user.to_optimized_dict()})
+    location_url = util.location_url(
+            'endpoints.get_user_by_username', username=new_user.username
+            )
+    response.headers['Location'] = location_url
+
+    return response, 201
 
 
 @endpoints.route('/token', methods=['GET'])
@@ -61,7 +110,6 @@ def api_status():
 
 
 @endpoints.route('/stats', methods=['GET'])
-@auth.token_required
 def linkhub_stats():
     """Get total number/stats of each LinkHub class objects"""
     classes = ['User', 'Repository', 'Resource', 'Tag']
@@ -71,11 +119,18 @@ def linkhub_stats():
     for i in range(len(classes)):
         stats[keys[i]] = storage.count(classes[i])
 
-    return jsonify(stats), 200
+    return jsonify({'LinkHub stats': stats}), 200
+
+
+@endpoints.route('/tags/delete-tags', methods=['DELETE'])
+@auth.secured
+def delete_unused_tags():
+    """Deletes tags not associated with any resource or repository"""
+    storage.delete_unused_tags()
+    return jsonify({}), 200
 
 
 @endpoints.route('/', methods=['GET'])
-@auth.token_required
 def supported_endpoints():
     """Get supported LinkHub API supported endpoints"""
     # Construct a dictionary with information about supported endpoints
@@ -118,7 +173,7 @@ def supported_endpoints():
                     '/{resource_id}': {
                         'GET': 'Returns a list of all the tags associated with a resource with the provided ID',
                         'POST': 'Creates/adds tags to a resource given the resource ID',
-                        '/{tag_id}': {
+                        '/{tag_name}': {
                             'DELETE': 'Removes tags from a given resource provided the ID'
                         }
                     },
