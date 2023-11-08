@@ -1,0 +1,25 @@
+Get a list of all users from LinkHub
+---
+tags:
+  - users
+responses:
+  200:
+    description: Returns a list of all users if available or an empty json if not available
+    schema:
+      type: object
+      items:
+        properties:
+          users:
+            type: object
+          username:
+            type: string
+          id:
+            type: string
+          created_at:
+            type: string
+          updated_at:
+            type: string
+          bio:
+            type: string
+  500:
+    description: Internal Server Error

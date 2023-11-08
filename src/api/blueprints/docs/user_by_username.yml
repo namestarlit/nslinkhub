@@ -1,0 +1,33 @@
+Get user's information by their username
+---
+tags:
+  - users
+parameters:
+  -name: username
+  in: path
+  type: string
+  required: true
+  description: The username of the user to retrive their information
+responses:
+  404:
+    description: User Not Found
+  200:
+    description: Returns a user information in json format
+    schema:
+      type: object
+      items:
+        properties:
+          user:
+            type: object
+          username:
+            type: string
+          id:
+            type: string
+          created_at:
+            type: string
+          updated_at:
+            type: string
+          bio:
+            type: string
+  500:
+    description: Internal Server Error
