@@ -22,18 +22,21 @@ and authorization, as specified in the decorators applied to each endpoint.
 Author: Paul John
 
 """
-from flask import request
 from flask import jsonify
+from flask import request, abort
 
+from api import log
 from api import auth
+from api import util
 from api import limiter
 from api import validate
 from linkhub import storage
+from linkhub.user import User
 from api.blueprints import endpoints
 
 
 @endpoints.route('/user/register', methods=['POST'])
-@limiter.limit("2 per month")
+@limiter.limit("3 per month")
 def register_user():
     """Register a new user to LinkHub"""
     # Impelment user registration logic
