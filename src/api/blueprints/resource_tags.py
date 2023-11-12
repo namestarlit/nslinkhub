@@ -188,7 +188,7 @@ def create_resource_tag(owner, repo_name, resource_id):
         '/repos/<owner>/<repo_name>/resources/<resource_id>/tags/<tag_name>',
         methods=['DELETE'])
 @auth.token_required
-def delete_resource_tag(owner, repo_name, resource_id):
+def delete_resource_tag(owner, repo_name, resource_id, tag_name):
     """Deletes a resource tag"""
     try:
         # Get user if exists
@@ -232,6 +232,8 @@ def delete_resource_tag(owner, repo_name, resource_id):
         abort(500, 'Internal Server Error')
 
     if tag is None:
+        abort(404, 'Tag Not Found')
+    if tag not in resource.tags:
         abort(404, 'Tag Not Found')
 
     try:

@@ -189,6 +189,8 @@ def delete_repo_tag(owner, repo_name, tag_name):
 
     if tag is None:
         abort(404, 'Tag Not Found')
+    if tag not in repo.tags:
+        abort(404, 'Tag Not Found')
 
     try:
         # Remove tag from repository

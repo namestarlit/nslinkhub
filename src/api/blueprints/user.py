@@ -38,7 +38,7 @@ from api.blueprints import endpoints
 
 
 @endpoints.route('/users', methods=['GET'])
-@swag_from('docs/users.yml')
+@auth.token_required
 def get_users():
     """Retrives a list of all users from linkhub database"""
     try:
