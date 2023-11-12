@@ -9,7 +9,9 @@ Linkhub is still under development. Three major parts of it have to be developed
 * LinkHub Web application
 * LinkHub chrome extension
 
-The LinkHub REST API is done and can be used. For more details on how to interact with LinkHub API you can visit the <a href=https://documenter.getpostman.com/view/29464988/2s9YXiaMvk>LinkHub REST API Documentation</a>   
+The LinkHub REST API is done and can be used. For more details on how to interact with LinkHub API you can visit the <a href=https://documenter.getpostman.com/view/29464988/2s9YXiaMvk>LinkHub REST API Documentation</a>     
+
+LinkHub web application and LinkHub chrome extension are yet to be developed :)
 
 ## About LinkHub
 ### What is LinkHub and who is it for?
