@@ -4,7 +4,7 @@
 
 LinkHub is a resource management web application. It allows users to save and organize web resources (links) in repositories.      
 
-Linkhub development is still in progress. Three major parts of it have to be developed  
+Linkhub is still under development. Three major parts of it have to be developed  
 * LinkHub REST API 
 * LinkHub Web application
 * LinkHub chrome extension
