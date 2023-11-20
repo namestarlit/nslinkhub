@@ -57,5 +57,5 @@ class Tag(LinkHubBase, Base):
 
     def is_valid_tag_name(self, tag_name):
         """Validate a tag name using a regular expression"""
-        pattern = r"^[a-z0-9]+$"
+        pattern = r"^[a-zA-Z0-9]+$"
         return bool(re.match(pattern, tag_name))

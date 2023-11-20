@@ -121,7 +121,7 @@ def create_repo_tag(owner, repo_name):
     if not validate.is_tag_name_valid(tag_name):
         return jsonify(
                 {'message': 'invalid tag name: tag name must contain '
-                 'only lowercase letters and numbers'}
+                 'only lowercase or uppercase letters, and numbers'}
                 ), 409
     if not validate.is_repo_tag_available(repo, tag_name):
         return jsonify({'message': 'tag already exists'}), 409

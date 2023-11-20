@@ -114,7 +114,7 @@ class Validate:
         if not isinstance(tag_name, str):
             raise TypeError('tag name must be a string')
 
-        pattern = r"^[a-z0-9]+$"
+        pattern = r"^[a-zA-Z0-9]+$"
         return bool(re.match(pattern, tag_name))
 
     def is_username_available(self, username):
@@ -279,9 +279,12 @@ class Validate:
         if not isinstance(tag_name, str):
             raise TypeError('tag name must be a string')
 
+        # convert tag name to lower
+        tag_name_lower = tag_name.lower()
+
         try:
             for tag in resource.tags:
-                if tag.name == tag_name:
+                if tag.name.lower() == tag_name_lower:
                     return False
 
             return True
