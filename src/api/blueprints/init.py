@@ -133,7 +133,7 @@ def delete_unused_tags():
     return jsonify({}), 200
 
 
-@endpoints.route('/', methods=['GET'])
+@endpoints.route('/api', methods=['GET'])
 def supported_endpoints():
     """Get supported LinkHub API supported endpoints"""
     # Construct a dictionary with information about supported endpoints
