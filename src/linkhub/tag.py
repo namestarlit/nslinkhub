@@ -25,14 +25,15 @@ from linkhub.linkhub_base import LinkHubBase, Base
 
 class Tag(LinkHubBase, Base):
     """Defines a Tag class for managing tags"""
-    __tablename__ = 'tags'
+
+    __tablename__ = "tags"
     name = Column(String(32), unique=True, index=True, nullable=False)
-    repositories = relationship('Repository',
-                                secondary='repository_tags',
-                                back_populates='tags')
-    resources = relationship('Resource',
-                             secondary='resource_tags',
-                             back_populates='tags')
+    repositories = relationship(
+        "Repository", secondary="repository_tags", back_populates="tags"
+    )
+    resources = relationship(
+        "Resource", secondary="resource_tags", back_populates="tags"
+    )
 
     def __init__(self, name, *args, **kwargs):
         """Initializes an instance of a Tag class.
@@ -52,7 +53,7 @@ class Tag(LinkHubBase, Base):
     def set_name(self, name):
         """Setter for tag name property"""
         if not self.is_valid_tag_name(name):
-            raise ValueError('invalid tag name')
+            raise ValueError("invalid tag name")
         self.name = name
 
     def is_valid_tag_name(self, tag_name):

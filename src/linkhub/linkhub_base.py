@@ -27,10 +27,13 @@ Base = declarative_base()
 
 class LinkHubBase:
     """Defines a LinkHubBase class for common functionality across modules"""
+
     # Define common columns of tables across classes
-    id = Column(String(36), primary_key=True, index=True, default=str(uuid4()))
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=func.now())
+    id = Column(String(36), primary_key=True, default=str(uuid4()))
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = Column(
+        DateTime, nullable=False, default=datetime.utcnow, onupdate=func.now()
+    )
 
     def __init__(self, *args, **kwargs):
         """Initializes instances of LinkHubBase class.
@@ -45,15 +48,15 @@ class LinkHubBase:
         self.id = str(uuid4())
 
         # Handle additional keyword arguments
-        ISO_FORMAT = '%Y-%m-%dT%H:%M:%S.%f'
+        ISO_FORMAT = "%Y-%m-%dT%H:%M:%S.%f"
         for key, value in kwargs.items():
-            if key == 'created_at' or key == 'updated_at':
+            if key == "created_at" or key == "updated_at":
                 try:
                     value = datetime.strptime(value, ISO_FORMAT)
                 except ValueError:
                     # Handle datetime string parsing error
                     pass
-            if key == '__class__':
+            if key == "__class__":
                 continue
             setattr(self, key, value)
 
@@ -65,9 +68,9 @@ class LinkHubBase:
 
     def __repr__(self):
         """Formal string representation of the LinkHubBase class."""
-        return ("<{}: (id='{}', created_at='{}', updated_at='{}')>"
-                .format(self.__class__.__name__,
-                        self.id, self.created_at, self.updated_at))
+        return "<{}: (id='{}', created_at='{}', updated_at='{}')>".format(
+            self.__class__.__name__, self.id, self.created_at, self.updated_at
+        )
 
     def save(self):
         """Updates updated_at time on save"""
@@ -80,16 +83,16 @@ class LinkHubBase:
         new_dict = dict(self.__dict__)
 
         # Convert 'created_at' and 'updated_at' into ISO format.
-        if 'created_at' in new_dict:
-            new_dict['created_at'] = new_dict['created_at'].isoformat()
-        if 'updated_at' in new_dict:
-            new_dict['updated_at'] = new_dict['updated_at'].isoformat()
+        if "created_at" in new_dict:
+            new_dict["created_at"] = new_dict["created_at"].isoformat()
+        if "updated_at" in new_dict:
+            new_dict["updated_at"] = new_dict["updated_at"].isoformat()
 
         # Set the '__class__' key
         # new_dict['__class__'] = self.__class__.__name__
 
         # Delete unwanted keys
-        for key in ['_User__email', '_User__password', '_sa_instance_state']:
+        for key in ["_User__email", "_User__password", "_sa_instance_state"]:
             new_dict.pop(key, None)
 
         return new_dict
@@ -105,8 +108,7 @@ class LinkHubBase:
         # Collect keys to remove
         keys_to_remove = []
         for key, value in obj_dict.items():
-            if (isinstance(value, (list, dict))
-                    or hasattr(value, 'to_optimized_dict')):
+            if isinstance(value, (list, dict)) or hasattr(value, "to_optimized_dict"):
                 keys_to_remove.append(key)
 
         # Remove the collected keys

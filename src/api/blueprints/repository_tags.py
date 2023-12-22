@@ -28,7 +28,7 @@ from linkhub.tag import Tag
 from api.blueprints import endpoints
 
 
-@endpoints.route('/repos/<owner>/<repo_name>/tags', methods=['GET'])
+@endpoints.route("/repos/<owner>/<repo_name>/tags", methods=["GET"])
 @auth.token_required
 def get_repo_tags(owner, repo_name):
     """Retrives a list of a repository tags"""
@@ -37,20 +37,20 @@ def get_repo_tags(owner, repo_name):
         user = storage.get_user_by_username(owner)
     except Exception as e:
         log.logerror(e, send_email=True)
-        abort(500, 'Internal Server Error')
+        abort(500, "Internal Server Error")
 
     if user is None:
-        abort(404, 'User Not Found')
+        abort(404, "User Not Found")
 
     try:
         # Get repository if exists
         repo = storage.get_repo_by_name(user.username, repo_name)
     except Exception as e:
         log.logerror(e, send_email=True)
-        abort(500, 'Internal Server Error')
+        abort(500, "Internal Server Error")
 
     if repo is None:
-        abort(404, 'Repository Not Found')
+        abort(404, "Repository Not Found")
 
     repo_tags = repo.tags
 
@@ -63,16 +63,13 @@ def get_repo_tags(owner, repo_name):
     for tag in repo_tags:
         tags_list.append(tag.name)
 
-    return jsonify(
-            {
-                'owner': user.username,
-                'repository': repo.name,
-                'tags': tags_list
-                }
-            ), 200
+    return (
+        jsonify({"owner": user.username, "repository": repo.name, "tags": tags_list}),
+        200,
+    )
 
 
-@endpoints.route('/repos/<owner>/<repo_name>/tags', methods=['POST'])
+@endpoints.route("/repos/<owner>/<repo_name>/tags", methods=["POST"])
 @auth.token_required
 def create_repo_tag(owner, repo_name):
     """Creates a new repository tag"""
@@ -83,48 +80,50 @@ def create_repo_tag(owner, repo_name):
     error_info = None
 
     if not tag_data:
-        abort(415, 'Not a JSON')
-    if 'name' not in tag_data:
-        error_info = {
-                'code': 400,
-                'message': 'tag name not provided'
-                }
+        abort(415, "Not a JSON")
+    if "name" not in tag_data:
+        error_info = {"code": 400, "message": "tag name not provided"}
 
     if error_info is not None:
-        return jsonify({'error': error_info}), 400
+        return jsonify({"error": error_info}), 400
 
     try:
         # Get user if exists
         user = storage.get_user_by_username(owner)
     except Exception as e:
         log.logerror(e, send_email=True)
-        abort(500, 'Internal Server Error')
+        abort(500, "Internal Server Error")
 
     if user is None:
-        abort(404, 'User Not Found')
+        abort(404, "User Not Found")
 
     if not auth.is_authorized(user.id):
-        abort(403, 'Forbidden')
+        abort(403, "Forbidden")
 
     try:
         # Get repository if exists
         repo = storage.get_repo_by_name(user.username, repo_name)
     except Exception as e:
         log.logerror(e, send_email=True)
-        abort(500, 'Internal Server Error')
+        abort(500, "Internal Server Error")
 
     if repo is None:
-        abort(404, 'Repository Not Found')
+        abort(404, "Repository Not Found")
 
     # Check if tag name is available and valid
-    tag_name = tag_data.get('name')
+    tag_name = tag_data.get("name")
     if not validate.is_tag_name_valid(tag_name):
-        return jsonify(
-                {'message': 'invalid tag name: tag name must contain '
-                 'only lowercase or uppercase letters, and numbers'}
-                ), 409
+        return (
+            jsonify(
+                {
+                    "message": "invalid tag name: tag name must contain "
+                    "only lowercase or uppercase letters, and numbers"
+                }
+            ),
+            409,
+        )
     if not validate.is_repo_tag_available(repo, tag_name):
-        return jsonify({'message': 'tag already exists'}), 409
+        return jsonify({"message": "tag already exists"}), 409
 
     try:
         # check if tag is in the database
@@ -139,21 +138,19 @@ def create_repo_tag(owner, repo_name):
         storage.save()
     except Exception as e:
         log.logerror(e, send_email=True)
-        abort(500, 'Internal Server Error')
+        abort(500, "Internal Server Error")
 
     # Add Location Header to the reponse
-    response = jsonify({'tag': tag.to_optimized_dict()})
+    response = jsonify({"tag": tag.to_optimized_dict()})
     location_url = util.location_url(
-            'endpoints.get_repo_tags',
-            owner=user.username, repo_name=repo.name
-            )
-    response.headers['Location'] = location_url
+        "endpoints.get_repo_tags", owner=user.username, repo_name=repo.name
+    )
+    response.headers["Location"] = location_url
 
     return response, 201
 
 
-@endpoints.route('/repos/<owner>/<repo_name>/tags/<tag_name>',
-                 methods=['DELETE'])
+@endpoints.route("/repos/<owner>/<repo_name>/tags/<tag_name>", methods=["DELETE"])
 @auth.token_required
 def delete_repo_tag(owner, repo_name, tag_name):
     """Deletes a repository tag"""
@@ -162,35 +159,35 @@ def delete_repo_tag(owner, repo_name, tag_name):
         user = storage.get_user_by_username(owner)
     except Exception as e:
         log.logerror(e, send_email=True)
-        abort(500, 'Internal Server Error')
+        abort(500, "Internal Server Error")
 
     if user is None:
-        abort(404, 'User Not Found')
+        abort(404, "User Not Found")
 
     if not auth.is_authorized(user.id):
-        abort(403, 'Forbidden')
+        abort(403, "Forbidden")
 
     try:
         # Get repository if exists
         repo = storage.get_repo_by_name(user.username, repo_name)
     except Exception as e:
         log.logerror(e, send_email=True)
-        abort(500, 'Internal Server Error')
+        abort(500, "Internal Server Error")
 
     if repo is None:
-        abort(404, 'Repository Not Found')
+        abort(404, "Repository Not Found")
 
     try:
         # Get tag to delete
         tag = storage.get_tag_by_name(tag_name)
     except Exception as e:
         log.logerror(e, send_email=True)
-        abort(500, 'Internal Server Error')
+        abort(500, "Internal Server Error")
 
     if tag is None:
-        abort(404, 'Tag Not Found')
+        abort(404, "Tag Not Found")
     if tag not in repo.tags:
-        abort(404, 'Tag Not Found')
+        abort(404, "Tag Not Found")
 
     try:
         # Remove tag from repository
@@ -198,6 +195,6 @@ def delete_repo_tag(owner, repo_name, tag_name):
         storage.save()
     except Exception as e:
         log.logerror(e, send_email=True)
-        abort(500, 'Internal Server Error')
+        abort(500, "Internal Server Error")
 
     return jsonify({}), 200

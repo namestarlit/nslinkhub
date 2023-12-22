@@ -37,7 +37,7 @@ from linkhub.user import User
 from api.blueprints import endpoints
 
 
-@endpoints.route('/users', methods=['GET'])
+@endpoints.route("/users", methods=["GET"])
 @auth.token_required
 def get_users():
     """Retrives a list of all users from linkhub database"""
@@ -45,7 +45,7 @@ def get_users():
         users = storage.all(User).values()
     except Exception as e:
         log.logerror(e, send_email=True)
-        abort(500, 'Internal Server Error')
+        abort(500, "Internal Server Error")
 
     # Check if users don't exist
     if not users:
@@ -57,10 +57,10 @@ def get_users():
     for user in users:
         users_list.append(user.to_optimized_dict())
 
-    return jsonify({'users': users_list}), 200
+    return jsonify({"users": users_list}), 200
 
 
-@endpoints.route('/users/<username>', methods=['GET'])
+@endpoints.route("/users/<username>", methods=["GET"])
 @auth.token_required
 def get_user_by_username(username):
     """Retrives a user by their username"""
@@ -68,27 +68,27 @@ def get_user_by_username(username):
         user = storage.get_user_by_username(username)
     except Exception as e:
         log.logerror(e, send_email=True)
-        abort(500, 'Internal Server Error')
+        abort(500, "Internal Server Error")
 
     if user is None:
-        abort(404, 'User Not Found')
+        abort(404, "User Not Found")
 
     # Check the If-Modified-Since header
-    if 'If-Modified-Since' in request.headers:
-        modified_since = request.headers['If-Modified-Since']
+    if "If-Modified-Since" in request.headers:
+        modified_since = request.headers["If-Modified-Since"]
 
         # check if a resource has been modified
         if not util.is_modified_since(user.updated_at, modified_since):
-            return make_response('', 304)
+            return make_response("", 304)
 
     # Add Last-Modified header to the response
-    response = jsonify({'user': user.to_optimized_dict()})
-    response.headers['Last-Modified'] = util.last_modified(user.updated_at)
+    response = jsonify({"user": user.to_optimized_dict()})
+    response.headers["Last-Modified"] = util.last_modified(user.updated_at)
 
     return response, 200
 
 
-@endpoints.route('/users', methods=['POST'])
+@endpoints.route("/users", methods=["POST"])
 @auth.secured
 @auth.token_required
 def create_user():
@@ -99,35 +99,43 @@ def create_user():
     # Handle possible exceptions/errors
     error_info = None
     if not user_data:
-        abort(415, 'Not a JSON')
-    if 'username' not in user_data:
-        error_info = {'code': 400, 'message': 'username not provided'}
-    if 'email' not in user_data:
-        error_info = {'code': 400, 'message': 'email not provided'}
-    if 'password' not in user_data:
-        error_info = {'code': 400, 'message': 'password not provided'}
+        abort(415, "Not a JSON")
+    if "username" not in user_data:
+        error_info = {"code": 400, "message": "username not provided"}
+    if "email" not in user_data:
+        error_info = {"code": 400, "message": "email not provided"}
+    if "password" not in user_data:
+        error_info = {"code": 400, "message": "password not provided"}
 
     if error_info is not None:
-        return jsonify({'error': error_info}), 400
+        return jsonify({"error": error_info}), 400
 
     # Check email validity and if it already exists
-    email = user_data.get('email')
+    email = user_data.get("email")
     if not validate.is_email_valid(email):
-        error_info = {'code': 400, 'message': 'invalid email address'}
-        return jsonify({'error': error_info}), 400
+        error_info = {"code": 400, "message": "invalid email address"}
+        return jsonify({"error": error_info}), 400
     if not validate.is_email_available(email):
-        return jsonify({'message': 'email already exists'}), 409
+        return jsonify({"message": "email already exists"}), 409
 
     # check if the username is available and valid
-    username = user_data.get('username')
+    username = user_data.get("username")
     if not validate.is_username_valid(username):
-        return jsonify(
-                {'message': 'invalid username format: '
-                 'username can only contain lowercase letters, '
-                 'numbers and underscores (_)'}), 409
+        return (
+            jsonify(
+                {
+                    "message": "invalid username format: "
+                    "username can only contain lowercase letters, "
+                    "numbers and underscores (_)"
+                }
+            ),
+            409,
+        )
     if not validate.is_username_available(username):
-        return jsonify({'message': 'username exists, '
-                        'please choose another username'}), 409
+        return (
+            jsonify({"message": "username exists, " "please choose another username"}),
+            409,
+        )
 
     try:
         # Create new user
@@ -136,19 +144,19 @@ def create_user():
         storage.save()
     except Exception as e:
         log.logerror(e, send_email=True)
-        abort(500, 'Internal Server Error')
+        abort(500, "Internal Server Error")
 
     # Add Location Header to the response
-    response = jsonify({'user': new_user.to_optimized_dict()})
+    response = jsonify({"user": new_user.to_optimized_dict()})
     location_url = util.location_url(
-            'endpoints.get_user_by_username', username=new_user.username
-            )
-    response.headers['Location'] = location_url
+        "endpoints.get_user_by_username", username=new_user.username
+    )
+    response.headers["Location"] = location_url
 
     return response, 201
 
 
-@endpoints.route('/users/<username>', methods=['PUT'])
+@endpoints.route("/users/<username>", methods=["PUT"])
 @auth.token_required
 def update_user(username):
     """Updates user by their username"""
@@ -157,67 +165,79 @@ def update_user(username):
 
     # Handle possible exceptions
     if not user_data:
-        abort(415, 'Not JSON')
+        abort(415, "Not JSON")
 
     try:
         # Get user if they exist
         user = storage.get_user_by_username(username)
     except Exception as e:
         log.logerror(e, send_email=True)
-        abort(500, 'Internal Server Error')
+        abort(500, "Internal Server Error")
 
     if user is None:
-        abort(404, 'User Not found')
+        abort(404, "User Not found")
 
     # Check if the user owns the account
     if not auth.is_authorized(user.id):
-        abort(403, 'Forbidden')
+        abort(403, "Forbidden")
 
     # check if username is available and valid
-    if 'username' in user_data:
-        new_username = user_data.get('username')
+    if "username" in user_data:
+        new_username = user_data.get("username")
         if username != new_username:
             if not validate.is_username_valid(new_username):
-                return jsonify(
-                        {'message': 'invalid username format: '
-                         'username can only contain lowercase letters, '
-                         'numbers and underscores (_)'}), 409
+                return (
+                    jsonify(
+                        {
+                            "message": "invalid username format: "
+                            "username can only contain lowercase letters, "
+                            "numbers and underscores (_)"
+                        }
+                    ),
+                    409,
+                )
             if not validate.is_username_available(new_username):
-                return jsonify(
-                        {'message': 'username already exists. '
-                         'Please choose a another one'}), 409
+                return (
+                    jsonify(
+                        {
+                            "message": "username already exists. "
+                            "Please choose a another one"
+                        }
+                    ),
+                    409,
+                )
 
     # check if new email already exists
-    if 'email' in user_data:
-        new_email = user_data.get('email')
+    if "email" in user_data:
+        new_email = user_data.get("email")
         if user.email != new_email:
             if not validate.is_email_valid(new_email):
-                error_info = {'code': 400, 'message': 'invalid email address'}
-                return jsonify({'error': error_info}), 400
+                error_info = {"code": 400, "message": "invalid email address"}
+                return jsonify({"error": error_info}), 400
             if not validate.is_email_available(new_email):
-                return jsonify({'message': 'new email already exist'}), 409
+                return jsonify({"message": "new email already exist"}), 409
 
     try:
         # Update user info
         for key, value in user_data.items():
-            if key not in ['id', 'created_at', 'updated_at']:
+            if key not in ["id", "created_at", "updated_at"]:
                 setattr(user, key, value)
         user.save()
     except Exception as e:
         log.logerror(e, send_email=True)
-        abort(500, 'Internal Server Error')
+        abort(500, "Internal Server Error")
 
     # Add Location header to the response
-    response = jsonify({'user': user.to_optimized_dict()})
+    response = jsonify({"user": user.to_optimized_dict()})
     location_url = util.location_url(
-            'endpoints.get_user_by_username', username=user.username
-            )
-    response.headers['Location'] = location_url
+        "endpoints.get_user_by_username", username=user.username
+    )
+    response.headers["Location"] = location_url
 
     return response, 200
 
 
-@endpoints.route('/users/<username>', methods=['DELETE'])
+@endpoints.route("/users/<username>", methods=["DELETE"])
 @auth.token_required
 def delete_user(username):
     """Deletes a user from linkhub"""
@@ -225,19 +245,19 @@ def delete_user(username):
         user = storage.get_user_by_username(username)
     except Exception as e:
         log.logerror(e, send_email=True)
-        abort(500, 'Internal Server Error')
+        abort(500, "Internal Server Error")
 
     # Handle possible errors and authorization
     if user is None:
-        abort(404, 'User Not Found')
+        abort(404, "User Not Found")
     if not auth.is_authorized(user.id):
-        abort(403, 'Forbidden')
+        abort(403, "Forbidden")
 
     try:
         storage.delete(user)
         storage.save()
     except Exception as e:
         log.logerror(e, send_email=True)
-        abort(500, 'Internal Server Error')
+        abort(500, "Internal Server Error")
 
     return jsonify({}), 200

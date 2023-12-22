@@ -25,27 +25,25 @@ from linkhub.linkhub_base import LinkHubBase, Base
 
 # Create an association table for resources and tags
 resource_tags = Table(
-        'resource_tags',
-        Base.metadata,
-        Column('resource_id', String(36),
-               ForeignKey('resources.id')),
-        Column('tag_id', String(36),
-               ForeignKey('tags.id'))
-        )
+    "resource_tags",
+    Base.metadata,
+    Column("resource_id", String(36), ForeignKey("resources.id")),
+    Column("tag_id", String(36), ForeignKey("tags.id")),
+)
 
 
 class Resource(LinkHubBase, Base):
     """Defines a 'Resource' class for creating link resources"""
-    __tablename__ = 'resources'
+
+    __tablename__ = "resources"
     title = Column(String(128), nullable=False)
     url = Column(String(255), nullable=False)
     description = Column(String(255), nullable=True)
-    repository_id = Column(String(36),
-                           ForeignKey('repositories.id', ondelete='CASCADE'),
-                           nullable=False)
-    repository = relationship('Repository', back_populates='resources')
-    tags = relationship('Tag', secondary='resource_tags',
-                        back_populates='resources')
+    repository_id = Column(
+        String(36), ForeignKey("repositories.id", ondelete="CASCADE"), nullable=False
+    )
+    repository = relationship("Repository", back_populates="resources")
+    tags = relationship("Tag", secondary="resource_tags", back_populates="resources")
 
     def __init__(self, title, url, repository: Repository, *args, **kwargs):
         """Initializes an instance of Resource class
@@ -68,17 +66,18 @@ class Resource(LinkHubBase, Base):
 
     def __str__(self):
         """String representation of the Resource class"""
-        return ("[Resource] (id='{}', title='{}', URL='{}')"
-                .format(self.id, self.title, self.url))
+        return "[Resource] (id='{}', title='{}', URL='{}')".format(
+            self.id, self.title, self.url
+        )
 
     def set_url(self, url):
         """Setter method for the url property, with URL format validation"""
         if not self.is_valid_url(url):
-            raise ValueError('Invalid URL format')
+            raise ValueError("Invalid URL format")
         self.url = url
 
     def is_valid_url(self, url):
         """Check if the provided URL has a valid format"""
         # A basic URL format validation using regular expression
-        url_pattern = r'^(https?|ftp)://[^\s/$.?#].[^\s]*$'
+        url_pattern = r"^(https?|ftp)://[^\s/$.?#].[^\s]*$"
         return bool(re.match(url_pattern, url))

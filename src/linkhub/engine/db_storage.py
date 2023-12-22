@@ -30,12 +30,7 @@ from linkhub.repository import Repository
 
 def import_models():
     """Dynamic import of models"""
-    return {
-            'Tag': Tag,
-            'User': User,
-            'Resource': Resource,
-            'Repository': Repository
-            }
+    return {"Tag": Tag, "User": User, "Resource": Resource, "Repository": Repository}
 
 
 class DBStorage:
@@ -45,6 +40,7 @@ class DBStorage:
     operations that can be performed on data and database
     configuration
     """
+
     __engine = None
     __session = None
     model_mapping = import_models()
@@ -53,18 +49,18 @@ class DBStorage:
         """Initializes database connection"""
         # Get database credentials from environment variables
         DB_URL = URL.create(
-                'mysql+mysqldb',
-                username=getenv('LINKHUB_USER'),
-                password=getenv('LINKHUB_PWD'),
-                host=getenv('LINKHUB_HOST'),
-                database=getenv('LINKHUB_DB')
-                )
+            "mysql+mysqldb",
+            username=getenv("LINKHUB_USER"),
+            password=getenv("LINKHUB_PWD"),
+            host=getenv("LINKHUB_HOST"),
+            database=getenv("LINKHUB_DB"),
+        )
 
         # Create database Engine object
         self.__engine = create_engine(DB_URL, pool_recycle=3600)
 
         # Reset database on development environment
-        if getenv('LINKHUB_ENV') == 'developement':
+        if getenv("LINKHUB_ENV") == "developement":
             Base.metadata.drop_all(bind=self.__engine)
 
     def reload(self):
@@ -98,14 +94,15 @@ class DBStorage:
                     cls = self.model_mapping[cls]
                     objects = self.__session.query(cls).all()
                 else:
-                    raise ValueError(f"Class name: {cls} not found in"
-                                     " model_mapping")
+                    raise ValueError(f"Class name: {cls} not found in" " model_mapping")
             elif inspect.isclass(cls):
                 # cls is already a class object, retrive objects
                 objects = self.__session.query(cls).all()
             else:
-                raise TypeError("Invalid input for cls. Please provide"
-                                " a class name or class object.")
+                raise TypeError(
+                    "Invalid input for cls. Please provide"
+                    " a class name or class object."
+                )
 
             # Append all the objects to the objs_dict
             for obj in objects:
@@ -193,14 +190,10 @@ class DBStorage:
             return None
 
         if not isinstance(username, str):
-            raise TypeError('username must be a string')
+            raise TypeError("username must be a string")
 
         try:
-            user = (
-                    self.__session.query(User)
-                    .filter_by(username=username)
-                    .first()
-                    )
+            user = self.__session.query(User).filter_by(username=username).first()
             return user
         except Exception as e:
             raise e
@@ -221,7 +214,7 @@ class DBStorage:
             return None
 
         if not isinstance(email, str):
-            raise TypeError('Email must be a string')
+            raise TypeError("Email must be a string")
 
         try:
             query = text("SELECT * FROM users WHERE email = :email")
@@ -245,9 +238,9 @@ class DBStorage:
         if username is None or repo_name is None:
             return None
         if not isinstance(username, str):
-            raise TypeError('username must be a string')
+            raise TypeError("username must be a string")
         if not isinstance(repo_name, str):
-            raise TypeError('repository name must be a string')
+            raise TypeError("repository name must be a string")
 
         try:
             # Get user
@@ -276,9 +269,9 @@ class DBStorage:
         if repo_id is None or resource_id is None:
             return None
         if not isinstance(repo_id, str):
-            raise TypeError('Repository ID must be a string')
+            raise TypeError("Repository ID must be a string")
         if not isinstance(resource_id, str):
-            raise TypeError('Resource ID must be a string')
+            raise TypeError("Resource ID must be a string")
 
         try:
             # Get repository
@@ -298,10 +291,10 @@ class DBStorage:
         """Delete all tags not linked to any resource or repository"""
         try:
             unused_tags = (
-                    self.__session.query(Tag)
-                    .filter(~Tag.repositories.any(), ~Tag.resources.any())
-                    .all()
-                    )
+                self.__session.query(Tag)
+                .filter(~Tag.repositories.any(), ~Tag.resources.any())
+                .all()
+            )
 
             for tag in unused_tags:
                 self.delete(tag)
@@ -314,17 +307,14 @@ class DBStorage:
             return None
 
         if not isinstance(name, str):
-            raise TypeError('tag name must be a string')
+            raise TypeError("tag name must be a string")
 
         try:
-            tag = (
-                    self.__session.query(Tag)
-                    .filter_by(name=name)
-                    .first()
-                    )
+            tag = self.__session.query(Tag).filter_by(name=name).first()
             return tag
         except Exception as e:
             raise e
+
 
 # ToDO: sorted(self, objects, sort_key) - method to sort objects
 #       paginate(self, objects, page_number, page_size) - methods to paginate

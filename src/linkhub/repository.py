@@ -32,28 +32,32 @@ from linkhub.linkhub_base import LinkHubBase, Base
 
 # Create an association table for repository and tags
 repository_tags = Table(
-        'repository_tags',
-        Base.metadata,
-        Column('repository_id', String(36),
-               ForeignKey('repositories.id')),
-        Column('tag_id', String(36),
-               ForeignKey('tags.id'))
-        )
+    "repository_tags",
+    Base.metadata,
+    Column("repository_id", String(36), ForeignKey("repositories.id")),
+    Column("tag_id", String(36), ForeignKey("tags.id")),
+)
 
 
 class Repository(LinkHubBase, Base):
     """Defines 'Repository' class for organizing and managing resources"""
-    __tablename__ = 'repositories'
+
+    __tablename__ = "repositories"
     name = Column(String(60), index=True, nullable=False)
     description = Column(String(255), nullable=True)
-    user_id = Column(String(36), ForeignKey('users.id', ondelete='CASCADE'),
-                     nullable=False)
-    user = relationship('User', back_populates='repositories')
-    resources = relationship('Resource', back_populates='repository',
-                             cascade='all, delete-orphan',
-                             passive_deletes=True)
-    tags = relationship('Tag', secondary='repository_tags',
-                        back_populates='repositories')
+    user_id = Column(
+        String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    user = relationship("User", back_populates="repositories")
+    resources = relationship(
+        "Resource",
+        back_populates="repository",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+    tags = relationship(
+        "Tag", secondary="repository_tags", back_populates="repositories"
+    )
 
     def __init__(self, name, user: User, *args, **kwargs):
         """Initializes an instance of Repository class
@@ -84,7 +88,7 @@ class Repository(LinkHubBase, Base):
             repo_name (str): The name of the repository
         """
         if not self.is_valid_repo_name(repo_name):
-            raise ValueError('Invalid repository name')
+            raise ValueError("Invalid repository name")
         self.name = repo_name
 
     def is_valid_repo_name(self, repo_name):

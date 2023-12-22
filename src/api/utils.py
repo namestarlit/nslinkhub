@@ -29,6 +29,7 @@ from flask import url_for, abort
 
 class Util:
     """Defines helping methods"""
+
     def last_modified(self, updated_at):
         """Formats last updated_at time to use in Last-Modified header
 
@@ -38,7 +39,7 @@ class Util:
         Returns:
             str: formatted time
         """
-        GMT_FORMAT = '%a, %d %b %Y %H:%M:%S GMT'
+        GMT_FORMAT = "%a, %d %b %Y %H:%M:%S GMT"
         last_modified = datetime.strftime(updated_at, GMT_FORMAT)
 
         return last_modified
@@ -53,7 +54,7 @@ class Util:
             datetime: Parsed datetime object
         """
         try:
-            GMT_FORMAT = '%a, %d %b %Y %H:%M:%S GMT'
+            GMT_FORMAT = "%a, %d %b %Y %H:%M:%S GMT"
             return datetime.strptime(date_str, GMT_FORMAT)
         except ValueError:
             abort(412, "Precondition Failed: Invalid date format")
