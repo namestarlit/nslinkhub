@@ -65,11 +65,12 @@ class DBStorage:
 
     def reload(self):
         """Creates all tables in the database and a database session"""
-        if self.__session is None:
-            Base.metadata.create_all(self.__engine)
-            Session = sessionmaker(bind=self.__engine, expire_on_commit=False)
-            Session = scoped_session(Session)
-            self.__session = Session()
+        if self.__session is not None:
+            self.close()
+        Base.metadata.create_all(self.__engine)
+        Session = sessionmaker(bind=self.__engine, expire_on_commit=False)
+        Session = scoped_session(Session)
+        self.__session = Session()
 
     def all(self, cls=None):
         """Retrives objects of a class or all classes

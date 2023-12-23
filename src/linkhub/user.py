@@ -17,6 +17,8 @@ Author: Paul John
 """
 import re
 import bcrypt
+import string
+import secrets
 from sqlalchemy import Column
 from sqlalchemy import String
 from sqlalchemy.orm import relationship
@@ -122,12 +124,21 @@ class User(LinkHubBase, Base):
     def change_password(self, old_password, new_password):
         """Change the user's password to a new one"""
         # This will automatically call the setter
-        if check_password(self, old_password):
+        if self.check_password(old_password):
             self.password = new_password
             return True
         return False
 
     def reset_password(self):
         """Reset the user password to a new password"""
-        self.password = "user_passwd"  # TODO: Set to a 8-byte random passwd
-        return self.password
+        # set random password with 8 bytes
+        new_password = self.generate_random_password(8)
+        self.password = new_password
+        return new_password
+
+    @staticmethod
+    def generate_random_password(length):
+        """Generate a random password with the specified length"""
+        characters = string.ascii_letters + string.digits + string.punctuation
+        secure_password = "".join(secrets.choice(characters) for _ in range(length))
+        return secure_password
