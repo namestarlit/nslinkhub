@@ -193,12 +193,9 @@ class Validate:
             if user is None:
                 return False
 
-            # Convert repo_name to lowercase
-            repo_name_lower = repo_name.lower()
-
             # Check if repository exists
             for repo in user.repositories:
-                if repo.name.lower() == repo_name_lower:
+                if repo.name == repo_name:
                     return False
 
             return True
@@ -253,8 +250,11 @@ class Validate:
             raise TypeError("tag name must be a string")
 
         try:
+            # change tag name to lower
+            tag_name_lower = tag_name.lower()
+
             for tag in repository.tags:
-                if tag.name == tag_name:
+                if tag.name.lower() == tag_name_lower:
                     return False
 
             return True
