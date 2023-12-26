@@ -32,7 +32,7 @@ from linkhub import storage
 class Auth:
     """Authentication and Authorization class"""
 
-    __ADMINS = os.getenv('ADMINS').split(':')
+    __ADMINS = os.getenv("ADMINS").split(":")
 
     @property
     def admins(self):
@@ -53,7 +53,7 @@ class Auth:
 
         """
         # Get user-agent
-        user_agent = g.user_id if hasattr(g, 'user_id') else None
+        user_agent = g.user_id if hasattr(g, "user_id") else None
 
         # Return False is User-Agent is None
         if user_agent is None:
@@ -71,13 +71,14 @@ class Auth:
 
     def basic_auth_required(self, f):
         """A wraper for basic_auth_required method"""
+
         @wraps(f)
         def decorated(*args, **kwargs):
             auth = request.authorization
-            if (not auth or not
-                    self.verify_credentials(auth.username, auth.password)):
-                return jsonify({'message': 'Invalid credentials'}), 401
+            if not auth or not self.verify_credentials(auth.username, auth.password):
+                return jsonify({"message": "Invalid credentials"}), 401
             return f(*args, **kwargs)
+
         return decorated
 
     def verify_credentials(self, username, password):
@@ -90,41 +91,44 @@ class Auth:
 
     def token_required(self, f):
         """A wraper for token_required method"""
+
         @wraps(f)
         def decorated(*args, **kwargs):
             token = None
             if "Authorization" in request.headers:
-                auth_header = request.headers['Authorization']
-                if auth_header.startswith('Bearer '):
-                    token = auth_header.split('Bearer ')[1]
+                auth_header = request.headers["Authorization"]
+                if auth_header.startswith("Bearer "):
+                    token = auth_header.split("Bearer ")[1]
                 else:
                     error_info = {
-                            'code': 400,
-                            'message': ('Incorrect token format. '
-                                        'Format: Bearer your_token_here')
-                            }
+                        "code": 400,
+                        "message": (
+                            "Incorrect token format. " "Format: Bearer your_token_here"
+                        ),
+                    }
 
-                    return jsonify({'error': error_info}), 400
+                    return jsonify({"error": error_info}), 400
 
             if token is None:
-                return jsonify({'message': 'Token is missing'}), 401
+                return jsonify({"message": "Token is missing"}), 401
             try:
-                secret_key = current_app.config['SECRET_KEY']
-                data = jwt.decode(token, secret_key, algorithms=['HS256'])
+                secret_key = current_app.config["SECRET_KEY"]
+                data = jwt.decode(token, secret_key, algorithms=["HS256"])
             except jwt.ExpiredSignatureError:
-                return jsonify({'message': 'Token has Expired'}), 401
+                return jsonify({"message": "Token has Expired"}), 401
             except Exception as e:
-                return jsonify({'message': 'Invalid Token'}), 403
+                return jsonify({"message": "Invalid Token"}), 403
 
             # Set the user ID in a Flask global
-            user_id = data.get('sub')
+            user_id = data.get("sub")
             if user_id is not None:
                 g.user_id = user_id
 
             return f(*args, **kwargs)
+
         return decorated
 
-    def generate_auth_token(self, username, expiration=3600):
+    def generate_auth_token(self, username, expiration=24):
         """Generates JWT token
 
         Args:
@@ -132,28 +136,31 @@ class Auth:
             expiration (int): The expiration time of a token in seconds
         Returns:
             str: a JWT token
+
         """
         user = storage.get_user_by_username(username)
         user_id = user.id
         issued_at = datetime.datetime.utcnow()
 
         payload = {
-                'sub': user_id,
-                'iat': issued_at,
-                'exp': issued_at + datetime.timedelta(hours=24)
-                }
-        secret_key = current_app.config['SECRET_KEY']
-        token = jwt.encode(payload, secret_key, algorithm='HS256')
+            "sub": user_id,
+            "iat": issued_at,
+            "exp": issued_at + datetime.timedelta(hours=expiration),
+        }
+        secret_key = current_app.config["SECRET_KEY"]
+        token = jwt.encode(payload, secret_key, algorithm="HS256")
         return token
 
     def secured(self, f):
         """A wraper for secured methods [only-admins methods]"""
+
         @wraps(f)
         def decorated(*args, **kwargs):
-            user_agent = g.user_id if hasattr(g, 'user_id') else None
+            user_agent = g.user_id if hasattr(g, "user_id") else None
 
             if user_agent is not None:
                 if user_agent in self.admins:
                     return f(*args, **kwargs)
-            abort(403, 'Forbidden')
+            abort(403, "Forbidden")
+
         return decorated

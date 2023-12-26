@@ -28,8 +28,8 @@ application and connecting its components.
 
 """
 
-__author__ = 'Paul John'
-__version__ = '23.10'
+__author__ = "Paul John"
+__version__ = "23.10"
 
 from os import getenv
 from flask import Flask
@@ -60,18 +60,18 @@ mail = Mail(app)
 swagger = Swagger(app)
 
 # Configure CORS to allow all origins
-CORS(app, resources={r'/*': {'origins': '*'}})
+CORS(app, resources={r"/*": {"origins": "*"}})
 
 # Instantiate Rate Limit object
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1)
 limiter = Limiter(
-        get_remote_address,
-        app=app,
-        default_limits=["15 per second"],
-        storage_uri=getenv("RATELIMIT_STORAGE_URI", "memory://"),
-        strategy='fixed-window-elastic-expiry',
-        headers_enabled=True
-        )
+    get_remote_address,
+    app=app,
+    default_limits=["15 per second"],
+    storage_uri=getenv("RATELIMIT_STORAGE_URI", "memory://"),
+    strategy="fixed-window-elastic-expiry",
+    headers_enabled=True,
+)
 
 # Instantiate auth and util objects
 auth = Auth()
@@ -79,14 +79,17 @@ util = Util()
 
 # Institatiate logging object
 from api.logging import Logging
+
 log = Logging()
 
 # Instantiate validate object
 from api.validation import Validate
+
 validate = Validate()
 
 # Import endpoints blueprint
 from api.blueprints import endpoints
+
 # Register blueprints to app instance
 app.register_blueprint(endpoints)
 

@@ -22,8 +22,8 @@ This will give you access to the database session and operations.
 
 """
 
-__author__ = 'Paul John'
-__version__ = '1.0.0'
+__author__ = "Paul John"
+__version__ = "1.0.0"
 
 # Import the DBStorage class from the engine module
 from linkhub.engine.db_storage import DBStorage
