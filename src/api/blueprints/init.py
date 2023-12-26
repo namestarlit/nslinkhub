@@ -100,10 +100,14 @@ def register_user():
 @auth.basic_auth_required
 def get_token():
     """Get JWT token"""
-    # User authentication passed, generate and return the token
-    username = request.authorization.username
-    token = auth.generate_auth_token(username)
-    return jsonify({'token': token}), 200
+    try:
+        # User authentication passed, generate and return the token
+        username = request.authorization.username
+        token = auth.generate_auth_token(username)
+        return jsonify({'token': token}), 200
+    except Exception as e:
+        log.logerror(e)
+        abort(500)
 
 
 @endpoints.route('/status', methods=['GET'])
