@@ -108,7 +108,6 @@ def register_user():
 @auth.basic_auth_required
 def get_token():
     """Get JWT token"""
-<<<<<<< HEAD
     try:
         # User authentication passed, generate and return the token
         username = request.authorization.username
@@ -117,12 +116,6 @@ def get_token():
     except Exception as e:
         log.logerror(e)
         abort(500)
-=======
-    # User authentication passed, generate and return the token
-    username = request.authorization.username
-    token = auth.generate_auth_token(username)
-    return jsonify({"token": token}), 200
->>>>>>> d46fa1ea02bc90ea106c63969d6bbfe19ab600d6
 
 
 @endpoints.route("/status", methods=["GET"])
@@ -152,11 +145,7 @@ def delete_unused_tags():
     return jsonify({}), 200
 
 
-<<<<<<< HEAD
 @endpoints.route('/api', methods=['GET'])
-=======
-@endpoints.route("/", methods=["GET"])
->>>>>>> d46fa1ea02bc90ea106c63969d6bbfe19ab600d6
 def supported_endpoints():
     """Get supported LinkHub API supported endpoints"""
     # Construct a dictionary with information about supported endpoints
