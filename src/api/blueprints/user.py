@@ -133,7 +133,7 @@ def create_user():
         )
     if not validate.is_username_available(username):
         return (
-            jsonify({"message": "username exists, " "please choose another username"}),
+            jsonify({"message": "username exists, please choose another username"}),
             409,
         )
 

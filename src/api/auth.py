@@ -103,7 +103,7 @@ class Auth:
                     error_info = {
                         "code": 400,
                         "message": (
-                            "Incorrect token format. " "Format: Bearer your_token_here"
+                            "Incorrect token format. Format: Bearer your_token_here"
                         ),
                     }
 

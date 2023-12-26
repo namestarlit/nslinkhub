@@ -66,6 +66,7 @@ class Validate:
 
         Returns:
             bool: True if valid, False otherwise
+
         """
         if not isinstance(url, str):
             raise TypeError("url must be a string")
@@ -84,6 +85,7 @@ class Validate:
 
         Returns:
             bool: True if valid, False otherwise
+
         """
         if not isinstance(username, str):
             raise TypeError("username must be a string")
@@ -100,6 +102,7 @@ class Validate:
 
         Returns:
             bool: True if valid, False otherwise
+
         """
         if not isinstance(repo_name, str):
             raise TypeError("repository name must be a string")
@@ -245,7 +248,7 @@ class Validate:
             bool: True if doesn't exist, False otherwise
         """
         if not isinstance(repository, Repository):
-            raise TypeError("repository must be a instance of Repository" " class")
+            raise TypeError("repository must be a instance of Repository class")
         if not isinstance(tag_name, str):
             raise TypeError("tag name must be a string")
 

@@ -54,6 +54,7 @@ class Resource(LinkHubBase, Base):
             repository (cls: Repository): An instance of a Repository class
             *args: Additional non-keyword arguments.
             **kwargs: Additional keyword arguments.
+            
         """
         # Check if repository is None or a Repository instance
         if not isinstance(repository, Repository):

@@ -164,7 +164,7 @@ def create_repository(owner):
                 {
                     "message": "invalid repository name: "
                     "repository name can only contain lowercase letters, "
-                    "uppercase letters, numbers, and hypen (-)"
+                    "numbers, and hypen (-)"
                 }
             ),
             409,
@@ -236,7 +236,7 @@ def update_repository(owner, repo_name):
                         {
                             "message": "invalid repository name: "
                             "repository name can only contain lowercase letters, "
-                            "uppercase letters, numbers, and hypen (-)"
+                            "numbers, and hypen (-)"
                         }
                     ),
                     409,

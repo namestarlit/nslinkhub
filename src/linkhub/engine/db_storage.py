@@ -79,6 +79,7 @@ class DBStorage:
             cls (class, str): a class name, or class
         Returns:
             obj_dictionary (dict): a dictionary of objects
+            
         """
         objs_dict = {}
 
@@ -123,6 +124,7 @@ class DBStorage:
 
         Args:
             obj: instance of a class (object) or a list of objects
+
         """
         if obj:
             if isinstance(obj, list):
@@ -139,6 +141,7 @@ class DBStorage:
 
         Args:
             obj: instance of a class (object) to delete
+
         """
         if obj is not None:
             self.__session.delete(obj)
@@ -155,6 +158,7 @@ class DBStorage:
             id (str): Object ID
         Returns:
             obj: object
+
         """
         if cls is None or id is None:
             return None
@@ -186,6 +190,7 @@ class DBStorage:
 
         Raises:
             TypeError: If the username is not a string.
+
         """
         if username is None:
             return None
@@ -210,6 +215,7 @@ class DBStorage:
 
         Raises:
             TypeError: If the email is not a string.
+
         """
         if email is None:
             return None
@@ -235,6 +241,7 @@ class DBStorage:
 
         Returns:
             Repository: Repository object if available, else None
+
         """
         if username is None or repo_name is None:
             return None
@@ -266,6 +273,7 @@ class DBStorage:
 
         Returns:
             Resource: Resource object
+
         """
         if repo_id is None or resource_id is None:
             return None

@@ -42,6 +42,7 @@ class Tag(LinkHubBase, Base):
             name (str): The name of the tag.
             *args: Additional non-keyword arguments.
             **kwargs: Additional keyword arguments.
+            
         """
         super().__init__(*args, **kwargs)
         self.set_name(name)

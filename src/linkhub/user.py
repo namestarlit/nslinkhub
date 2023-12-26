@@ -50,6 +50,7 @@ class User(LinkHubBase, Base):
             bio (str): The short description of the user
             *args: Additional non-keyword arguments.
             **kwargs: Additional keyword arguments.
+            
         """
         super().__init__(*args, **kwargs)
         self.set_username(username)
@@ -65,6 +66,7 @@ class User(LinkHubBase, Base):
 
         Args:
             username (str): User's username
+
         """
         if not self.is_valid_username(username):
             raise ValueError("Invalid username")
@@ -107,6 +109,7 @@ class User(LinkHubBase, Base):
             new_password (str): password attribute
         Returns:
             str: hashed password
+
         """
         # Hashes the provided password and stores it
         salt = bcrypt.gensalt()
