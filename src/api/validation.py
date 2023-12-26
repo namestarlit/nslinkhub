@@ -105,7 +105,7 @@ class Validate:
             raise TypeError("repository name must be a string")
 
         # Allow alphanumeric characters, hyphens, and underscores
-        pattern = "^[a-zA-Z0-9-]+$"
+        pattern = "^[a-z0-9-]+$"
         return bool(re.match(pattern, repo_name))
 
     def is_tag_name_valid(self, tag_name):

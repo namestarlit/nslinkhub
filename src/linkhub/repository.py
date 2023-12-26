@@ -94,5 +94,5 @@ class Repository(LinkHubBase, Base):
     def is_valid_repo_name(self, repo_name):
         """Check if the provided repository name is of valid format"""
         # Allow alphanumeric characters, hyphens, and underscores
-        pattern = "^[a-zA-Z0-9-]+$"
+        pattern = "^[a-z0-9-]+$"
         return bool(re.match(pattern, repo_name))
