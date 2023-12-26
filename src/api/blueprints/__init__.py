@@ -1,7 +1,7 @@
 from flask import Blueprint
 
 # Instantiate API endpoints blueprint
-endpoints = Blueprint('endpoints', __name__)
+endpoints = Blueprint("endpoints", __name__)
 
 # Import endpoints blueprint routes from modules
 from api.blueprints import init
