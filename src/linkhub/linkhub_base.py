@@ -89,9 +89,6 @@ class LinkHubBase:
         if "updated_at" in new_dict:
             new_dict["updated_at"] = new_dict["updated_at"].isoformat()
 
-        # Set the '__class__' key
-        # new_dict['__class__'] = self.__class__.__name__
-
         # Delete unwanted keys
         for key in ["_User__email", "_User__password", "_sa_instance_state"]:
             new_dict.pop(key, None)
