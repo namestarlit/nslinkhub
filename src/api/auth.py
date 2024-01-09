@@ -52,8 +52,8 @@ class Auth:
             bool: True if condition passed, otherwise False
 
         """
-        # Get user-agent
-        user_agent = g.user_id if hasattr(g, "user_id") else None
+        # Get user-agent if exists, else None
+        user_agent = getattr(g, "user_id", None)
 
         # Return False is User-Agent is None
         if user_agent is None:

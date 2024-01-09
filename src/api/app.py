@@ -37,7 +37,7 @@ def set_custom_headers(response):
     response.headers["Cache-Control"] = "public, max-age=15, must-revalidate"
 
     # Check if user_id is available in g, set it to None otherwise
-    user_id = g.user_id if hasattr(g, "user_id") else None
+    user_id = getattr(g, "user_id", None)
     if user_id is not None:
         response.headers["User-Agent"] = user_id
 
