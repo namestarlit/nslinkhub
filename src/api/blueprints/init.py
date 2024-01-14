@@ -134,7 +134,7 @@ def linkhub_stats():
     for i in range(len(classes)):
         stats[keys[i]] = storage.count(classes[i])
 
-    return jsonify({"LinkHub stats": stats}), 200
+    return jsonify({"stats": stats}), 200
 
 
 @endpoints.route("/tags/delete-tags", methods=["DELETE"])
