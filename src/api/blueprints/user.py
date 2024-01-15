@@ -60,7 +60,6 @@ def get_users():
 
 
 @endpoints.route("/users/<username>", methods=["GET"])
-@auth.token_required
 def get_user_by_username(username):
     """Retrives a user by their username"""
     try:
