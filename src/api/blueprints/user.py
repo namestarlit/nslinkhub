@@ -38,7 +38,6 @@ from api.blueprints import endpoints
 
 
 @endpoints.route("/users", methods=["GET"])
-@auth.token_required
 def get_users():
     """Retrives a list of all users from linkhub database"""
     try:

@@ -29,7 +29,6 @@ from api.blueprints import endpoints
 
 
 @endpoints.route("/repos/<owner>/<repo_name>/tags", methods=["GET"])
-@auth.token_required
 def get_repo_tags(owner, repo_name):
     """Retrives a list of a repository tags"""
     try:

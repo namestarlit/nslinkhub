@@ -46,7 +46,6 @@ from linkhub.repository import Repository
 
 
 @endpoints.route("/users/<owner>/repos", methods=["GET"])
-@auth.token_required
 def get_user_repos(owner):
     """Retrives a list of repositories owned by a user
 
@@ -82,7 +81,6 @@ def get_user_repos(owner):
 
 
 @endpoints.route("/repos/<owner>/<repo_name>", methods=["GET"])
-@auth.token_required
 def get_repository_by_name(owner, repo_name):
     """Retrives user's repository by name"""
     try:

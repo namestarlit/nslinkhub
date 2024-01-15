@@ -37,7 +37,6 @@ from linkhub.resource import Resource
 
 
 @endpoints.route("/repos/<owner>/<repo_name>/resources", methods=["GET"])
-@auth.token_required
 def get_repo_resources(owner, repo_name):
     """Retrives a list of repository resources"""
     try:
@@ -82,7 +81,6 @@ def get_repo_resources(owner, repo_name):
 
 
 @endpoints.route("/repos/<owner>/<repo_name>/resources/<resource_id>", methods=["GET"])
-@auth.token_required
 def get_repo_resource_by_id(owner, repo_name, resource_id):
     """Get repository resource by ID"""
     try:
