@@ -68,7 +68,7 @@ class Repository(LinkHubBase, Base):
             description (str): The description of the repository
             *args: Additional non-keyword arguments.
             **kwargs: Additional keyword arguments.
-            
+
         """
         # Check if user is a User instance
         if not isinstance(user, User):

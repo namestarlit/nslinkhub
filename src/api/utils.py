@@ -38,7 +38,7 @@ class Util:
 
         Returns:
             str: formatted time
-            
+
         """
         GMT_FORMAT = "%a, %d %b %Y %H:%M:%S GMT"
         last_modified = datetime.strftime(updated_at, GMT_FORMAT)

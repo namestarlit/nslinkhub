@@ -72,7 +72,6 @@ class DBStorage:
         Session = scoped_session(Session)
         self.__session = Session()
 
-
     def new(self, obj):
         """Adds the object to the current database session
 
@@ -111,7 +110,7 @@ class DBStorage:
             cls (class, str): a class name, or class
         Returns:
             obj_dictionary (dict): a dictionary of objects
-            
+
         """
         objs_dict = {}
 

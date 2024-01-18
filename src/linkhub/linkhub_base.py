@@ -43,7 +43,7 @@ class LinkHubBase:
             created_at (datetime): Creation timestamp.
             updated_at (datetime): Last update timestamp.
             **kwargs (dict): Keyworded parameters for additional attributes.
-            
+
         """
         # Set a random unique ID to the instance attribute 'id'
         self.id = str(uuid4())

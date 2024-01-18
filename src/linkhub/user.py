@@ -50,7 +50,7 @@ class User(LinkHubBase, Base):
             bio (str): The short description of the user
             *args: Additional non-keyword arguments.
             **kwargs: Additional keyword arguments.
-            
+
         """
         super().__init__(*args, **kwargs)
         self.set_username(username)
