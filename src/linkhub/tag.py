@@ -5,11 +5,6 @@ In the LinkHub application, the 'Tag' class is used to create and manage
 tags that can be associated with various entities, such as resources and
 repositories. Tags help organize and categorize these entities.
 
-Key Features:
-- Creation and management of tags.
-- Tags can be associated with resources and repositories.
-- Provides a flexible way to categorize and organize content.
-
 Author: Paul John
 
 """
