@@ -54,11 +54,12 @@ class LinkHubBase:
             if key == "created_at" or key == "updated_at":
                 try:
                     value = datetime.strptime(value, ISO_FORMAT)
-                except ValueError:
-                    # Handle datetime string parsing error
-                    pass
+                except ValueError as e:
+                    raise e
+
             if key == "__class__":
                 continue
+
             setattr(self, key, value)
 
         # Ensure 'created_at' and 'updated_at' are set to current time.
@@ -98,7 +99,7 @@ class LinkHubBase:
     def to_optimized_dict(self):
         """Returns a simple dictionary representation of an object.
 
-        This method removes all the objects related to the object
+        This method removes all the nested objects in the dictionary
         and returns just the bare, simple dictionary with essential data.
 
         """
