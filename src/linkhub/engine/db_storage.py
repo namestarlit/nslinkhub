@@ -72,6 +72,38 @@ class DBStorage:
         Session = scoped_session(Session)
         self.__session = Session()
 
+
+    def new(self, obj):
+        """Adds the object to the current database session
+
+        Args:
+            obj: instance of a class (object) or a list of objects
+
+        """
+        if obj:
+            if isinstance(obj, list):
+                self.__session.add_all(obj)
+            else:
+                self.__session.add(obj)
+
+    def save(self):
+        """Commits all changes of the current database session"""
+        self.__session.commit()
+
+    def delete(self, obj=None):
+        """Deletes an object from the current database session
+
+        Args:
+            obj: instance of a class (object) to delete
+
+        """
+        if obj is not None:
+            self.__session.delete(obj)
+
+    def close(self):
+        """Closes a database session"""
+        self.__session.close()
+
     def all(self, cls=None):
         """Retrives objects of a class or all classes
 
@@ -118,37 +150,6 @@ class DBStorage:
             # where you use linkhub package
             # like logging the exceptions raised
             raise e
-
-    def new(self, obj):
-        """Adds the object to the current database session
-
-        Args:
-            obj: instance of a class (object) or a list of objects
-
-        """
-        if obj:
-            if isinstance(obj, list):
-                self.__session.add_all(obj)
-            else:
-                self.__session.add(obj)
-
-    def save(self):
-        """Commits all changes of the current database session"""
-        self.__session.commit()
-
-    def delete(self, obj=None):
-        """Deletes an object from the current database session
-
-        Args:
-            obj: instance of a class (object) to delete
-
-        """
-        if obj is not None:
-            self.__session.delete(obj)
-
-    def close(self):
-        """Closes a database session"""
-        self.__session.close()
 
     def get(self, cls=None, id=None):
         """Retrives object by ID
