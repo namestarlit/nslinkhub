@@ -9,13 +9,12 @@ Author: Paul John
 
 """
 import re
-from sqlalchemy import Table
+
+from sqlalchemy import Column, ForeignKey, String, Table
 from sqlalchemy.orm import relationship
-from sqlalchemy import Column, String, ForeignKey
 
+from linkhub.linkhub_base import Base, LinkHubBase
 from linkhub.repository import Repository
-from linkhub.linkhub_base import LinkHubBase, Base
-
 
 # Create an association table for resources and tags
 resource_tags = Table(

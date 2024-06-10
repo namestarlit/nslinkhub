@@ -9,14 +9,14 @@ Author: Paul John
 
 """
 import re
-import bcrypt
-import string
 import secrets
-from sqlalchemy import Column
-from sqlalchemy import String
+import string
+
+import bcrypt
+from sqlalchemy import Column, String
 from sqlalchemy.orm import relationship
 
-from linkhub.linkhub_base import LinkHubBase, Base
+from linkhub.linkhub_base import Base, LinkHubBase
 
 
 class User(LinkHubBase, Base):

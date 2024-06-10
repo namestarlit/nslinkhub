@@ -31,15 +31,15 @@ Usage:
 Author: Paul John
 
 """
-import os
 import logging
+import os
 import traceback
-from logging.handlers import SMTPHandler
-from logging.handlers import RotatingFileHandler
+from logging.handlers import RotatingFileHandler, SMTPHandler
 
-from api import mail
 from flask import current_app
 from flask_mail import Message
+
+from api import mail
 
 
 class Logging:

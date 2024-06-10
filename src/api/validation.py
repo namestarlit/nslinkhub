@@ -21,12 +21,13 @@ Author: Paul John
 
 """
 import re
+
+from email_validator import EmailNotValidError, validate_email
+
 from api import log
 from linkhub import storage
-from linkhub.resource import Resource
 from linkhub.repository import Repository
-from email_validator import validate_email
-from email_validator import EmailNotValidError
+from linkhub.resource import Resource
 
 
 class Validate:

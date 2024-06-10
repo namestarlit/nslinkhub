@@ -32,19 +32,18 @@ __author__ = "Paul John"
 __version__ = "23.10"
 
 from os import getenv
-from flask import Flask
-from flask_mail import Mail
-from flask_cors import CORS
-from flasgger import Swagger
 
+from flasgger import Swagger
+from flask import Flask
+from flask_cors import CORS
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
+from flask_mail import Mail
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 from api.auth import Auth
-from api.utils import Util
 from api.config import Config
-
+from api.utils import Util
 
 # Instantiate flask app object
 app = Flask(__name__)

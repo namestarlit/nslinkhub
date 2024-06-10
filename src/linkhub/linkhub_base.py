@@ -13,10 +13,10 @@ Key Features:
 Author: Paul John
 
 """
-from uuid import uuid4
 from datetime import datetime
-from sqlalchemy import Column, func
-from sqlalchemy import DateTime, String
+from uuid import uuid4
+
+from sqlalchemy import Column, DateTime, String, func
 from sqlalchemy.orm import declarative_base
 
 import linkhub

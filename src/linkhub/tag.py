@@ -9,13 +9,13 @@ Author: Paul John
 
 """
 import re
-from sqlalchemy import Column
-from sqlalchemy import String
+
+from sqlalchemy import Column, String
 from sqlalchemy.orm import relationship
 
-from linkhub.resource import resource_tags
+from linkhub.linkhub_base import Base, LinkHubBase
 from linkhub.repository import repository_tags
-from linkhub.linkhub_base import LinkHubBase, Base
+from linkhub.resource import resource_tags
 
 
 class Tag(LinkHubBase, Base):

@@ -24,7 +24,8 @@ Author: Paul John
 
 """
 from datetime import datetime
-from flask import url_for, abort
+
+from flask import abort, url_for
 
 
 class Util:

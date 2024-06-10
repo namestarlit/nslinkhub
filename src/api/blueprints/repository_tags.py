@@ -16,16 +16,12 @@ Endpoints:
 Author: Paul John
 
 """
-from flask import request, abort
-from flask import jsonify, make_response
+from flask import abort, jsonify, make_response, request
 
-from api import log
-from api import auth
-from api import util
-from api import validate
+from api import auth, log, util, validate
+from api.blueprints import endpoints
 from linkhub import storage
 from linkhub.tag import Tag
-from api.blueprints import endpoints
 
 
 @endpoints.route("/repos/<owner>/<repo_name>/tags", methods=["GET"])

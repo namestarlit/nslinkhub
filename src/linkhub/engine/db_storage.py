@@ -17,15 +17,15 @@ Author: Paul John
 """
 import inspect
 from os import getenv
-from sqlalchemy import text
-from sqlalchemy import create_engine, URL
-from sqlalchemy.orm import sessionmaker, scoped_session
 
+from sqlalchemy import URL, create_engine, text
+from sqlalchemy.orm import scoped_session, sessionmaker
+
+from linkhub.linkhub_base import Base
+from linkhub.repository import Repository
+from linkhub.resource import Resource
 from linkhub.tag import Tag
 from linkhub.user import User
-from linkhub.linkhub_base import Base
-from linkhub.resource import Resource
-from linkhub.repository import Repository
 
 
 def import_models():

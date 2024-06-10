@@ -25,7 +25,9 @@ Author: Paul John
 
 """
 import os
+
 from flask import g
+
 from api import app
 from linkhub import storage
 

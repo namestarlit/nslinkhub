@@ -22,17 +22,12 @@ and authorization, as specified in the decorators applied to each endpoint.
 Author: Paul John
 
 """
-from flask import jsonify
-from flask import request, abort
+from flask import abort, jsonify, request
 
-from api import log
-from api import auth
-from api import util
-from api import limiter
-from api import validate
+from api import auth, limiter, log, util, validate
+from api.blueprints import endpoints
 from linkhub import storage
 from linkhub.user import User
-from api.blueprints import endpoints
 
 
 @endpoints.route("/user/register", methods=["POST"])

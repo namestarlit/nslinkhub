@@ -19,12 +19,12 @@ token-based authentication, as well as token generation.
 Author: Paul John
 
 """
-import os
-import jwt
 import datetime
+import os
 from functools import wraps
-from flask import current_app, g
-from flask import request, jsonify, abort
+
+import jwt
+from flask import abort, current_app, g, jsonify, request
 
 from linkhub import storage
 

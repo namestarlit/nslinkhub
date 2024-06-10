@@ -11,13 +11,12 @@ Author: Paul John
 
 """
 import re
-from sqlalchemy import Column, Table
+
+from sqlalchemy import Column, ForeignKey, String, Table
 from sqlalchemy.orm import relationship
-from sqlalchemy import String, ForeignKey
 
+from linkhub.linkhub_base import Base, LinkHubBase
 from linkhub.user import User
-from linkhub.linkhub_base import LinkHubBase, Base
-
 
 # Create an association table for repository and tags
 repository_tags = Table(
