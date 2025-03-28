@@ -10,6 +10,7 @@ within them.
 Author: Paul John
 
 """
+
 import re
 
 from sqlalchemy import Column, ForeignKey, String, Table

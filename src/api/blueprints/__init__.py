@@ -12,3 +12,12 @@ from api.blueprints import (
     resource_tags,
     user,
 )
+
+__all__ = [
+    "init",
+    "repository",
+    "repository_tags",
+    "resource",
+    "resource_tags",
+    "user",
+]

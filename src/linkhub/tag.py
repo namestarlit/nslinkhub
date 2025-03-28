@@ -8,14 +8,13 @@ repositories. Tags help organize and categorize these entities.
 Author: Paul John
 
 """
+
 import re
 
 from sqlalchemy import Column, String
 from sqlalchemy.orm import relationship
 
 from linkhub.linkhub_base import Base, LinkHubBase
-from linkhub.repository import repository_tags
-from linkhub.resource import resource_tags
 
 
 class Tag(LinkHubBase, Base):

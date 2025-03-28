@@ -8,6 +8,7 @@ data with essential fields such as usernames, email addresses, and user IDs.
 Author: Paul John
 
 """
+
 import re
 import secrets
 import string

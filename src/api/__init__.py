@@ -94,3 +94,6 @@ app.register_blueprint(endpoints)
 
 # Import routes module
 from api.routes import error
+
+
+__all__ = ["error"]

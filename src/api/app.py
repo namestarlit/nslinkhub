@@ -24,9 +24,10 @@ and port settings.
 Author: Paul John
 
 """
+
 import os
 
-from flask import g
+from flask import g, jsonify
 
 from api import app
 from linkhub import storage
@@ -55,6 +56,27 @@ def app_teardown(exception):
 @app.after_request
 def after_request(response):
     return set_custom_headers(response)
+
+
+@app.route("/", methods=["GET"])
+def home():
+    response = {
+        "title": "nsclinkhub",
+        "description": "A web resources managment REST API",
+        "links": [
+            {"href": "/api", "rel": "api"},
+            {
+                "href": "https://documenter.getpostman.com/view/29464988/2s9YXiaMvk",
+                "rel": "Postman Linkhub REST API Documentation Reference",
+            },
+            {
+                "href": "https://github.com/namestarlit/nsclinkhub",
+                "rel": "GitHub Repository",
+            },
+        ],
+    }
+
+    return jsonify(response), 200
 
 
 if __name__ == "__main__":

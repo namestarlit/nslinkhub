@@ -33,6 +33,7 @@ Endpoints:
 Author: Paul John
 
 """
+
 from flask import abort, jsonify, make_response, request
 
 from api import auth, log, util, validate
@@ -81,7 +82,7 @@ def get_repository_by_name(owner, repo_name):
     """Retrives user's repository by name"""
     try:
         user = storage.get_user_by_username(owner)
-    except Exception as e:
+    except Exception:
         log.logerror(3, send_email=True)
         abort(500, "Internal Server Error")
 

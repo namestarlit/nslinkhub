@@ -24,7 +24,7 @@ Submodules:
 Author: Paul John
 
 """
-from flasgger.utils import swag_from
+
 from flask import abort, jsonify, make_response, request
 
 from api import auth, log, util, validate

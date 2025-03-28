@@ -15,6 +15,7 @@ Key Features:
 Author: Paul John
 
 """
+
 import inspect
 from os import getenv
 
@@ -127,7 +128,7 @@ class DBStorage:
                     cls = self.model_mapping[cls]
                     objects = self.__session.query(cls).all()
                 else:
-                    raise ValueError(f"Class name: {cls} not found in" " model_mapping")
+                    raise ValueError(f"Class name: {cls} not found in model_mapping")
             elif inspect.isclass(cls):
                 # cls is already a class object, retrive objects
                 objects = self.__session.query(cls).all()

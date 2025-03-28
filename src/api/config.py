@@ -17,6 +17,7 @@ Flask application used in the LinkHub API.
 Author: Paul John
 
 """
+
 from os import getenv
 
 

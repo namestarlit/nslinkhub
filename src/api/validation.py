@@ -20,9 +20,11 @@ Key Methods:
 Author: Paul John
 
 """
+
 import re
 
 from email_validator import EmailNotValidError, validate_email
+from flask import abort
 
 from api import log
 from linkhub import storage
@@ -53,7 +55,7 @@ class Validate:
             raise TypeError("deliverability must be a True or False")
 
         try:
-            emailinfo = validate_email(email, check_deliverability=deliverability)
+            validate_email(email, check_deliverability=deliverability)
         except EmailNotValidError:
             return False
         else:

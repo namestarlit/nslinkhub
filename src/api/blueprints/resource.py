@@ -24,6 +24,7 @@ Endpoints:
 Author: Paul John
 
 """
+
 from flask import abort, jsonify, make_response, request
 
 from api import auth, log, util, validate

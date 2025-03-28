@@ -8,6 +8,7 @@ link resources with essential fields such as URLs and titles.
 Author: Paul John
 
 """
+
 import re
 
 from sqlalchemy import Column, ForeignKey, String, Table

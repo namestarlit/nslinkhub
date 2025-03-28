@@ -22,6 +22,7 @@ and authorization, as specified in the decorators applied to each endpoint.
 Author: Paul John
 
 """
+
 from flask import abort, jsonify, request
 
 from api import auth, limiter, log, util, validate
@@ -76,7 +77,7 @@ def register_user():
         )
     if not validate.is_username_available(username):
         return (
-            jsonify({"message": "username exists, " "please choose another username"}),
+            jsonify({"message": "username exists, please choose another username"}),
             409,
         )
 

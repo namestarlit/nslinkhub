@@ -19,6 +19,7 @@ token-based authentication, as well as token generation.
 Author: Paul John
 
 """
+
 import datetime
 import os
 from functools import wraps
@@ -116,7 +117,7 @@ class Auth:
                 data = jwt.decode(token, secret_key, algorithms=["HS256"])
             except jwt.ExpiredSignatureError:
                 return jsonify({"message": "Token has Expired"}), 401
-            except Exception as e:
+            except Exception:
                 return jsonify({"message": "Invalid Token"}), 403
 
             # Set the user ID in a Flask global

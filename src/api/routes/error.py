@@ -2,6 +2,7 @@
 
 It contains routes for handling erros
 """
+
 from flask import jsonify
 
 from api import app

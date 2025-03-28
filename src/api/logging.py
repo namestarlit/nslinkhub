@@ -31,10 +31,11 @@ Usage:
 Author: Paul John
 
 """
+
 import logging
 import os
 import traceback
-from logging.handlers import RotatingFileHandler, SMTPHandler
+from logging.handlers import RotatingFileHandler
 
 from flask import current_app
 from flask_mail import Message

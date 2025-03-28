@@ -16,7 +16,8 @@ Endpoints:
 Author: Paul John
 
 """
-from flask import abort, jsonify, make_response, request
+
+from flask import abort, jsonify, request
 
 from api import auth, log, util, validate
 from api.blueprints import endpoints
