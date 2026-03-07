@@ -2,6 +2,7 @@ import {
   IsEnum,
   IsOptional,
   IsString,
+  IsUUID,
   Matches,
   MaxLength,
   MinLength,
@@ -30,6 +31,6 @@ export class CreateRepositoryDto {
   visibility?: RepositoryVisibility;
 
   @IsOptional()
-  @IsString()
+  @IsUUID()
   parentRepositoryId?: string;
 }

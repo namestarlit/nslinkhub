@@ -3,6 +3,7 @@ import {
   IsInt,
   IsOptional,
   IsString,
+  IsUUID,
   Matches,
   MaxLength,
   Min,
@@ -34,7 +35,7 @@ export class UpdateRepositoryDto {
   visibility?: RepositoryVisibility;
 
   @IsOptional()
-  @IsString()
+  @IsUUID()
   parentRepositoryId?: string | null;
 
   @IsInt()

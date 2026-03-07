@@ -10,6 +10,7 @@ import { EntryKind } from 'src/common/enums/entry-kind.enum';
 import { RepositoryVisibility } from 'src/common/enums/repository-visibility.enum';
 import { UserRole } from 'src/common/enums/user-role.enum';
 import { AuthUser } from 'src/common/interfaces/auth-user.interface';
+import { canonicalizeUrl } from 'src/common/utils/url.util';
 import { Repository } from 'typeorm';
 import { EntryEntity } from '../entries/entities/entry.entity';
 import { LinkEntity } from '../links/entities/link.entity';
@@ -133,7 +134,11 @@ export class ImportsService {
       relations: { link: true },
     });
 
-    let nextPosition = existingEntries.length;
+    const maxPosition = existingEntries.reduce(
+      (max, entry) => Math.max(max, entry.position),
+      -1,
+    );
+    let nextPosition = maxPosition + 1;
     const existingHashes = new Set(
       existingEntries
         .map((entry) => entry.link?.urlHash)
@@ -248,38 +253,6 @@ export class ImportsService {
 
     return this.repositoriesRepo.save(repository);
   }
-}
-
-function canonicalizeUrl(url: string) {
-  const parsed = new URL(url);
-
-  parsed.protocol = parsed.protocol.toLowerCase();
-  parsed.hostname = parsed.hostname.toLowerCase();
-
-  if (
-    (parsed.protocol === 'http:' && parsed.port === '80') ||
-    (parsed.protocol === 'https:' && parsed.port === '443')
-  ) {
-    parsed.port = '';
-  }
-
-  if (parsed.pathname === '') {
-    parsed.pathname = '/';
-  }
-
-  const params = [...parsed.searchParams.entries()]
-    .filter(
-      ([key]) =>
-        !/^utm_/i.test(key) && !['fbclid', 'gclid'].includes(key.toLowerCase()),
-    )
-    .sort(([a], [b]) => a.localeCompare(b));
-
-  parsed.search = '';
-  for (const [key, value] of params) {
-    parsed.searchParams.append(key, value);
-  }
-
-  return parsed.toString();
 }
 
 function stripHtml(value: string) {

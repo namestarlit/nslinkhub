@@ -11,6 +11,7 @@ import { EntryKind } from 'src/common/enums/entry-kind.enum';
 import { RepositoryVisibility } from 'src/common/enums/repository-visibility.enum';
 import { UserRole } from 'src/common/enums/user-role.enum';
 import { AuthUser } from 'src/common/interfaces/auth-user.interface';
+import { canonicalizeUrl } from 'src/common/utils/url.util';
 import { Repository } from 'typeorm';
 import { LinkEntity } from '../links/entities/link.entity';
 import { RepositoryEntity } from '../repositories/entities/repository.entity';
@@ -211,19 +212,33 @@ export class EntriesService {
       }
     }
 
-    const stale = entries.some(
-      (entry) => Number(entry.version) !== dto.version,
-    );
-    if (stale) {
-      throw new ConflictException('Version mismatch');
+    const byId = new Map(entries.map((entry) => [entry.id, entry]));
+    for (const item of dto.items) {
+      const entry = byId.get(item.entryId)!;
+      if (Number(entry.version) !== item.version) {
+        throw new ConflictException('Version mismatch');
+      }
     }
 
-    const byId = new Map(entries.map((entry) => [entry.id, entry]));
     await this.entriesRepo.manager.transaction(async (manager) => {
+      // Avoid transient unique conflicts on (repository_id, position) by
+      // writing temporary positions first, then final positions.
+      const offset = entries.length + 1024;
+
       for (const item of dto.items) {
-        const entry = byId.get(item.entryId)!;
-        entry.position = item.position;
-        await manager.save(entry);
+        await manager.update(
+          EntryEntity,
+          { id: item.entryId, repositoryId },
+          { position: item.position + offset },
+        );
+      }
+
+      for (const item of dto.items) {
+        await manager.update(
+          EntryEntity,
+          { id: item.entryId, repositoryId },
+          { position: item.position },
+        );
       }
     });
 
@@ -323,36 +338,4 @@ export class EntriesService {
       updatedAt: entry.updatedAt,
     };
   }
-}
-
-function canonicalizeUrl(url: string) {
-  const parsed = new URL(url);
-
-  parsed.protocol = parsed.protocol.toLowerCase();
-  parsed.hostname = parsed.hostname.toLowerCase();
-
-  if (
-    (parsed.protocol === 'http:' && parsed.port === '80') ||
-    (parsed.protocol === 'https:' && parsed.port === '443')
-  ) {
-    parsed.port = '';
-  }
-
-  if (parsed.pathname === '') {
-    parsed.pathname = '/';
-  }
-
-  const params = [...parsed.searchParams.entries()]
-    .filter(
-      ([key]) =>
-        !/^utm_/i.test(key) && !['fbclid', 'gclid'].includes(key.toLowerCase()),
-    )
-    .sort(([a], [b]) => a.localeCompare(b));
-
-  parsed.search = '';
-  for (const [key, value] of params) {
-    parsed.searchParams.append(key, value);
-  }
-
-  return parsed.toString();
 }

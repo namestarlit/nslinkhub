@@ -16,6 +16,10 @@ export class ReorderItemDto {
   @IsInt()
   @Min(0)
   position: number;
+
+  @IsInt()
+  @Min(1)
+  version: number;
 }
 
 export class ReorderEntriesDto {
@@ -25,8 +29,4 @@ export class ReorderEntriesDto {
   @ValidateNested({ each: true })
   @Type(() => ReorderItemDto)
   items: ReorderItemDto[];
-
-  @IsInt()
-  @Min(1)
-  version: number;
 }

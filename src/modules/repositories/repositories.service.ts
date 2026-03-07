@@ -157,6 +157,31 @@ export class RepositoriesService {
       }
     }
 
+    if (
+      dto.parentRepositoryId !== undefined &&
+      dto.parentRepositoryId !== repository.parentRepositoryId
+    ) {
+      if (dto.parentRepositoryId === null) {
+        repository.parentRepositoryId = null;
+      } else {
+        if (dto.parentRepositoryId === repository.id) {
+          throw new BadRequestException(
+            'Repository cannot be parent of itself',
+          );
+        }
+
+        const parent = await this.repositoriesRepo.findOne({
+          where: { id: dto.parentRepositoryId },
+        });
+
+        if (!parent) {
+          throw new NotFoundException('Parent repository not found');
+        }
+
+        this.ensureWriteAccess(user, parent.ownerId);
+      }
+    }
+
     Object.assign(repository, {
       slug: dto.slug ?? repository.slug,
       title: dto.title ?? repository.title,
