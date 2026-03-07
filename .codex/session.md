@@ -6,15 +6,56 @@
 2. Read `ARCHITECTURE.md`.
 3. Read `PROJECT_STATE.md`.
 4. Read `docs/dev-session-latest.md`.
-5. Run `git status`.
-6. Run `git log -1`.
-7. Summarize the current repository state before coding.
+5. Read `TASKS.md`.
+6. Run `git status`.
+7. Run `git log -1`.
+8. Summarize the current repository state before coding.
+
+## Task Driven Development
+
+- Always read `TASKS.md` at session start.
+- Select the next unchecked task in **Current Sprint**.
+- Implement that task.
+- When completed, mark it as `[x]` in `TASKS.md`.
+- Move the next item into focus.
 
 ## Development Workflow
 
-- Focus on the prioritized "Next Steps" in `docs/dev-session-latest.md`.
+- Focus on the prioritized "Next Steps" in `docs/dev-session-latest.md` and align with `TASKS.md`.
 - Make small, safe, incremental changes.
-- Avoid unnecessary rewrites or large refactors unless required by a next step.
+- Avoid unnecessary rewrites or large refactors unless required by a task.
+
+## Git Commit Discipline
+
+Commits must represent logical milestones.
+
+Allowed commit types:
+- `feat:` new feature
+- `fix:` bug fix
+- `refactor:` structural code change without behavior change
+- `docs:` documentation changes
+- `chore:` maintenance tasks
+- `style:` formatting or lint fixes
+- `test:` tests added or updated
+
+Rules:
+- Each commit must represent a completed milestone.
+- Do not create extremely large commits.
+- Group related file changes together.
+
+## Safe Checkpoint Tags
+
+Before risky refactors or large changes, create a rollback checkpoint tag:
+
+```bash
+git tag checkpoint-pre-change
+```
+
+If the change fails and rollback is needed:
+
+```bash
+git reset --hard checkpoint-pre-change
+```
 
 ## Documentation Responsibilities
 
@@ -22,6 +63,7 @@
 - Maintain persistent context files:
   - `ARCHITECTURE.md`
   - `PROJECT_STATE.md`
+  - `TASKS.md`
   - `docs/dev-session-latest.md`
   - `.codex/session.md`
   - `.codex/restart.md`
@@ -34,3 +76,4 @@ Before ending a development session:
 - Record current system state.
 - Record known issues/risks.
 - Record prioritized next steps for the next session.
+- Update task status in `TASKS.md`.
