@@ -46,10 +46,12 @@ NSLinkHub is a backend API for organizing and sharing curated link repositories.
 - `entries`:
   - external-link and repository-link entries
   - entry list/update/delete/reorder
+  - reorder uses per-entry optimistic version checks
 - `tags`:
   - attach/remove tags for repositories and entries
 - `imports`:
   - CSV, bookmarks HTML, and WhatsApp TXT ingestion into repository entries
+  - shared URL canonicalization utility used for dedupe parity with entries
 - `exports`:
   - markdown export generation
   - PDF export job enqueueing + status tracking (`export_jobs` + BullMQ)

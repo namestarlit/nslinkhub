@@ -34,4 +34,4 @@ For detailed structure and flow, read `ARCHITECTURE.md`.
 
 ## Current Development Stage
 
-Sprint 1 backend foundation is implemented with real service logic for major modules and queue + DB-backed export jobs. AI continuity docs are now standardized via `.codex/*`, `PROJECT_STATE.md`, `ARCHITECTURE.md`, and `docs/dev-session-latest.md`. Remaining work is production hardening (real PDF artifact generation, migration workflow automation, parser robustness, broader test coverage).
+Sprint 1 backend foundation is implemented with real service logic for major modules and queue + DB-backed export jobs. Recent correctness hardening addressed reorder consistency (per-entry versions + uniqueness-safe transactional updates), repository parent validation on update, shared URL canonicalization reuse, and authenticated logout routing. Remaining work is production hardening (real PDF artifact generation, migration workflow automation, parser robustness, broader test coverage).

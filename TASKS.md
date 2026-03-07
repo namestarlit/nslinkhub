@@ -28,3 +28,4 @@
 - [x] Implement import endpoints (CSV, bookmarks HTML, WhatsApp TXT) MVP
 - [x] Replace in-memory PDF jobs with BullMQ + DB-backed `export_jobs`
 - [x] Add persistent architecture and session context docs (`ARCHITECTURE.md`, `.codex/*`)
+- [x] Patch post-review correctness gaps (reorder versioning/swap safety, parent update checks, import position calculation, logout guard, shared URL canonicalization)

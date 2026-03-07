@@ -68,7 +68,8 @@ Implemented TypeORM entities:
   - no duplicates
   - no unknown IDs
   - contiguous positions
-  - version conflict handling
+  - per-entry version conflict handling
+  - transactional two-phase updates to avoid unique-position swap conflicts
 
 ### 7. Tags
 
@@ -86,10 +87,18 @@ Implemented TypeORM entities:
   - use existing repository
   - or create new repository
 - URL canonicalization and dedupe behavior
+- Next-position calculation now uses max existing position to avoid collisions in sparse sequences
 - Partial-failure response payload fields
 - File size validation (10MB)
 
-### 9. Exports and Queue
+### 9. Correctness Hardening (Latest)
+
+- Repository parent updates now validate parent existence and enforce write access checks, matching create behavior.
+- `parentRepositoryId` request validation is UUID-based for repository create/update DTOs.
+- URL canonicalization logic is centralized in `src/common/utils/url.util.ts` and reused by entries/imports.
+- Auth logout endpoint now requires JWT auth guard.
+
+### 10. Exports and Queue
 
 - Markdown export from repository entries
 - PDF export jobs are now DB-backed and queue-driven:
