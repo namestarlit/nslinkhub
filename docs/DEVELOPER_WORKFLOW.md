@@ -1,15 +1,15 @@
 # Developer Workflow
 
-This guide explains exactly when to run each instruction while working with Codex CLI.
+This guide defines a simple lifecycle for Codex sessions: start, continue, close.
 
-## 1. Session Start
+## 1. Start a Session
 
 When: start of a new coding session.
 
 Run:
 
 ```bash
-codex "Start development using .codex/restart.md"
+codex "Follow .codex/start-session.md"
 ```
 
 Expected result:
@@ -17,20 +17,26 @@ Expected result:
 - Reads `ARCHITECTURE.md`, `PROJECT_STATE.md`, `docs/dev-session-latest.md`, `TASKS.md`
 - Checks current git state and summarizes before coding
 
-## 2. Pick the Work Item
+## 2. Continue the Session
 
-When: after startup summary.
+When: after startup summary, and throughout the session.
 
 Default:
 - Codex should take the next unchecked task in `TASKS.md` under **Current Sprint**.
 
-If you want to force a task, say:
+If you want to explicitly continue from current state, run:
+
+```bash
+codex "Read .codex/session.md and continue with the next Current Sprint task from TASKS.md"
+```
+
+If you want to force a specific task, say:
 
 ```text
 Work on this task: <task description>
 ```
 
-## 3. Live Monitoring (Recommended)
+## 3. Monitor Live Changes (Recommended)
 
 When: while Codex is implementing.
 
@@ -51,7 +57,7 @@ Pause and explain the current changes.
 Stop and split this into smaller milestones.
 ```
 
-## 4. Checkpoints Before Risky Changes
+## 4. Create Safety Checkpoints
 
 When: before large refactors, schema rewrites, or broad file edits.
 
@@ -67,7 +73,7 @@ Rollback if needed:
 git reset --hard checkpoint-pre-change
 ```
 
-## 5. Milestone Commits
+## 5. Commit by Milestone
 
 When: after each completed logical unit (not at random intervals).
 
@@ -91,7 +97,7 @@ Example instruction to Codex:
 Create a milestone commit for this completed task using the correct commit type.
 ```
 
-## 6. Mid-Session Review
+## 6. Review Before Moving On
 
 When: before approving a commit or moving to next task.
 
@@ -103,7 +109,7 @@ git diff
 git log --oneline --max-count=10
 ```
 
-## 7. End Session
+## 7. Close the Session
 
 When: done for the day or handing over work.
 
@@ -119,17 +125,22 @@ Expected result:
 - task progress updated in `TASKS.md`
 - final milestone commits prepared
 
-## 8. Fast Timeline (Cheat Sheet)
+## 8. Quick Commands
 
-1. Start session:
+1. Start:
 
 ```bash
-codex "Start development using .codex/restart.md"
+codex "Follow .codex/start-session.md"
 ```
 
-2. Implement next task (or specify task).
-3. Monitor changes with `watch` commands.
-4. Create checkpoint before risky changes.
-5. Commit completed milestone.
-6. Repeat for next task.
-7. End session with `.codex/end-session.md` flow.
+2. Continue:
+
+```bash
+codex "Read .codex/session.md and continue with TASKS.md"
+```
+
+3. Close:
+
+```bash
+codex "Follow .codex/end-session.md"
+```

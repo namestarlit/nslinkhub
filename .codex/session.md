@@ -1,5 +1,7 @@
 # Codex Session Guide
 
+This is the canonical development workflow. Do not duplicate steps in other `.codex` files.
+
 ## Session Initialization
 
 1. Read `README.md`.
@@ -66,14 +68,9 @@ git reset --hard checkpoint-pre-change
   - `TASKS.md`
   - `docs/dev-session-latest.md`
   - `.codex/session.md`
-  - `.codex/restart.md`
+  - `.codex/start-session.md`
+  - `.codex/end-session.md`
 
 ## Session Wrap-Up
 
-Before ending a development session:
-- Update `docs/dev-session-latest.md`.
-- Record completed work.
-- Record current system state.
-- Record known issues/risks.
-- Record prioritized next steps for the next session.
-- Update task status in `TASKS.md`.
+When ending a development session, follow `.codex/end-session.md`.

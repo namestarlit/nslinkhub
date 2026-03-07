@@ -17,7 +17,7 @@ This session finalized workflow/context management documentation, introduced a r
 - Added/updated AI workflow docs:
   - `ARCHITECTURE.md`
   - `.codex/session.md`
-  - `.codex/restart.md`
+  - `.codex/start-session.md`
   - `.codex/end-session.md`
   - `PROJECT_STATE.md`
   - `TASKS.md`
@@ -52,7 +52,7 @@ This session finalized workflow/context management documentation, introduced a r
   - `test/jest-e2e.json`
 - AI workflow/context:
   - `.codex/session.md`
-  - `.codex/restart.md`
+  - `.codex/start-session.md`
   - `ARCHITECTURE.md`
   - `PROJECT_STATE.md`
   - `TASKS.md`

@@ -1,6 +1,7 @@
 # Codex End Session Checklist
 
 Use this checklist to close a development session cleanly.
+This is the canonical closeout flow referenced by `.codex/start-session.md` and `.codex/session.md`.
 
 ## 1. Inspect Repository State
 
