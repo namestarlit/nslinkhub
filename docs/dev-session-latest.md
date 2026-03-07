@@ -2,68 +2,58 @@
 
 ## Session Summary
 
-This session finalized workflow/context management documentation, introduced a reusable `.codex/end-session.md` runbook, and aligned the repository handoff docs for predictable AI-assisted development.
+This session closed outstanding API correctness issues from review, ran an iterative lint/build/test review loop, and updated end-session workflow rules to require comprehensive pre-commit review.
 
 ## Work Completed
 
-- Removed template app runtime files:
-  - deleted `src/app.controller.ts`
-  - deleted `src/app.service.ts`
-  - removed template controller/provider wiring from `src/app.module.ts`
-- Updated tests away from template behavior:
-  - `src/app.controller.spec.ts` now tests `HealthService`
-  - `test/app.e2e-spec.ts` now targets `GET /api/v2/health`
-  - added `moduleNameMapper` for `src/*` aliases in `test/jest-e2e.json`
-- Added/updated AI workflow docs:
-  - `ARCHITECTURE.md`
-  - `.codex/session.md`
-  - `.codex/start-session.md`
-  - `.codex/end-session.md`
-  - `PROJECT_STATE.md`
-  - `TASKS.md`
-  - `docs/DEVELOPER_WORKFLOW.md`
-- Created milestone commit for template cleanup:
-  - `8597706 refactor: remove nest template hello-world app wiring`
+- Fixed import multipart boolean handling:
+  - `createRepository` in `ImportTargetDto` now transforms `"true"`/`"false"` strings to boolean values before validation.
+- Fixed repository create validation for unlisted visibility:
+  - create now returns a controlled `400` when `visibility=unlisted` is provided before share-link creation.
+- Fixed child listing metadata leak/inconsistency:
+  - children are filtered by visibility first, paginated after filtering, and `meta.total` reflects only visible children.
+- Performed review-driven hardening and lint/type cleanup across touched modules:
+  - auth/controller/service/module typing and jwt strategy safety
+  - optional auth guard/request typing
+  - enum-safe comparisons in export markdown generation
+  - formatting/maintainability cleanup in entries/imports/tags/users/repositories modules
+- Updated `.codex/end-session.md`:
+  - added mandatory iterative `/review` loop before commits
+  - added explicit push policy: no automatic push
 
 ## Current System State
 
 - Branch: `main`
 - Recent commits:
+  - `d0bca96` codex restart renamed to start-session + workflow docs alignment
+  - `10e78e0` codex end-session workflow + task-driven docs
   - `8597706` template cleanup + test alignment
-  - `e182b97` codex session/restart workflow docs
-  - `efc12ac` architecture + project/session state docs
-- Build status:
+- Validation status:
+  - `npm run lint` passes
   - `npm run build` passes
   - unit tests pass via `npm run test -- --runInBand --watchman=false`
-- e2e notes:
-  - e2e boot now targets real health endpoint, but full e2e run requires reachable Postgres + Redis.
+  - e2e run fails in sandbox environment due blocked Redis/Postgres connectivity (`EPERM` to `127.0.0.1:6379` and `127.0.0.1:5432`)
 
 ## Important Files/Modules
 
-- Runtime/app wiring:
-  - `src/app.module.ts`
-  - `src/main.ts`
-- Health endpoint baseline:
-  - `src/modules/health/health.controller.ts`
-  - `src/modules/health/health.service.ts`
-- Test updates:
-  - `src/app.controller.spec.ts`
-  - `test/app.e2e-spec.ts`
-  - `test/jest-e2e.json`
-- AI workflow/context:
-  - `.codex/session.md`
-  - `.codex/start-session.md`
-  - `ARCHITECTURE.md`
-  - `PROJECT_STATE.md`
-  - `TASKS.md`
-  - `docs/DEVELOPER_WORKFLOW.md`
+- Import validation:
+  - `src/modules/imports/dto/import-target.dto.ts`
+- Repository behavior fixes:
+  - `src/modules/repositories/repositories.service.ts`
+  - `src/modules/repositories/repositories.controller.ts`
+- Cross-module lint/type hardening:
+  - `src/modules/auth/*`
+  - `src/modules/exports/*`
+  - `src/common/*`
+- Workflow enforcement:
+  - `.codex/end-session.md`
 
 ## Known Issues
 
 - Migration execution is still manual SQL application.
 - PDF export pipeline still stores placeholder output reference (no real artifact storage).
 - Import parsers are MVP-level and need hardening.
-- Full e2e coverage depends on DB/Redis test environment.
+- e2e tests require reachable local PostgreSQL + Redis; sandbox environment blocks these connections.
 
 ## Next Steps (Prioritized)
 
