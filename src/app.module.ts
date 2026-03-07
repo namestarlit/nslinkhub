@@ -1,8 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
 import { EntryEntity } from './modules/entries/entities/entry.entity';
 import { LinkEntity } from './modules/links/entities/link.entity';
 import { RepositoryEntity } from './modules/repositories/entities/repository.entity';
@@ -57,7 +55,5 @@ import { UsersModule } from './modules/users/users.module';
     ExportsModule,
     HealthModule,
   ],
-  controllers: [AppController],
-  providers: [AppService],
 })
 export class AppModule {}
