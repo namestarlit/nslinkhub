@@ -9,7 +9,9 @@ import { EntriesController } from './entries.controller';
 import { EntriesService } from './entries.service';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([EntryEntity, LinkEntity, RepositoryEntity])],
+  imports: [
+    TypeOrmModule.forFeature([EntryEntity, LinkEntity, RepositoryEntity]),
+  ],
   controllers: [EntriesController],
   providers: [EntriesService, JwtAuthGuard, OptionalJwtAuthGuard],
   exports: [EntriesService],

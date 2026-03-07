@@ -10,9 +10,13 @@ export class RepositoryTagEntity {
   @PrimaryColumn({ type: 'uuid', name: 'tag_id' })
   tagId: string;
 
-  @ManyToOne(() => RepositoryEntity, (repository) => repository.repositoryTags, {
-    onDelete: 'CASCADE',
-  })
+  @ManyToOne(
+    () => RepositoryEntity,
+    (repository) => repository.repositoryTags,
+    {
+      onDelete: 'CASCADE',
+    },
+  )
   @JoinColumn({ name: 'repository_id' })
   repository: RepositoryEntity;
 

@@ -7,7 +7,9 @@ import { ImportsController } from './imports.controller';
 import { ImportsService } from './imports.service';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([RepositoryEntity, EntryEntity, LinkEntity])],
+  imports: [
+    TypeOrmModule.forFeature([RepositoryEntity, EntryEntity, LinkEntity]),
+  ],
   controllers: [ImportsController],
   providers: [ImportsService],
   exports: [ImportsService],

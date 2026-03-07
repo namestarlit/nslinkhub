@@ -28,7 +28,11 @@ export class TagsController {
     @CurrentUser() user: AuthUser,
     @Body() dto: AttachTagDto,
   ) {
-    const data = await this.tagsService.attachToRepository(repositoryId, user, dto);
+    const data = await this.tagsService.attachToRepository(
+      repositoryId,
+      user,
+      dto,
+    );
     return apiOk(data);
   }
 

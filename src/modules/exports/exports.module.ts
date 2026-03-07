@@ -21,7 +21,7 @@ import { ExportsService } from './exports.service';
           port: configService.get<number>('REDIS_PORT', 6379),
           password: configService.get<string>('REDIS_PASSWORD'),
         },
-      }) as any,
+      }),
     }),
     BullModule.registerQueue({ name: 'exports' }),
   ],

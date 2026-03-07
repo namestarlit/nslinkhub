@@ -39,7 +39,9 @@ export class ImportsService {
       throw new BadRequestException('CSV file is empty');
     }
 
-    const headers = lines[0].split(',').map((header) => header.trim().toLowerCase());
+    const headers = lines[0]
+      .split(',')
+      .map((header) => header.trim().toLowerCase());
     const urlIdx = headers.indexOf('url');
     const titleIdx = headers.indexOf('title');
     const descriptionIdx = headers.indexOf('description');
@@ -50,19 +52,27 @@ export class ImportsService {
     }
 
     const rows = lines.slice(1);
-    return this.ingestRows(repository.id, rows.map((row, index) => {
-      const columns = row.split(',').map((column) => column.trim());
-      return {
-        index: index + 2,
-        url: columns[urlIdx] ?? '',
-        title: titleIdx >= 0 ? columns[titleIdx] : undefined,
-        description: descriptionIdx >= 0 ? columns[descriptionIdx] : undefined,
-        note: noteIdx >= 0 ? columns[noteIdx] : undefined,
-      };
-    }));
+    return this.ingestRows(
+      repository.id,
+      rows.map((row, index) => {
+        const columns = row.split(',').map((column) => column.trim());
+        return {
+          index: index + 2,
+          url: columns[urlIdx] ?? '',
+          title: titleIdx >= 0 ? columns[titleIdx] : undefined,
+          description:
+            descriptionIdx >= 0 ? columns[descriptionIdx] : undefined,
+          note: noteIdx >= 0 ? columns[noteIdx] : undefined,
+        };
+      }),
+    );
   }
 
-  async importBookmarksHtml(user: AuthUser, file: unknown, dto: ImportTargetDto) {
+  async importBookmarksHtml(
+    user: AuthUser,
+    file: unknown,
+    dto: ImportTargetDto,
+  ) {
     const repository = await this.resolveTargetRepository(user, dto);
     this.ensureValidFile(file);
 
@@ -89,7 +99,9 @@ export class ImportsService {
     this.ensureValidFile(file);
 
     const utf8 = file.buffer.toString('utf8');
-    const text = utf8.includes('\uFFFD') ? file.buffer.toString('latin1') : utf8;
+    const text = utf8.includes('\uFFFD')
+      ? file.buffer.toString('latin1')
+      : utf8;
     const urlRegex = /https?:\/\/[^\s<>()]+/gi;
     const rows: Array<{ index: number; url: string }> = [];
 
@@ -123,7 +135,9 @@ export class ImportsService {
 
     let nextPosition = existingEntries.length;
     const existingHashes = new Set(
-      existingEntries.map((entry) => entry.link?.urlHash).filter(Boolean) as string[],
+      existingEntries
+        .map((entry) => entry.link?.urlHash)
+        .filter(Boolean) as string[],
     );
 
     let importedCount = 0;
@@ -179,7 +193,9 @@ export class ImportsService {
     };
   }
 
-  private ensureValidFile(file: unknown): asserts file is { buffer: Buffer; size: number } {
+  private ensureValidFile(
+    file: unknown,
+  ): asserts file is { buffer: Buffer; size: number } {
     if (!file) {
       throw new BadRequestException('File is required');
     }
@@ -240,8 +256,10 @@ function canonicalizeUrl(url: string) {
   parsed.protocol = parsed.protocol.toLowerCase();
   parsed.hostname = parsed.hostname.toLowerCase();
 
-  if ((parsed.protocol === 'http:' && parsed.port === '80') ||
-      (parsed.protocol === 'https:' && parsed.port === '443')) {
+  if (
+    (parsed.protocol === 'http:' && parsed.port === '80') ||
+    (parsed.protocol === 'https:' && parsed.port === '443')
+  ) {
     parsed.port = '';
   }
 
@@ -250,7 +268,10 @@ function canonicalizeUrl(url: string) {
   }
 
   const params = [...parsed.searchParams.entries()]
-    .filter(([key]) => !/^utm_/i.test(key) && !['fbclid', 'gclid'].includes(key.toLowerCase()))
+    .filter(
+      ([key]) =>
+        !/^utm_/i.test(key) && !['fbclid', 'gclid'].includes(key.toLowerCase()),
+    )
     .sort(([a], [b]) => a.localeCompare(b));
 
   parsed.search = '';

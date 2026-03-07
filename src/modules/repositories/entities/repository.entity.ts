@@ -49,7 +49,12 @@ export class RepositoryEntity extends BaseEntity {
   })
   visibility: RepositoryVisibility;
 
-  @Column({ type: 'varchar', name: 'share_token_hash', length: 255, nullable: true })
+  @Column({
+    type: 'varchar',
+    name: 'share_token_hash',
+    length: 255,
+    nullable: true,
+  })
   shareTokenHash: string | null;
 
   @Column({ type: 'uuid', name: 'parent_repository_id', nullable: true })
@@ -62,7 +67,10 @@ export class RepositoryEntity extends BaseEntity {
   @JoinColumn({ name: 'parent_repository_id' })
   parentRepository: RepositoryEntity | null;
 
-  @OneToMany(() => RepositoryEntity, (repository) => repository.parentRepository)
+  @OneToMany(
+    () => RepositoryEntity,
+    (repository) => repository.parentRepository,
+  )
   children: RepositoryEntity[];
 
   @OneToMany(() => EntryEntity, (entry) => entry.repository)

@@ -13,14 +13,10 @@ import { RepositoryVisibility } from 'src/common/enums/repository-visibility.enu
 import { UserRole } from 'src/common/enums/user-role.enum';
 import { AuthUser } from 'src/common/interfaces/auth-user.interface';
 import { PaginationQueryDto } from 'src/common/dto/pagination-query.dto';
-import {
-  parseIfMatchVersion,
-  toVersionEtag,
-} from 'src/common/utils/etag.util';
+import { parseIfMatchVersion, toVersionEtag } from 'src/common/utils/etag.util';
 import { EntryEntity } from '../entries/entities/entry.entity';
 import { CreateChildRepositoryDto } from './dto/create-child-repository.dto';
 import { CreateRepositoryDto } from './dto/create-repository.dto';
-import { CreateShareLinkDto } from './dto/create-share-link.dto';
 import { UpdateRepositoryDto } from './dto/update-repository.dto';
 import { RepositoryEntity } from './entities/repository.entity';
 
@@ -34,6 +30,12 @@ export class RepositoriesService {
   ) {}
 
   async create(user: AuthUser, dto: CreateRepositoryDto) {
+    if (dto.visibility === RepositoryVisibility.UNLISTED) {
+      throw new BadRequestException(
+        'Create repository as private/public first, then create share link and switch to unlisted',
+      );
+    }
+
     if (dto.parentRepositoryId) {
       const parent = await this.repositoriesRepo.findOne({
         where: { id: dto.parentRepositoryId },
@@ -134,7 +136,10 @@ export class RepositoriesService {
     this.ensureWriteAccess(user, repository.ownerId);
 
     const versionFromHeader = parseIfMatchVersion(ifMatch);
-    if (versionFromHeader !== null && versionFromHeader !== Number(repository.version)) {
+    if (
+      versionFromHeader !== null &&
+      versionFromHeader !== Number(repository.version)
+    ) {
       throw new ConflictException('Version mismatch');
     }
 
@@ -188,11 +193,7 @@ export class RepositoriesService {
     return { id, deleted: true };
   }
 
-  async createOrRotateShareLink(
-    id: string,
-    user: AuthUser,
-    _dto: CreateShareLinkDto,
-  ) {
+  async createOrRotateShareLink(id: string, user: AuthUser) {
     const repository = await this.repositoriesRepo.findOne({ where: { id } });
     if (!repository) {
       throw new NotFoundException('Repository not found');
@@ -218,7 +219,9 @@ export class RepositoriesService {
     user: AuthUser,
     dto: CreateChildRepositoryDto,
   ) {
-    const parent = await this.repositoriesRepo.findOne({ where: { id: parentId } });
+    const parent = await this.repositoriesRepo.findOne({
+      where: { id: parentId },
+    });
     if (!parent) {
       throw new NotFoundException('Parent repository not found');
     }
@@ -272,11 +275,9 @@ export class RepositoriesService {
 
     this.ensureReadAccess(parent, viewer, shareToken);
 
-    const [children, count] = await this.repositoriesRepo.findAndCount({
+    const children = await this.repositoriesRepo.find({
       where: { parentRepositoryId: id },
       order: { updatedAt: 'DESC' },
-      skip: (page - 1) * limit,
-      take: limit,
     });
 
     const visibleChildren = children.filter((child) => {
@@ -288,12 +289,15 @@ export class RepositoriesService {
       }
     });
 
+    const start = (page - 1) * limit;
+    const pagedChildren = visibleChildren.slice(start, start + limit);
+
     return {
-      items: visibleChildren.map((child) => this.toPublicRepository(child)),
+      items: pagedChildren.map((child) => this.toPublicRepository(child)),
       meta: {
         page,
         limit,
-        total: count,
+        total: visibleChildren.length,
       },
     };
   }
@@ -319,7 +323,10 @@ export class RepositoriesService {
     }
 
     if (viewer) {
-      if (viewer.role === UserRole.ADMIN || viewer.userId === repository.ownerId) {
+      if (
+        viewer.role === UserRole.ADMIN ||
+        viewer.userId === repository.ownerId
+      ) {
         return;
       }
     }
@@ -329,7 +336,9 @@ export class RepositoriesService {
         throw new ForbiddenException('Invalid or missing share token');
       }
 
-      const providedHash = createHash('sha256').update(shareToken).digest('hex');
+      const providedHash = createHash('sha256')
+        .update(shareToken)
+        .digest('hex');
       if (providedHash === repository.shareTokenHash) {
         return;
       }

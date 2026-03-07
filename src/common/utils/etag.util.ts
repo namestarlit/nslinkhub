@@ -1,5 +1,5 @@
 export function toVersionEtag(version: number | string) {
-  return `W/\"v${String(version)}\"`;
+  return `W/"v${String(version)}"`;
 }
 
 export function ifNoneMatchHit(headerValue: string | undefined, etag: string) {

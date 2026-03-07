@@ -64,7 +64,9 @@ export class TagsService {
     tagName: string,
   ) {
     const repository = await this.requireWritableRepository(repositoryId, user);
-    const tag = await this.tagsRepo.findOne({ where: { name: tagName.toLowerCase() } });
+    const tag = await this.tagsRepo.findOne({
+      where: { name: tagName.toLowerCase() },
+    });
 
     if (!tag) {
       throw new NotFoundException('Tag not found');
@@ -120,7 +122,9 @@ export class TagsService {
 
     await this.requireWritableRepository(entry.repositoryId, user);
 
-    const tag = await this.tagsRepo.findOne({ where: { name: tagName.toLowerCase() } });
+    const tag = await this.tagsRepo.findOne({
+      where: { name: tagName.toLowerCase() },
+    });
     if (!tag) {
       throw new NotFoundException('Tag not found');
     }
@@ -149,8 +153,13 @@ export class TagsService {
     return tag;
   }
 
-  private async requireWritableRepository(repositoryId: string, actor: AuthUser) {
-    const repository = await this.repositoriesRepo.findOne({ where: { id: repositoryId } });
+  private async requireWritableRepository(
+    repositoryId: string,
+    actor: AuthUser,
+  ) {
+    const repository = await this.repositoriesRepo.findOne({
+      where: { id: repositoryId },
+    });
     if (!repository) {
       throw new NotFoundException('Repository not found');
     }

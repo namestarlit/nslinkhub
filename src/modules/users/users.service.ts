@@ -29,7 +29,11 @@ export class UsersService {
     return this.toPublicUser(user);
   }
 
-  async updateByUsername(username: string, actor: AuthUser, dto: UpdateUserDto) {
+  async updateByUsername(
+    username: string,
+    actor: AuthUser,
+    dto: UpdateUserDto,
+  ) {
     const user = await this.usersRepo.findOne({ where: { username } });
 
     if (!user) {
@@ -39,7 +43,9 @@ export class UsersService {
     this.ensureWriteAccess(actor, user.id);
 
     if (dto.username && dto.username !== user.username) {
-      const exists = await this.usersRepo.exists({ where: { username: dto.username } });
+      const exists = await this.usersRepo.exists({
+        where: { username: dto.username },
+      });
       if (exists) {
         throw new ConflictException('Username already exists');
       }
@@ -48,7 +54,9 @@ export class UsersService {
 
     if (dto.email && dto.email.toLowerCase() !== user.email) {
       const normalized = dto.email.toLowerCase();
-      const exists = await this.usersRepo.exists({ where: { email: normalized } });
+      const exists = await this.usersRepo.exists({
+        where: { email: normalized },
+      });
       if (exists) {
         throw new ConflictException('Email already exists');
       }

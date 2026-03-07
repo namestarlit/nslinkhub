@@ -31,8 +31,8 @@ export class AuthController {
 
   @ApiBearerAuth()
   @Post('logout')
-  async logout(@Body() dto: RefreshTokenDto) {
-    const data = await this.authService.logout(dto);
+  logout(@Body() dto: RefreshTokenDto) {
+    const data = this.authService.logout(dto);
     return apiOk(data);
   }
 }

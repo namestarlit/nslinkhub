@@ -7,6 +7,7 @@ import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import * as argon2 from 'argon2';
+import type { StringValue } from 'ms';
 import { UserRole } from 'src/common/enums/user-role.enum';
 import { Repository } from 'typeorm';
 import { UserEntity } from '../users/entities/user.entity';
@@ -54,10 +55,7 @@ export class AuthService {
   async login(dto: LoginDto) {
     const identity = dto.usernameOrEmail.trim();
     const user = await this.usersRepo.findOne({
-      where: [
-        { username: identity },
-        { email: identity.toLowerCase() },
-      ],
+      where: [{ username: identity }, { email: identity.toLowerCase() }],
     });
 
     if (!user) {
@@ -84,9 +82,12 @@ export class AuthService {
 
     let payload: JwtPayload;
     try {
-      payload = await this.jwtService.verifyAsync<JwtPayload>(dto.refreshToken, {
-        secret: refreshSecret,
-      });
+      payload = await this.jwtService.verifyAsync<JwtPayload>(
+        dto.refreshToken,
+        {
+          secret: refreshSecret,
+        },
+      );
     } catch {
       throw new UnauthorizedException('Invalid refresh token');
     }
@@ -107,7 +108,8 @@ export class AuthService {
     };
   }
 
-  async logout(_dto: RefreshTokenDto) {
+  logout(dto: RefreshTokenDto) {
+    void dto;
     return {
       message: 'Logged out',
     };
@@ -130,13 +132,14 @@ export class AuthService {
       'JWT_REFRESH_SECRET',
       'dev-refresh-secret',
     );
-    const refreshTtl = this.configService.get<string>('JWT_REFRESH_TTL', '7d');
+    const refreshTtl = (this.configService.get<string>('JWT_REFRESH_TTL') ??
+      '7d') as StringValue;
 
     const [accessToken, refreshToken] = await Promise.all([
       this.jwtService.signAsync(accessPayload),
       this.jwtService.signAsync(refreshPayload, {
         secret: refreshSecret,
-        expiresIn: refreshTtl as any,
+        expiresIn: refreshTtl,
       }),
     ]);
 

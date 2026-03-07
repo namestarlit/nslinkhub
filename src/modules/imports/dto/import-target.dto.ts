@@ -7,6 +7,7 @@ import {
   Matches,
   MaxLength,
 } from 'class-validator';
+import { Transform } from 'class-transformer';
 import { RepositoryVisibility } from 'src/common/enums/repository-visibility.enum';
 
 export class ImportTargetDto {
@@ -15,6 +16,21 @@ export class ImportTargetDto {
   targetRepositoryId?: string;
 
   @IsOptional()
+  @Transform(({ value }: { value: unknown }) => {
+    if (typeof value === 'boolean') {
+      return value;
+    }
+    if (typeof value === 'string') {
+      const normalized = value.trim().toLowerCase();
+      if (normalized === 'true') {
+        return true;
+      }
+      if (normalized === 'false') {
+        return false;
+      }
+    }
+    return value;
+  })
   @IsBoolean()
   createRepository?: boolean;
 

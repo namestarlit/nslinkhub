@@ -3,6 +3,7 @@ import { Job } from 'bullmq';
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { EntryKind } from 'src/common/enums/entry-kind.enum';
 import { EntryEntity } from '../entries/entities/entry.entity';
 import { RepositoryEntity } from '../repositories/entities/repository.entity';
 import { ExportJobEntity } from './entities/export-job.entity';
@@ -47,7 +48,11 @@ export class ExportsProcessor extends WorkerHost {
 
       const entries = await this.entriesRepo.find({
         where: { repositoryId: repository.id },
-        relations: { link: true, linkedRepository: true, entryTags: { tag: true } },
+        relations: {
+          link: true,
+          linkedRepository: true,
+          entryTags: { tag: true },
+        },
         order: { position: 'ASC' },
       });
 
@@ -82,12 +87,14 @@ function buildMarkdown(repository: RepositoryEntity, entries: EntryEntity[]) {
   lines.push('## Resources');
 
   for (const entry of entries) {
-    if (entry.kind === 'external_link') {
-      const title = entry.titleOverride ?? entry.link?.canonicalUrl ?? 'Untitled Link';
+    if (entry.kind === EntryKind.EXTERNAL_LINK) {
+      const title =
+        entry.titleOverride ?? entry.link?.canonicalUrl ?? 'Untitled Link';
       const url = entry.link?.canonicalUrl ?? '';
       lines.push(`- [${title}](${url})`);
     } else {
-      const title = entry.titleOverride ?? entry.linkedRepository?.title ?? 'Repository';
+      const title =
+        entry.titleOverride ?? entry.linkedRepository?.title ?? 'Repository';
       lines.push(`- [Repository] ${title}`);
     }
 
@@ -99,7 +106,9 @@ function buildMarkdown(repository: RepositoryEntity, entries: EntryEntity[]) {
       lines.push(`  - Note: ${entry.note}`);
     }
 
-    const tagNames = entry.entryTags?.map((tag) => tag.tag?.name).filter(Boolean);
+    const tagNames = entry.entryTags
+      ?.map((tag) => tag.tag?.name)
+      .filter(Boolean);
     if (tagNames && tagNames.length > 0) {
       lines.push(`  - Tags: ${tagNames.join(', ')}`);
     }

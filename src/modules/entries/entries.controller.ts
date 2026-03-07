@@ -39,7 +39,11 @@ export class EntriesController {
     @CurrentUser() user: AuthUser,
     @Body() dto: CreateExternalEntryDto,
   ) {
-    const data = await this.entriesService.createExternal(repositoryId, user, dto);
+    const data = await this.entriesService.createExternal(
+      repositoryId,
+      user,
+      dto,
+    );
     return apiOk(data);
   }
 
@@ -88,7 +92,12 @@ export class EntriesController {
     @CurrentUser() user: AuthUser,
     @Body() dto: UpdateEntryDto,
   ) {
-    const data = await this.entriesService.update(repositoryId, entryId, user, dto);
+    const data = await this.entriesService.update(
+      repositoryId,
+      entryId,
+      user,
+      dto,
+    );
     return apiOk(data);
   }
 

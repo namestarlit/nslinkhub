@@ -63,7 +63,12 @@ export class EntryEntity extends BaseEntity {
   @JoinColumn({ name: 'linked_repository_id' })
   linkedRepository: RepositoryEntity | null;
 
-  @Column({ type: 'varchar', name: 'title_override', length: 255, nullable: true })
+  @Column({
+    type: 'varchar',
+    name: 'title_override',
+    length: 255,
+    nullable: true,
+  })
   titleOverride: string | null;
 
   @Column({ type: 'text', nullable: true })

@@ -125,7 +125,9 @@ export class EntriesService {
     });
 
     return {
-      items: items.map((item) => this.toPublicEntry(item, item.link?.canonicalUrl)),
+      items: items.map((item) =>
+        this.toPublicEntry(item, item.link?.canonicalUrl),
+      ),
       meta: { page, limit, total },
     };
   }
@@ -198,14 +200,20 @@ export class EntriesService {
       }
     }
 
-    const positions = dto.items.map((item) => item.position).sort((a, b) => a - b);
+    const positions = dto.items
+      .map((item) => item.position)
+      .sort((a, b) => a - b);
     for (let i = 0; i < positions.length; i += 1) {
       if (positions[i] !== i) {
-        throw new BadRequestException('Positions must be contiguous from 0..n-1');
+        throw new BadRequestException(
+          'Positions must be contiguous from 0..n-1',
+        );
       }
     }
 
-    const stale = entries.some((entry) => Number(entry.version) !== dto.version);
+    const stale = entries.some(
+      (entry) => Number(entry.version) !== dto.version,
+    );
     if (stale) {
       throw new ConflictException('Version mismatch');
     }
@@ -222,8 +230,13 @@ export class EntriesService {
     return { reordered: true, count: dto.items.length };
   }
 
-  private async requireWritableRepository(repositoryId: string, user: AuthUser) {
-    const repository = await this.repositoriesRepo.findOne({ where: { id: repositoryId } });
+  private async requireWritableRepository(
+    repositoryId: string,
+    user: AuthUser,
+  ) {
+    const repository = await this.repositoriesRepo.findOne({
+      where: { id: repositoryId },
+    });
     if (!repository) {
       throw new NotFoundException('Repository not found');
     }
@@ -240,7 +253,9 @@ export class EntriesService {
     viewer: AuthUser | null,
     shareToken: string | undefined,
   ) {
-    const repository = await this.repositoriesRepo.findOne({ where: { id: repositoryId } });
+    const repository = await this.repositoriesRepo.findOne({
+      where: { id: repositoryId },
+    });
     if (!repository) {
       throw new NotFoundException('Repository not found');
     }
@@ -285,7 +300,9 @@ export class EntriesService {
     });
 
     if (existing && existing.id !== ignoreEntryId) {
-      throw new ConflictException('Position is already used in this repository');
+      throw new ConflictException(
+        'Position is already used in this repository',
+      );
     }
   }
 
@@ -314,8 +331,10 @@ function canonicalizeUrl(url: string) {
   parsed.protocol = parsed.protocol.toLowerCase();
   parsed.hostname = parsed.hostname.toLowerCase();
 
-  if ((parsed.protocol === 'http:' && parsed.port === '80') ||
-      (parsed.protocol === 'https:' && parsed.port === '443')) {
+  if (
+    (parsed.protocol === 'http:' && parsed.port === '80') ||
+    (parsed.protocol === 'https:' && parsed.port === '443')
+  ) {
     parsed.port = '';
   }
 
@@ -324,7 +343,10 @@ function canonicalizeUrl(url: string) {
   }
 
   const params = [...parsed.searchParams.entries()]
-    .filter(([key]) => !/^utm_/i.test(key) && !['fbclid', 'gclid'].includes(key.toLowerCase()))
+    .filter(
+      ([key]) =>
+        !/^utm_/i.test(key) && !['fbclid', 'gclid'].includes(key.toLowerCase()),
+    )
     .sort(([a], [b]) => a.localeCompare(b));
 
   parsed.search = '';

@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Queue } from 'bullmq';
+import { EntryKind } from 'src/common/enums/entry-kind.enum';
 import { RepositoryVisibility } from 'src/common/enums/repository-visibility.enum';
 import { UserRole } from 'src/common/enums/user-role.enum';
 import { AuthUser } from 'src/common/interfaces/auth-user.interface';
@@ -44,7 +45,11 @@ export class ExportsService {
 
     const entries = await this.entriesRepo.find({
       where: { repositoryId: repository.id },
-      relations: { link: true, linkedRepository: true, entryTags: { tag: true } },
+      relations: {
+        link: true,
+        linkedRepository: true,
+        entryTags: { tag: true },
+      },
       order: { position: 'ASC' },
     });
 
@@ -99,14 +104,20 @@ export class ExportsService {
       throw new NotFoundException('Export job not found');
     }
 
-    if (user.role !== UserRole.ADMIN && job.repository.ownerId !== user.userId) {
+    if (
+      user.role !== UserRole.ADMIN &&
+      job.repository.ownerId !== user.userId
+    ) {
       throw new ForbiddenException('Forbidden');
     }
 
     return this.toView(job);
   }
 
-  private async requireReadableRepository(repositoryId: string, user: AuthUser) {
+  private async requireReadableRepository(
+    repositoryId: string,
+    user: AuthUser,
+  ) {
     const repository = await this.repositoriesRepo.findOne({
       where: { id: repositoryId },
       relations: { owner: true },
@@ -159,12 +170,14 @@ function buildMarkdown(repository: RepositoryEntity, entries: EntryEntity[]) {
   lines.push('## Resources');
 
   for (const entry of entries) {
-    if (entry.kind === 'external_link') {
-      const title = entry.titleOverride ?? entry.link?.canonicalUrl ?? 'Untitled Link';
+    if (entry.kind === EntryKind.EXTERNAL_LINK) {
+      const title =
+        entry.titleOverride ?? entry.link?.canonicalUrl ?? 'Untitled Link';
       const url = entry.link?.canonicalUrl ?? '';
       lines.push(`- [${title}](${url})`);
     } else {
-      const title = entry.titleOverride ?? entry.linkedRepository?.title ?? 'Repository';
+      const title =
+        entry.titleOverride ?? entry.linkedRepository?.title ?? 'Repository';
       lines.push(`- [Repository] ${title}`);
     }
 
@@ -176,7 +189,9 @@ function buildMarkdown(repository: RepositoryEntity, entries: EntryEntity[]) {
       lines.push(`  - Note: ${entry.note}`);
     }
 
-    const tagNames = entry.entryTags?.map((tag) => tag.tag?.name).filter(Boolean);
+    const tagNames = entry.entryTags
+      ?.map((tag) => tag.tag?.name)
+      .filter(Boolean);
     if (tagNames && tagNames.length > 0) {
       lines.push(`  - Tags: ${tagNames.join(', ')}`);
     }

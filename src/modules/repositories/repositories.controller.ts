@@ -24,7 +24,6 @@ import { ifNoneMatchHit } from 'src/common/utils/etag.util';
 import { apiOk } from 'src/common/utils/response.util';
 import { CreateChildRepositoryDto } from './dto/create-child-repository.dto';
 import { CreateRepositoryDto } from './dto/create-repository.dto';
-import { CreateShareLinkDto } from './dto/create-share-link.dto';
 import { UpdateRepositoryDto } from './dto/update-repository.dto';
 import { RepositoriesService } from './repositories.service';
 
@@ -116,12 +115,10 @@ export class RepositoriesController {
   async createOrRotateShareLink(
     @Param('id', new ParseUUIDPipe()) id: string,
     @CurrentUser() user: AuthUser,
-    @Body() dto: CreateShareLinkDto,
   ) {
     const data = await this.repositoriesService.createOrRotateShareLink(
       id,
       user,
-      dto,
     );
     return apiOk(data);
   }
@@ -148,7 +145,12 @@ export class RepositoriesController {
     @Req() req?: Request,
   ) {
     const shareToken = headerToken ?? (req?.query.s as string | undefined);
-    const data = await this.repositoriesService.getChildren(id, user, shareToken, query);
+    const data = await this.repositoriesService.getChildren(
+      id,
+      user,
+      shareToken,
+      query,
+    );
     return apiOk(data.items, data.meta);
   }
 }
