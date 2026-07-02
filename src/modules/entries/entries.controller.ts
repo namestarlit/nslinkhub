@@ -15,8 +15,8 @@ import {
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import type { Request } from 'express';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
-import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
-import { OptionalJwtAuthGuard } from 'src/common/guards/optional-jwt-auth.guard';
+import { AuthGuard } from 'src/common/guards/auth.guard';
+import { OptionalAuthGuard } from 'src/common/guards/optional-auth.guard';
 import type { AuthUser } from 'src/common/interfaces/auth-user.interface';
 import { PaginationQueryDto } from 'src/common/dto/pagination-query.dto';
 import { apiOk } from 'src/common/utils/response.util';
@@ -32,7 +32,7 @@ export class EntriesController {
   constructor(private readonly entriesService: EntriesService) {}
 
   @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(AuthGuard)
   @Post('external')
   async createExternal(
     @Param('id', new ParseUUIDPipe()) repositoryId: string,
@@ -48,7 +48,7 @@ export class EntriesController {
   }
 
   @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(AuthGuard)
   @Post('repository-link')
   async createRepositoryLink(
     @Param('id', new ParseUUIDPipe()) repositoryId: string,
@@ -63,7 +63,7 @@ export class EntriesController {
     return apiOk(data);
   }
 
-  @UseGuards(OptionalJwtAuthGuard)
+  @UseGuards(OptionalAuthGuard)
   @Get()
   async getByRepository(
     @Param('id', new ParseUUIDPipe()) repositoryId: string,
@@ -83,8 +83,21 @@ export class EntriesController {
     return apiOk(data.items, data.meta);
   }
 
+  // Must be declared before the ':entryId' routes or it is unreachable.
   @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(AuthGuard)
+  @Patch('reorder')
+  async reorder(
+    @Param('id', new ParseUUIDPipe()) repositoryId: string,
+    @CurrentUser() user: AuthUser,
+    @Body() dto: ReorderEntriesDto,
+  ) {
+    const data = await this.entriesService.reorder(repositoryId, user, dto);
+    return apiOk(data);
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(AuthGuard)
   @Patch(':entryId')
   async update(
     @Param('id', new ParseUUIDPipe()) repositoryId: string,
@@ -102,7 +115,7 @@ export class EntriesController {
   }
 
   @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(AuthGuard)
   @Delete(':entryId')
   async remove(
     @Param('id', new ParseUUIDPipe()) repositoryId: string,
@@ -110,18 +123,6 @@ export class EntriesController {
     @CurrentUser() user: AuthUser,
   ) {
     const data = await this.entriesService.remove(repositoryId, entryId, user);
-    return apiOk(data);
-  }
-
-  @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard)
-  @Patch('reorder')
-  async reorder(
-    @Param('id', new ParseUUIDPipe()) repositoryId: string,
-    @CurrentUser() user: AuthUser,
-    @Body() dto: ReorderEntriesDto,
-  ) {
-    const data = await this.entriesService.reorder(repositoryId, user, dto);
     return apiOk(data);
   }
 }

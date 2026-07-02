@@ -1,10 +1,6 @@
 import { BullModule } from '@nestjs/bullmq';
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { EntryEntity } from '../entries/entities/entry.entity';
-import { RepositoryEntity } from '../repositories/entities/repository.entity';
-import { ExportJobEntity } from './entities/export-job.entity';
 import { ExportsController } from './exports.controller';
 import { ExportsProcessor } from './exports.processor';
 import { ExportsService } from './exports.service';
@@ -12,7 +8,6 @@ import { ExportsService } from './exports.service';
 @Module({
   imports: [
     ConfigModule,
-    TypeOrmModule.forFeature([RepositoryEntity, EntryEntity, ExportJobEntity]),
     BullModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({

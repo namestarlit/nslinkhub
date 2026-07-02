@@ -9,7 +9,7 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
-import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
+import { AuthGuard } from 'src/common/guards/auth.guard';
 import type { AuthUser } from 'src/common/interfaces/auth-user.interface';
 import { apiOk } from 'src/common/utils/response.util';
 import { AttachTagDto } from './dto/attach-tag.dto';
@@ -17,7 +17,7 @@ import { TagsService } from './tags.service';
 
 @ApiTags('tags')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
+@UseGuards(AuthGuard)
 @Controller('api/v2')
 export class TagsController {
   constructor(private readonly tagsService: TagsService) {}

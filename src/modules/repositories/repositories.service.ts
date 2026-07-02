@@ -5,29 +5,22 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
 import { createHash, randomBytes } from 'crypto';
-import { Repository as TypeOrmRepository } from 'typeorm';
+import { PrismaService } from 'src/database/prisma.service';
 import { EntryKind } from 'src/common/enums/entry-kind.enum';
 import { RepositoryVisibility } from 'src/common/enums/repository-visibility.enum';
 import { UserRole } from 'src/common/enums/user-role.enum';
 import { AuthUser } from 'src/common/interfaces/auth-user.interface';
 import { PaginationQueryDto } from 'src/common/dto/pagination-query.dto';
 import { parseIfMatchVersion, toVersionEtag } from 'src/common/utils/etag.util';
-import { EntryEntity } from '../entries/entities/entry.entity';
+import { Repository } from 'src/generated/prisma/client';
 import { CreateChildRepositoryDto } from './dto/create-child-repository.dto';
 import { CreateRepositoryDto } from './dto/create-repository.dto';
 import { UpdateRepositoryDto } from './dto/update-repository.dto';
-import { RepositoryEntity } from './entities/repository.entity';
 
 @Injectable()
 export class RepositoriesService {
-  constructor(
-    @InjectRepository(RepositoryEntity)
-    private readonly repositoriesRepo: TypeOrmRepository<RepositoryEntity>,
-    @InjectRepository(EntryEntity)
-    private readonly entriesRepo: TypeOrmRepository<EntryEntity>,
-  ) {}
+  constructor(private readonly prisma: PrismaService) {}
 
   async create(user: AuthUser, dto: CreateRepositoryDto) {
     if (dto.visibility === RepositoryVisibility.UNLISTED) {
@@ -37,7 +30,7 @@ export class RepositoriesService {
     }
 
     if (dto.parentRepositoryId) {
-      const parent = await this.repositoriesRepo.findOne({
+      const parent = await this.prisma.repository.findUnique({
         where: { id: dto.parentRepositoryId },
       });
 
@@ -48,39 +41,44 @@ export class RepositoriesService {
       this.ensureWriteAccess(user, parent.ownerId);
     }
 
-    const exists = await this.repositoriesRepo.exists({
+    const exists = await this.prisma.repository.findUnique({
       where: {
-        ownerId: user.userId,
-        slug: dto.slug,
+        ownerId_slug: { ownerId: user.userId, slug: dto.slug },
       },
+      select: { id: true },
     });
 
     if (exists) {
       throw new ConflictException('Repository slug already exists');
     }
 
-    const repository = this.repositoriesRepo.create({
-      ownerId: user.userId,
-      slug: dto.slug,
-      title: dto.title,
-      description: dto.description,
-      visibility: dto.visibility ?? RepositoryVisibility.PRIVATE,
-      parentRepositoryId: dto.parentRepositoryId ?? null,
+    const saved = await this.prisma.repository.create({
+      data: {
+        ownerId: user.userId,
+        slug: dto.slug,
+        title: dto.title,
+        description: dto.description,
+        visibility: dto.visibility ?? RepositoryVisibility.PRIVATE,
+        parentRepositoryId: dto.parentRepositoryId ?? null,
+      },
     });
 
-    const saved = await this.repositoriesRepo.save(repository);
     return this.toPublicRepository(saved);
   }
 
   async getPublic(query: PaginationQueryDto) {
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
-    const [items, count] = await this.repositoriesRepo.findAndCount({
-      where: { visibility: RepositoryVisibility.PUBLIC },
-      order: { updatedAt: 'DESC' },
-      skip: (page - 1) * limit,
-      take: limit,
-    });
+    const where = { visibility: RepositoryVisibility.PUBLIC as string };
+    const [items, count] = await this.prisma.$transaction([
+      this.prisma.repository.findMany({
+        where,
+        orderBy: { updatedAt: 'desc' },
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      this.prisma.repository.count({ where }),
+    ]);
 
     return {
       items: items.map((item) => this.toPublicRepository(item)),
@@ -98,13 +96,10 @@ export class RepositoriesService {
     viewer: AuthUser | null,
     shareToken?: string,
   ) {
-    const repository = await this.repositoriesRepo.findOne({
+    const repository = await this.prisma.repository.findFirst({
       where: {
         slug,
         owner: { username: owner },
-      },
-      relations: {
-        owner: true,
       },
     });
 
@@ -116,7 +111,7 @@ export class RepositoriesService {
 
     return {
       repository: this.toPublicRepository(repository),
-      etag: toVersionEtag(repository.version),
+      etag: toVersionEtag(Number(repository.version)),
       lastModified: repository.updatedAt.toUTCString(),
     };
   }
@@ -127,7 +122,9 @@ export class RepositoriesService {
     dto: UpdateRepositoryDto,
     ifMatch?: string,
   ) {
-    const repository = await this.repositoriesRepo.findOne({ where: { id } });
+    const repository = await this.prisma.repository.findUnique({
+      where: { id },
+    });
 
     if (!repository) {
       throw new NotFoundException('Repository not found');
@@ -148,8 +145,11 @@ export class RepositoriesService {
     }
 
     if (dto.slug && dto.slug !== repository.slug) {
-      const exists = await this.repositoriesRepo.exists({
-        where: { ownerId: repository.ownerId, slug: dto.slug },
+      const exists = await this.prisma.repository.findUnique({
+        where: {
+          ownerId_slug: { ownerId: repository.ownerId, slug: dto.slug },
+        },
+        select: { id: true },
       });
 
       if (exists) {
@@ -157,12 +157,13 @@ export class RepositoriesService {
       }
     }
 
+    let parentRepositoryId = repository.parentRepositoryId;
     if (
       dto.parentRepositoryId !== undefined &&
       dto.parentRepositoryId !== repository.parentRepositoryId
     ) {
       if (dto.parentRepositoryId === null) {
-        repository.parentRepositoryId = null;
+        parentRepositoryId = null;
       } else {
         if (dto.parentRepositoryId === repository.id) {
           throw new BadRequestException(
@@ -170,7 +171,7 @@ export class RepositoriesService {
           );
         }
 
-        const parent = await this.repositoriesRepo.findOne({
+        const parent = await this.prisma.repository.findUnique({
           where: { id: dto.parentRepositoryId },
         });
 
@@ -179,22 +180,14 @@ export class RepositoriesService {
         }
 
         this.ensureWriteAccess(user, parent.ownerId);
+        parentRepositoryId = dto.parentRepositoryId;
       }
     }
 
-    Object.assign(repository, {
-      slug: dto.slug ?? repository.slug,
-      title: dto.title ?? repository.title,
-      description: dto.description ?? repository.description,
-      visibility: dto.visibility ?? repository.visibility,
-      parentRepositoryId:
-        dto.parentRepositoryId === undefined
-          ? repository.parentRepositoryId
-          : dto.parentRepositoryId,
-    });
-
+    const nextVisibility = (dto.visibility ??
+      repository.visibility) as RepositoryVisibility;
     if (
-      repository.visibility === RepositoryVisibility.UNLISTED &&
+      nextVisibility === RepositoryVisibility.UNLISTED &&
       !repository.shareTokenHash
     ) {
       throw new BadRequestException(
@@ -202,24 +195,39 @@ export class RepositoriesService {
       );
     }
 
-    const saved = await this.repositoriesRepo.save(repository);
+    const saved = await this.prisma.repository.update({
+      where: { id: repository.id },
+      data: {
+        slug: dto.slug ?? repository.slug,
+        title: dto.title ?? repository.title,
+        description: dto.description ?? repository.description,
+        visibility: nextVisibility,
+        parentRepositoryId,
+        version: { increment: 1 },
+      },
+    });
+
     return this.toPublicRepository(saved);
   }
 
   async remove(id: string, user: AuthUser) {
-    const repository = await this.repositoriesRepo.findOne({ where: { id } });
+    const repository = await this.prisma.repository.findUnique({
+      where: { id },
+    });
     if (!repository) {
       throw new NotFoundException('Repository not found');
     }
 
     this.ensureWriteAccess(user, repository.ownerId);
-    await this.repositoriesRepo.remove(repository);
+    await this.prisma.repository.delete({ where: { id: repository.id } });
 
     return { id, deleted: true };
   }
 
   async createOrRotateShareLink(id: string, user: AuthUser) {
-    const repository = await this.repositoriesRepo.findOne({ where: { id } });
+    const repository = await this.prisma.repository.findUnique({
+      where: { id },
+    });
     if (!repository) {
       throw new NotFoundException('Repository not found');
     }
@@ -229,8 +237,13 @@ export class RepositoriesService {
     const rawToken = randomBytes(24).toString('base64url');
     const hashed = createHash('sha256').update(rawToken).digest('hex');
 
-    repository.shareTokenHash = hashed;
-    await this.repositoriesRepo.save(repository);
+    await this.prisma.repository.update({
+      where: { id: repository.id },
+      data: {
+        shareTokenHash: hashed,
+        version: { increment: 1 },
+      },
+    });
 
     return {
       repositoryId: repository.id,
@@ -244,7 +257,7 @@ export class RepositoriesService {
     user: AuthUser,
     dto: CreateChildRepositoryDto,
   ) {
-    const parent = await this.repositoriesRepo.findOne({
+    const parent = await this.prisma.repository.findUnique({
       where: { id: parentId },
     });
     if (!parent) {
@@ -258,27 +271,23 @@ export class RepositoriesService {
       parentRepositoryId: parent.id,
     });
 
-    const childRepository = await this.repositoriesRepo.findOneOrFail({
-      where: { id: child.id },
+    const maxPositionResult = await this.prisma.entry.aggregate({
+      where: { repositoryId: parent.id },
+      _max: { position: true },
     });
 
-    const maxPositionResult = await this.entriesRepo
-      .createQueryBuilder('entry')
-      .select('COALESCE(MAX(entry.position), -1)', 'max')
-      .where('entry.repository_id = :repositoryId', { repositoryId: parent.id })
-      .getRawOne<{ max: string }>();
+    const nextPosition = (maxPositionResult._max.position ?? -1) + 1;
 
-    const nextPosition = Number(maxPositionResult?.max ?? -1) + 1;
-
-    const linkEntry = this.entriesRepo.create({
-      repositoryId: parent.id,
-      kind: EntryKind.REPOSITORY_LINK,
-      linkedRepositoryId: childRepository.id,
-      position: nextPosition,
-      titleOverride: childRepository.title,
+    await this.prisma.entry.create({
+      data: {
+        repositoryId: parent.id,
+        kind: EntryKind.REPOSITORY_LINK,
+        linkedRepositoryId: child.id,
+        position: nextPosition,
+        titleOverride: child.title,
+      },
     });
 
-    await this.entriesRepo.save(linkEntry);
     return child;
   }
 
@@ -290,7 +299,7 @@ export class RepositoriesService {
   ) {
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
-    const parent = await this.repositoriesRepo.findOne({
+    const parent = await this.prisma.repository.findUnique({
       where: { id },
     });
 
@@ -300,9 +309,9 @@ export class RepositoriesService {
 
     this.ensureReadAccess(parent, viewer, shareToken);
 
-    const children = await this.repositoriesRepo.find({
+    const children = await this.prisma.repository.findMany({
       where: { parentRepositoryId: id },
-      order: { updatedAt: 'DESC' },
+      orderBy: { updatedAt: 'desc' },
     });
 
     const visibleChildren = children.filter((child) => {
@@ -338,12 +347,13 @@ export class RepositoriesService {
   }
 
   private ensureReadAccess(
-    repository: RepositoryEntity,
+    repository: Repository,
     viewer: AuthUser | null,
     shareToken?: string,
     failClosed = false,
   ) {
-    if (repository.visibility === RepositoryVisibility.PUBLIC) {
+    const visibility = repository.visibility as RepositoryVisibility;
+    if (visibility === RepositoryVisibility.PUBLIC) {
       return;
     }
 
@@ -356,7 +366,7 @@ export class RepositoriesService {
       }
     }
 
-    if (repository.visibility === RepositoryVisibility.UNLISTED) {
+    if (visibility === RepositoryVisibility.UNLISTED) {
       if (!repository.shareTokenHash || !shareToken) {
         throw new ForbiddenException('Invalid or missing share token');
       }
@@ -378,7 +388,7 @@ export class RepositoriesService {
     throw new ForbiddenException('Forbidden');
   }
 
-  private toPublicRepository(repository: RepositoryEntity) {
+  private toPublicRepository(repository: Repository) {
     return {
       id: repository.id,
       ownerId: repository.ownerId,

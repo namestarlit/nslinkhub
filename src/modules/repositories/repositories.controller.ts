@@ -16,8 +16,8 @@ import {
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import type { Request, Response } from 'express';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
-import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
-import { OptionalJwtAuthGuard } from 'src/common/guards/optional-jwt-auth.guard';
+import { AuthGuard } from 'src/common/guards/auth.guard';
+import { OptionalAuthGuard } from 'src/common/guards/optional-auth.guard';
 import type { AuthUser } from 'src/common/interfaces/auth-user.interface';
 import { PaginationQueryDto } from 'src/common/dto/pagination-query.dto';
 import { ifNoneMatchHit } from 'src/common/utils/etag.util';
@@ -33,7 +33,7 @@ export class RepositoriesController {
   constructor(private readonly repositoriesService: RepositoriesService) {}
 
   @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(AuthGuard)
   @Post()
   async create(
     @CurrentUser() user: AuthUser,
@@ -49,7 +49,7 @@ export class RepositoriesController {
     return apiOk(data.items, data.meta);
   }
 
-  @UseGuards(OptionalJwtAuthGuard)
+  @UseGuards(OptionalAuthGuard)
   @Get(':owner/:slug')
   async getByOwnerAndSlug(
     @Param('owner') owner: string,
@@ -86,7 +86,7 @@ export class RepositoriesController {
   }
 
   @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(AuthGuard)
   @Patch(':id')
   async update(
     @Param('id', new ParseUUIDPipe()) id: string,
@@ -99,7 +99,7 @@ export class RepositoriesController {
   }
 
   @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(AuthGuard)
   @Delete(':id')
   async remove(
     @Param('id', new ParseUUIDPipe()) id: string,
@@ -110,7 +110,7 @@ export class RepositoriesController {
   }
 
   @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(AuthGuard)
   @Post(':id/share-link')
   async createOrRotateShareLink(
     @Param('id', new ParseUUIDPipe()) id: string,
@@ -124,7 +124,7 @@ export class RepositoriesController {
   }
 
   @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(AuthGuard)
   @Post(':id/children')
   async createChild(
     @Param('id', new ParseUUIDPipe()) id: string,
@@ -135,7 +135,7 @@ export class RepositoriesController {
     return apiOk(data);
   }
 
-  @UseGuards(OptionalJwtAuthGuard)
+  @UseGuards(OptionalAuthGuard)
   @Get(':id/children')
   async getChildren(
     @Param('id', new ParseUUIDPipe()) id: string,

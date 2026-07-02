@@ -4,31 +4,20 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
 import { createHash } from 'crypto';
+import { PrismaService } from 'src/database/prisma.service';
 import { EntryKind } from 'src/common/enums/entry-kind.enum';
 import { RepositoryVisibility } from 'src/common/enums/repository-visibility.enum';
 import { UserRole } from 'src/common/enums/user-role.enum';
 import { AuthUser } from 'src/common/interfaces/auth-user.interface';
 import { canonicalizeUrl } from 'src/common/utils/url.util';
-import { Repository } from 'typeorm';
-import { EntryEntity } from '../entries/entities/entry.entity';
-import { LinkEntity } from '../links/entities/link.entity';
-import { RepositoryEntity } from '../repositories/entities/repository.entity';
 import { ImportTargetDto } from './dto/import-target.dto';
 
 const MAX_IMPORT_SIZE_BYTES = 10 * 1024 * 1024;
 
 @Injectable()
 export class ImportsService {
-  constructor(
-    @InjectRepository(RepositoryEntity)
-    private readonly repositoriesRepo: Repository<RepositoryEntity>,
-    @InjectRepository(EntryEntity)
-    private readonly entriesRepo: Repository<EntryEntity>,
-    @InjectRepository(LinkEntity)
-    private readonly linksRepo: Repository<LinkEntity>,
-  ) {}
+  constructor(private readonly prisma: PrismaService) {}
 
   async importCsv(user: AuthUser, file: unknown, dto: ImportTargetDto) {
     const repository = await this.resolveTargetRepository(user, dto);
@@ -100,9 +89,7 @@ export class ImportsService {
     this.ensureValidFile(file);
 
     const utf8 = file.buffer.toString('utf8');
-    const text = utf8.includes('\uFFFD')
-      ? file.buffer.toString('latin1')
-      : utf8;
+    const text = utf8.includes('�') ? file.buffer.toString('latin1') : utf8;
     const urlRegex = /https?:\/\/[^\s<>()]+/gi;
     const rows: Array<{ index: number; url: string }> = [];
 
@@ -129,9 +116,9 @@ export class ImportsService {
       note?: string;
     }>,
   ) {
-    const existingEntries = await this.entriesRepo.find({
+    const existingEntries = await this.prisma.entry.findMany({
       where: { repositoryId },
-      relations: { link: true },
+      include: { link: true },
     });
 
     const maxPosition = existingEntries.reduce(
@@ -159,22 +146,24 @@ export class ImportsService {
           continue;
         }
 
-        let link = await this.linksRepo.findOne({ where: { urlHash } });
+        let link = await this.prisma.link.findUnique({ where: { urlHash } });
         if (!link) {
-          link = this.linksRepo.create({ canonicalUrl, urlHash });
-          link = await this.linksRepo.save(link);
+          link = await this.prisma.link.create({
+            data: { canonicalUrl, urlHash },
+          });
         }
 
-        const entry = this.entriesRepo.create({
-          repositoryId,
-          kind: EntryKind.EXTERNAL_LINK,
-          linkId: link.id,
-          titleOverride: row.title ?? null,
-          description: row.description ?? null,
-          note: row.note ?? null,
-          position: nextPosition,
+        await this.prisma.entry.create({
+          data: {
+            repositoryId,
+            kind: EntryKind.EXTERNAL_LINK,
+            linkId: link.id,
+            titleOverride: row.title ?? null,
+            description: row.description ?? null,
+            note: row.note ?? null,
+            position: nextPosition,
+          },
         });
-        await this.entriesRepo.save(entry);
 
         existingHashes.add(urlHash);
         importedCount += 1;
@@ -217,7 +206,7 @@ export class ImportsService {
 
   private async resolveTargetRepository(user: AuthUser, dto: ImportTargetDto) {
     if (dto.targetRepositoryId) {
-      const repository = await this.repositoriesRepo.findOne({
+      const repository = await this.prisma.repository.findUnique({
         where: { id: dto.targetRepositoryId },
       });
 
@@ -244,14 +233,14 @@ export class ImportsService {
       );
     }
 
-    const repository = this.repositoriesRepo.create({
-      ownerId: user.userId,
-      title: dto.repositoryTitle,
-      slug: dto.repositorySlug,
-      visibility: dto.visibility ?? RepositoryVisibility.PRIVATE,
+    return this.prisma.repository.create({
+      data: {
+        ownerId: user.userId,
+        title: dto.repositoryTitle,
+        slug: dto.repositorySlug,
+        visibility: dto.visibility ?? RepositoryVisibility.PRIVATE,
+      },
     });
-
-    return this.repositoriesRepo.save(repository);
   }
 }
 

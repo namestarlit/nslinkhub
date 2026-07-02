@@ -5,33 +5,23 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
 import { createHash } from 'crypto';
+import { PrismaService } from 'src/database/prisma.service';
 import { EntryKind } from 'src/common/enums/entry-kind.enum';
 import { RepositoryVisibility } from 'src/common/enums/repository-visibility.enum';
 import { UserRole } from 'src/common/enums/user-role.enum';
 import { AuthUser } from 'src/common/interfaces/auth-user.interface';
 import { canonicalizeUrl } from 'src/common/utils/url.util';
-import { Repository } from 'typeorm';
-import { LinkEntity } from '../links/entities/link.entity';
-import { RepositoryEntity } from '../repositories/entities/repository.entity';
 import { PaginationQueryDto } from 'src/common/dto/pagination-query.dto';
+import { Entry } from 'src/generated/prisma/client';
 import { CreateExternalEntryDto } from './dto/create-external-entry.dto';
 import { CreateRepositoryLinkEntryDto } from './dto/create-repository-link-entry.dto';
 import { ReorderEntriesDto } from './dto/reorder-entries.dto';
 import { UpdateEntryDto } from './dto/update-entry.dto';
-import { EntryEntity } from './entities/entry.entity';
 
 @Injectable()
 export class EntriesService {
-  constructor(
-    @InjectRepository(EntryEntity)
-    private readonly entriesRepo: Repository<EntryEntity>,
-    @InjectRepository(LinkEntity)
-    private readonly linksRepo: Repository<LinkEntity>,
-    @InjectRepository(RepositoryEntity)
-    private readonly repositoriesRepo: Repository<RepositoryEntity>,
-  ) {}
+  constructor(private readonly prisma: PrismaService) {}
 
   async createExternal(
     repositoryId: string,
@@ -44,33 +34,34 @@ export class EntriesService {
     const canonicalUrl = canonicalizeUrl(dto.url);
     const urlHash = createHash('sha256').update(canonicalUrl).digest('hex');
 
-    let link = await this.linksRepo.findOne({ where: { canonicalUrl } });
+    let link = await this.prisma.link.findUnique({ where: { canonicalUrl } });
     if (!link) {
-      link = this.linksRepo.create({ canonicalUrl, urlHash });
-      link = await this.linksRepo.save(link);
+      link = await this.prisma.link.create({ data: { canonicalUrl, urlHash } });
     }
 
-    const duplicate = await this.entriesRepo.exists({
+    const duplicate = await this.prisma.entry.findFirst({
       where: {
         repositoryId: repository.id,
         linkId: link.id,
       },
+      select: { id: true },
     });
     if (duplicate) {
       throw new ConflictException('Link already exists in this repository');
     }
 
-    const entry = this.entriesRepo.create({
-      repositoryId: repository.id,
-      linkId: link.id,
-      kind: EntryKind.EXTERNAL_LINK,
-      titleOverride: dto.titleOverride ?? null,
-      description: dto.description ?? null,
-      note: dto.note ?? null,
-      position: dto.position,
+    const saved = await this.prisma.entry.create({
+      data: {
+        repositoryId: repository.id,
+        linkId: link.id,
+        kind: EntryKind.EXTERNAL_LINK,
+        titleOverride: dto.titleOverride ?? null,
+        description: dto.description ?? null,
+        note: dto.note ?? null,
+        position: dto.position,
+      },
     });
 
-    const saved = await this.entriesRepo.save(entry);
     return this.toPublicEntry(saved, link.canonicalUrl);
   }
 
@@ -82,7 +73,7 @@ export class EntriesService {
     const repository = await this.requireWritableRepository(repositoryId, user);
     await this.ensurePositionAvailable(repository.id, dto.position);
 
-    const linkedRepository = await this.repositoriesRepo.findOne({
+    const linkedRepository = await this.prisma.repository.findUnique({
       where: { id: dto.linkedRepositoryId },
     });
     if (!linkedRepository) {
@@ -93,17 +84,18 @@ export class EntriesService {
       throw new BadRequestException('Repository cannot link to itself');
     }
 
-    const entry = this.entriesRepo.create({
-      repositoryId: repository.id,
-      kind: EntryKind.REPOSITORY_LINK,
-      linkedRepositoryId: linkedRepository.id,
-      titleOverride: dto.titleOverride ?? linkedRepository.title,
-      description: dto.description ?? null,
-      note: dto.note ?? null,
-      position: dto.position,
+    const saved = await this.prisma.entry.create({
+      data: {
+        repositoryId: repository.id,
+        kind: EntryKind.REPOSITORY_LINK,
+        linkedRepositoryId: linkedRepository.id,
+        titleOverride: dto.titleOverride ?? linkedRepository.title,
+        description: dto.description ?? null,
+        note: dto.note ?? null,
+        position: dto.position,
+      },
     });
 
-    const saved = await this.entriesRepo.save(entry);
     return this.toPublicEntry(saved);
   }
 
@@ -117,13 +109,16 @@ export class EntriesService {
 
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
-    const [items, total] = await this.entriesRepo.findAndCount({
-      where: { repositoryId },
-      relations: { link: true, linkedRepository: true },
-      order: { position: 'ASC' },
-      skip: (page - 1) * limit,
-      take: limit,
-    });
+    const [items, total] = await this.prisma.$transaction([
+      this.prisma.entry.findMany({
+        where: { repositoryId },
+        include: { link: true, linkedRepository: true },
+        orderBy: { position: 'asc' },
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      this.prisma.entry.count({ where: { repositoryId } }),
+    ]);
 
     return {
       items: items.map((item) =>
@@ -141,7 +136,7 @@ export class EntriesService {
   ) {
     await this.requireWritableRepository(repositoryId, user);
 
-    const entry = await this.entriesRepo.findOne({
+    const entry = await this.prisma.entry.findFirst({
       where: { id: entryId, repositoryId },
     });
 
@@ -153,37 +148,46 @@ export class EntriesService {
       throw new ConflictException('Version mismatch');
     }
 
+    let position = entry.position;
     if (dto.position !== undefined && dto.position !== entry.position) {
       await this.ensurePositionAvailable(repositoryId, dto.position, entry.id);
-      entry.position = dto.position;
+      position = dto.position;
     }
 
-    entry.titleOverride = dto.titleOverride ?? entry.titleOverride;
-    entry.description = dto.description ?? entry.description;
-    entry.note = dto.note ?? entry.note;
+    const saved = await this.prisma.entry.update({
+      where: { id: entry.id },
+      data: {
+        position,
+        titleOverride: dto.titleOverride ?? entry.titleOverride,
+        description: dto.description ?? entry.description,
+        note: dto.note ?? entry.note,
+        version: { increment: 1 },
+      },
+    });
 
-    const saved = await this.entriesRepo.save(entry);
     return this.toPublicEntry(saved);
   }
 
   async remove(repositoryId: string, entryId: string, user: AuthUser) {
     await this.requireWritableRepository(repositoryId, user);
 
-    const entry = await this.entriesRepo.findOne({
+    const entry = await this.prisma.entry.findFirst({
       where: { id: entryId, repositoryId },
     });
     if (!entry) {
       throw new NotFoundException('Entry not found');
     }
 
-    await this.entriesRepo.remove(entry);
+    await this.prisma.entry.delete({ where: { id: entry.id } });
     return { id: entry.id, deleted: true };
   }
 
   async reorder(repositoryId: string, user: AuthUser, dto: ReorderEntriesDto) {
     await this.requireWritableRepository(repositoryId, user);
 
-    const entries = await this.entriesRepo.find({ where: { repositoryId } });
+    const entries = await this.prisma.entry.findMany({
+      where: { repositoryId },
+    });
     if (entries.length !== dto.items.length) {
       throw new BadRequestException('Reorder payload must include all entries');
     }
@@ -220,25 +224,23 @@ export class EntriesService {
       }
     }
 
-    await this.entriesRepo.manager.transaction(async (manager) => {
+    await this.prisma.$transaction(async (tx) => {
       // Avoid transient unique conflicts on (repository_id, position) by
       // writing temporary positions first, then final positions.
       const offset = entries.length + 1024;
 
       for (const item of dto.items) {
-        await manager.update(
-          EntryEntity,
-          { id: item.entryId, repositoryId },
-          { position: item.position + offset },
-        );
+        await tx.entry.updateMany({
+          where: { id: item.entryId, repositoryId },
+          data: { position: item.position + offset },
+        });
       }
 
       for (const item of dto.items) {
-        await manager.update(
-          EntryEntity,
-          { id: item.entryId, repositoryId },
-          { position: item.position },
-        );
+        await tx.entry.updateMany({
+          where: { id: item.entryId, repositoryId },
+          data: { position: item.position },
+        });
       }
     });
 
@@ -249,7 +251,7 @@ export class EntriesService {
     repositoryId: string,
     user: AuthUser,
   ) {
-    const repository = await this.repositoriesRepo.findOne({
+    const repository = await this.prisma.repository.findUnique({
       where: { id: repositoryId },
     });
     if (!repository) {
@@ -268,14 +270,15 @@ export class EntriesService {
     viewer: AuthUser | null,
     shareToken: string | undefined,
   ) {
-    const repository = await this.repositoriesRepo.findOne({
+    const repository = await this.prisma.repository.findUnique({
       where: { id: repositoryId },
     });
     if (!repository) {
       throw new NotFoundException('Repository not found');
     }
 
-    if (repository.visibility === RepositoryVisibility.PUBLIC) {
+    const visibility = repository.visibility as RepositoryVisibility;
+    if (visibility === RepositoryVisibility.PUBLIC) {
       return repository;
     }
 
@@ -286,7 +289,7 @@ export class EntriesService {
       return repository;
     }
 
-    if (repository.visibility === RepositoryVisibility.UNLISTED) {
+    if (visibility === RepositoryVisibility.UNLISTED) {
       if (!shareToken || !repository.shareTokenHash) {
         throw new ForbiddenException('Invalid or missing share token');
       }
@@ -307,11 +310,11 @@ export class EntriesService {
     position: number,
     ignoreEntryId?: string,
   ) {
-    const existing = await this.entriesRepo.findOne({
+    const existing = await this.prisma.entry.findUnique({
       where: {
-        repositoryId,
-        position,
+        repositoryId_position: { repositoryId, position },
       },
+      select: { id: true },
     });
 
     if (existing && existing.id !== ignoreEntryId) {
@@ -321,7 +324,7 @@ export class EntriesService {
     }
   }
 
-  private toPublicEntry(entry: EntryEntity, canonicalUrl?: string) {
+  private toPublicEntry(entry: Entry, canonicalUrl?: string) {
     return {
       id: entry.id,
       repositoryId: entry.repositoryId,

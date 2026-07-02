@@ -9,7 +9,7 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiBearerAuth, ApiConsumes, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
-import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
+import { AuthGuard } from 'src/common/guards/auth.guard';
 import type { AuthUser } from 'src/common/interfaces/auth-user.interface';
 import { apiOk } from 'src/common/utils/response.util';
 import { ImportTargetDto } from './dto/import-target.dto';
@@ -17,7 +17,7 @@ import { ImportsService } from './imports.service';
 
 @ApiTags('imports')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
+@UseGuards(AuthGuard)
 @Controller('api/v2/imports')
 export class ImportsController {
   constructor(private readonly importsService: ImportsService) {}

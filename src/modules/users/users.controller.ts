@@ -9,7 +9,7 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
-import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
+import { AuthGuard } from 'src/common/guards/auth.guard';
 import type { AuthUser } from 'src/common/interfaces/auth-user.interface';
 import { apiOk } from 'src/common/utils/response.util';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -27,7 +27,7 @@ export class UsersController {
   }
 
   @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(AuthGuard)
   @Patch(':username')
   async updateByUsername(
     @Param('username') username: string,
@@ -39,7 +39,7 @@ export class UsersController {
   }
 
   @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(AuthGuard)
   @Delete(':username')
   async deleteByUsername(
     @Param('username') username: string,

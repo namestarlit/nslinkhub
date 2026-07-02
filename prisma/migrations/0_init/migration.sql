@@ -1,4 +1,3 @@
-BEGIN;
 
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
@@ -27,15 +26,65 @@ $$;
 
 CREATE TABLE IF NOT EXISTS users (
   id uuid PRIMARY KEY DEFAULT public.app_uuid_v7(),
+  name varchar(255) NOT NULL,
   username varchar(60) NOT NULL UNIQUE,
+  display_username varchar(60),
   email varchar(255) NOT NULL UNIQUE,
-  password_hash varchar(255) NOT NULL,
+  email_verified boolean NOT NULL DEFAULT false,
+  image text,
   bio text,
   role varchar(16) NOT NULL DEFAULT 'user',
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now(),
   CONSTRAINT users_role_check CHECK (role IN ('user', 'admin'))
 );
+
+-- better-auth tables (sessions, credential/oauth accounts, verifications).
+CREATE TABLE IF NOT EXISTS sessions (
+  id uuid PRIMARY KEY DEFAULT public.app_uuid_v7(),
+  expires_at timestamptz NOT NULL,
+  token text NOT NULL,
+  ip_address text,
+  user_agent text,
+  user_id uuid NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS accounts (
+  id uuid PRIMARY KEY DEFAULT public.app_uuid_v7(),
+  account_id text NOT NULL,
+  provider_id text NOT NULL,
+  user_id uuid NOT NULL,
+  access_token text,
+  refresh_token text,
+  id_token text,
+  access_token_expires_at timestamptz,
+  refresh_token_expires_at timestamptz,
+  scope text,
+  password text,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS verifications (
+  id uuid PRIMARY KEY DEFAULT public.app_uuid_v7(),
+  identifier text NOT NULL,
+  value text NOT NULL,
+  expires_at timestamptz NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS sessions_token_key ON sessions (token);
+CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions (user_id);
+CREATE INDEX IF NOT EXISTS idx_accounts_user_id ON accounts (user_id);
+CREATE INDEX IF NOT EXISTS idx_verifications_identifier ON verifications (identifier);
+
+ALTER TABLE sessions ADD CONSTRAINT sessions_user_id_fkey
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE ON UPDATE NO ACTION;
+ALTER TABLE accounts ADD CONSTRAINT accounts_user_id_fkey
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE ON UPDATE NO ACTION;
 
 CREATE TABLE IF NOT EXISTS repositories (
   id uuid PRIMARY KEY DEFAULT public.app_uuid_v7(),
@@ -206,4 +255,30 @@ BEFORE UPDATE ON tags
 FOR EACH ROW
 EXECUTE FUNCTION public.set_updated_at();
 
-COMMIT;
+
+
+CREATE TABLE IF NOT EXISTS export_jobs (
+  id uuid PRIMARY KEY DEFAULT public.app_uuid_v7(),
+  repository_id uuid NOT NULL REFERENCES repositories(id) ON DELETE CASCADE,
+  requested_by_user_id uuid REFERENCES users(id) ON DELETE SET NULL,
+  format varchar(16) NOT NULL,
+  status varchar(16) NOT NULL,
+  output_ref text,
+  error_message text,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT export_jobs_format_check CHECK (format IN ('pdf')),
+  CONSTRAINT export_jobs_status_check CHECK (status IN ('queued', 'running', 'completed', 'failed'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_export_jobs_repository_created_at
+  ON export_jobs (repository_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_export_jobs_status_created_at
+  ON export_jobs (status, created_at DESC);
+
+DROP TRIGGER IF EXISTS trg_set_updated_at_export_jobs ON export_jobs;
+CREATE TRIGGER trg_set_updated_at_export_jobs
+BEFORE UPDATE ON export_jobs
+FOR EACH ROW
+EXECUTE FUNCTION public.set_updated_at();
+
