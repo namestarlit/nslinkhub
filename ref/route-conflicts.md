@@ -6,7 +6,11 @@ relocates the ambiguity — e.g. a repository slugged "entries" would then break
 the lookup), the owner/slug lookup moved off `/repositories` entirely, to
 `GET /api/v2/users/:username/repositories/:slug`
 (`src/modules/repositories/repository-lookup.controller.ts`). Regression e2e
-tests live in `test/routes.e2e.spec.ts`. Kept for the analysis below.
+tests live in `test/routes.e2e.spec.ts`, including the non-uuid 400 canary
+proposed below. The reserved-slug design note is moot under this fix: slugs no
+longer appear anywhere under `/repositories/*` (repositories are addressed by
+uuid there), and the lookup path `/users/:username/repositories/:slug` has no
+literal sibling segments to collide with. Kept for the analysis below.
 
 ---
 

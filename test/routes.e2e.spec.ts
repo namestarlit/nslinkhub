@@ -70,6 +70,15 @@ describe('Repository routes (e2e)', () => {
     expect(body.data[0].url).toContain(`e2e-${sfx}`);
   });
 
+  // Canary for the shadowing regressing: a non-uuid id must be rejected by
+  // the entries controller's ParseUUIDPipe (400), not swallowed by another
+  // route as a 404.
+  it('rejects a non-uuid repository id on the entries route with 400', async () => {
+    await request(app.getHttpServer())
+      .get('/api/v2/repositories/not-a-uuid/entries')
+      .expect(400);
+  });
+
   it('lists children of a public repository unauthenticated', async () => {
     const res = await request(app.getHttpServer())
       .get(`/api/v2/repositories/${repoId}/children`)
