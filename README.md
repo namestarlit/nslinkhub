@@ -8,12 +8,14 @@ This repository is a greenfield NestJS v2 rewrite. The old Flask v1 is retained 
 
 - Product + architecture spec: `docs/nestjs-v2-feature-spec.md`
 - Implementation status + next steps: `docs/implementation-status.md`
+- Stack migration plan/log (Bun + Prisma + better-auth): `ref/migration-plan.md`
 
 ## Implemented So Far
 
-- PostgreSQL schema migrations for Sprint 1 core entities
-- TypeORM entities for users/repositories/links/entries/tags/export_jobs
-- Auth (register/login/refresh/logout) with JWT and Argon2
+- PostgreSQL schema managed by Prisma Migrate (single `0_init` baseline)
+- Prisma models for users/repositories/links/entries/tags/export_jobs + better-auth tables
+- Auth via self-hosted [better-auth](https://better-auth.com) (email/username sign-in,
+  DB-backed sessions, bearer tokens for API clients, argon2id hashing via `Bun.password`)
 - Repository CRUD, visibility checks, share-link rotation, nested child creation
 - Entries CRUD + reorder with validation and version conflict checks
 - Tag attach/remove for repositories and entries
@@ -24,17 +26,17 @@ This repository is a greenfield NestJS v2 rewrite. The old Flask v1 is retained 
 
 ## Tech Stack
 
+- Bun (package manager **and** runtime)
 - NestJS
-- PostgreSQL + TypeORM
+- PostgreSQL + Prisma (with `@prisma/adapter-pg`)
+- better-auth (sessions, bearer plugin, username plugin)
 - BullMQ + Redis
-- JWT + Passport
 - class-validator/class-transformer
 
 ## Prerequisites
 
-- Node.js 22+
-- PostgreSQL
-- Redis
+- Bun 1.3+
+- Docker (or local PostgreSQL + Redis)
 
 ## Environment Variables
 
@@ -43,54 +45,75 @@ Recommended `.env` values:
 ```bash
 PORT=3000
 
-DB_HOST=127.0.0.1
-DB_PORT=5432
-DB_USER=postgres
-DB_PASSWORD=postgres
-DB_NAME=nslinkhub
+DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5432/nslinkhub
 
-JWT_ACCESS_SECRET=dev-access-secret
-JWT_ACCESS_TTL=15m
-JWT_REFRESH_SECRET=dev-refresh-secret
-JWT_REFRESH_TTL=7d
+BETTER_AUTH_SECRET=change-me-to-a-long-random-string
+BETTER_AUTH_URL=http://localhost:3000
 
 REDIS_HOST=127.0.0.1
 REDIS_PORT=6379
 # REDIS_PASSWORD=
 ```
 
+When `DATABASE_URL` is unset, the local dev default
+(`postgresql://postgres:postgres@127.0.0.1:5432/nslinkhub`) is used.
+
 ## Install
 
 ```bash
-npm install
+bun install   # also runs `prisma generate` (postinstall)
+```
+
+## Local services
+
+```bash
+docker compose up -d   # PostgreSQL 18 + Redis 7
 ```
 
 ## Migrations
 
-SQL migrations are in `src/database/migrations`:
-
-- `0001_sprint1_schema.sql`
-- `0002_export_jobs.sql`
-
-Run them in order against your PostgreSQL DB (example with `psql`):
+Migrations are managed by Prisma Migrate in `prisma/migrations`:
 
 ```bash
-psql "$DATABASE_URL" -f src/database/migrations/0001_sprint1_schema.sql
-psql "$DATABASE_URL" -f src/database/migrations/0002_export_jobs.sql
+bunx prisma migrate deploy
 ```
+
+To evolve the schema, edit `prisma/schema.prisma` and use
+`bunx prisma migrate dev --create-only`, then review the generated SQL —
+several database objects (the `app_uuid_v7()` function, `set_updated_at`
+triggers, the repository-hierarchy trigger, CHECK constraints, and the partial
+unique index on entries) exist only in migration SQL and must never be dropped
+by an auto-generated diff.
 
 ## Run
 
 ```bash
-# dev
-npm run start:dev
+# dev (watch)
+bun run start:dev
 
-# build
-npm run build
+# build + prod
+bun run build
+bun run start:prod
 
 # tests
-npm run test -- --watchman=false
+bun test src    # unit
+bun test test   # e2e (needs PostgreSQL + Redis running)
 ```
+
+## Auth
+
+Auth endpoints are served by better-auth under `/api/v2/auth/*`. The main ones:
+
+- `POST /api/v2/auth/sign-up/email` — `{ email, password, name, username }`
+- `POST /api/v2/auth/sign-in/email` — `{ email, password }`
+- `POST /api/v2/auth/sign-in/username` — `{ username, password }`
+- `POST /api/v2/auth/sign-out`
+- `GET  /api/v2/auth/get-session`
+
+Browser clients get an HttpOnly session cookie. API clients read the session
+token from the `set-auth-token` response header on sign-in and send it as
+`Authorization: Bearer <token>` (better-auth bearer plugin). Sessions are
+DB-backed and refresh themselves server-side.
 
 ## API Docs
 

@@ -9,12 +9,13 @@ NSLinkHub is a backend API for organizing and sharing curated link repositories.
 - Language: TypeScript
 - Framework: NestJS
 - API transport: HTTP (Nest controllers)
-- ORM/data access: TypeORM
+- Runtime/package manager: Bun
+- ORM/data access: Prisma (`@prisma/adapter-pg` driver adapter)
 - Database: PostgreSQL
 - Queue/async processing: BullMQ
 - Queue backend: Redis
-- Auth: JWT + Passport
-- Password hashing: Argon2
+- Auth: better-auth (self-hosted; DB sessions, bearer + username plugins)
+- Password hashing: argon2id via `Bun.password`
 - Validation: class-validator + class-transformer
 - API docs: Swagger (`/api/docs`)
 
@@ -27,17 +28,17 @@ NSLinkHub is a backend API for organizing and sharing curated link repositories.
   - Business logic in `*.service.ts`
   - Access checks and workflow orchestration
 - Persistence Layer:
-  - TypeORM entities in `src/modules/**/entities`
-  - SQL migrations in `src/database/migrations`
+  - Prisma schema in `prisma/schema.prisma` (generated client in `src/generated/prisma`)
+  - Prisma migrations in `prisma/migrations`
 - Infrastructure Layer:
   - App/bootstrap config in `src/main.ts` and `src/app.module.ts`
-  - Auth strategy/guards in `src/modules/auth` + `src/common/guards`
+  - better-auth instance in `src/auth/auth.ts` (handler mounted in `src/main.ts`); guards in `src/common/guards`
   - Queue processor for export jobs in `src/modules/exports/exports.processor.ts`
 
 ## 4. Key Modules
 
-- `auth`:
-  - registration/login/refresh/logout
+- `auth` (better-auth, mounted at `/api/v2/auth/*`):
+  - sign-up/sign-in (email + username), sign-out, get-session; bearer tokens for API clients
   - JWT token issuing and strategy validation
 - `users`:
   - user retrieval, updates, deletion with ownership/admin checks
@@ -60,10 +61,12 @@ NSLinkHub is a backend API for organizing and sharing curated link repositories.
 
 ## 5. Directory Map
 
-- `src/modules/` — domain modules (controllers/services/entities/dto)
+- `src/modules/` — domain modules (controllers/services/dto)
 - `src/common/` — shared guards, decorators, enums, utilities, interfaces
-- `src/database/migrations/` — SQL schema evolution scripts
-- `src/database/data-source.ts` — TypeORM data-source definition
+- `src/auth/` — better-auth instance/config
+- `src/database/` — `PrismaModule`/`PrismaService`
+- `prisma/` — Prisma schema, config, and migrations
+- `src/generated/prisma/` — generated Prisma client (gitignored; `bun install` regenerates)
 - `docs/` — project spec and session handoff docs
 - `.codex/` — AI session workflow and restart instructions
 
@@ -74,7 +77,7 @@ Typical request flow:
 2. DTO validation/transformation runs via global `ValidationPipe`.
 3. Guard/auth strategy may authenticate and attach current user context.
 4. Service executes business logic and access checks.
-5. Service reads/writes entities via TypeORM repositories.
+5. Service reads/writes rows via the Prisma client (`PrismaService`).
 6. Response is returned in a consistent envelope (`{ data, meta? }`).
 
 Async export flow:

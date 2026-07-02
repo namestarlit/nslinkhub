@@ -6,12 +6,13 @@ NSLinkHub is a NestJS backend API for organizing, tagging, importing, and sharin
 
 ## Technology Stack
 
+- Bun (runtime + package manager)
 - NestJS (TypeScript)
-- TypeORM
+- Prisma
 - PostgreSQL
 - BullMQ + Redis
-- JWT + Passport
-- Argon2
+- better-auth
+- argon2id via `Bun.password`
 - class-validator / class-transformer
 - Swagger/OpenAPI
 
@@ -19,14 +20,14 @@ NSLinkHub is a NestJS backend API for organizing, tagging, importing, and sharin
 
 - API modules: `auth`, `users`, `repositories`, `entries`, `tags`, `imports`, `exports`, `health`
 - Shared layer: guards, decorators, DTOs, enums, response/etag utilities
-- Persistence layer: SQL migrations + TypeORM entities
+- Persistence layer: Prisma schema + migrations (`prisma/`)
 - Async processing: export queue processor (`exports` queue) with DB-backed job records
 
 For detailed structure and flow, read `ARCHITECTURE.md`.
 
 ## Important Directories
 
-- `src/modules/` — domain modules (controllers/services/entities/dto)
+- `src/modules/` — domain modules (controllers/services/dto)
 - `src/common/` — shared guards/decorators/utils/interfaces
 - `src/database/migrations/` — SQL migrations (`0001`, `0002`)
 - `docs/` — product spec and session handoff docs
