@@ -1,9 +1,10 @@
 import { Module } from '@nestjs/common';
 import { RepositoriesController } from './repositories.controller';
+import { RepositoryLookupController } from './repository-lookup.controller';
 import { RepositoriesService } from './repositories.service';
 
 @Module({
-  controllers: [RepositoriesController],
+  controllers: [RepositoriesController, RepositoryLookupController],
   providers: [RepositoriesService],
   exports: [RepositoriesService],
 })

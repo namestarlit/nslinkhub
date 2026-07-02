@@ -10,17 +10,15 @@ import {
   Post,
   Query,
   Req,
-  Res,
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
-import type { Request, Response } from 'express';
+import type { Request } from 'express';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 import { AuthGuard } from 'src/common/guards/auth.guard';
 import { OptionalAuthGuard } from 'src/common/guards/optional-auth.guard';
 import type { AuthUser } from 'src/common/interfaces/auth-user.interface';
 import { PaginationQueryDto } from 'src/common/dto/pagination-query.dto';
-import { ifNoneMatchHit } from 'src/common/utils/etag.util';
 import { apiOk } from 'src/common/utils/response.util';
 import { CreateChildRepositoryDto } from './dto/create-child-repository.dto';
 import { CreateRepositoryDto } from './dto/create-repository.dto';
@@ -47,42 +45,6 @@ export class RepositoriesController {
   async getPublic(@Query() query: PaginationQueryDto) {
     const data = await this.repositoriesService.getPublic(query);
     return apiOk(data.items, data.meta);
-  }
-
-  @UseGuards(OptionalAuthGuard)
-  @Get(':owner/:slug')
-  async getByOwnerAndSlug(
-    @Param('owner') owner: string,
-    @Param('slug') slug: string,
-    @CurrentUser() user: AuthUser | null,
-    @Headers('x-share-token') headerToken?: string,
-    @Req() req?: Request,
-    @Res({ passthrough: true }) res?: Response,
-  ) {
-    const shareToken = headerToken ?? (req?.query.s as string | undefined);
-    const data = await this.repositoriesService.getByOwnerAndSlug(
-      owner,
-      slug,
-      user,
-      shareToken,
-    );
-
-    if (res) {
-      res.setHeader('ETag', data.etag);
-      res.setHeader('Last-Modified', data.lastModified);
-    }
-
-    const ifNoneMatchHeader = req?.headers['if-none-match'];
-    const ifNoneMatchValue = Array.isArray(ifNoneMatchHeader)
-      ? ifNoneMatchHeader.join(',')
-      : ifNoneMatchHeader;
-
-    if (ifNoneMatchHit(ifNoneMatchValue, data.etag) && res) {
-      res.status(304);
-      return;
-    }
-
-    return apiOk(data.repository, { etag: data.etag });
   }
 
   @ApiBearerAuth()

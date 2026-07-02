@@ -191,7 +191,7 @@ Base path: `/api/v2`
 ### Repositories
 - `POST /repositories` (auth)
 - `GET /repositories/public` (paginated)
-- `GET /repositories/:owner/:slug` (visibility-aware)
+- `GET /users/:username/repositories/:slug` (visibility-aware; moved out of `/repositories` so it cannot shadow `/repositories/:id/*` routes)
 - `PATCH /repositories/:id` (owner/admin, optimistic lock)
 - `DELETE /repositories/:id` (owner/admin)
 - `POST /repositories/:id/share-link` (owner/admin; create/rotate unlisted token)
