@@ -18,6 +18,7 @@ import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 import { AuthGuard } from 'src/common/guards/auth.guard';
 import { OptionalAuthGuard } from 'src/common/guards/optional-auth.guard';
 import type { AuthUser } from 'src/common/interfaces/auth-user.interface';
+import { CursorQueryDto } from 'src/common/dto/cursor-query.dto';
 import { PaginationQueryDto } from 'src/common/dto/pagination-query.dto';
 import { apiOk } from 'src/common/utils/response.util';
 import { CreateChildRepositoryDto } from './dto/create-child-repository.dto';
@@ -42,7 +43,7 @@ export class RepositoriesController {
   }
 
   @Get('public')
-  async getPublic(@Query() query: PaginationQueryDto) {
+  async getPublic(@Query() query: CursorQueryDto) {
     const data = await this.repositoriesService.getPublic(query);
     return apiOk(data.items, data.meta);
   }

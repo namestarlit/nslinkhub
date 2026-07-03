@@ -11,6 +11,13 @@ summary of what changed after completed work has been promoted out of `ref/`.
 
 ### Changed
 
+- Foundation conventions (Phase A): failures now return the stable error
+  envelope `{ error: { code, message, requestId, details } }` with stable
+  machine-readable codes; every response carries a server-generated
+  `X-Request-Id`; startup fails fast on malformed configuration; and the
+  entries and public-repositories listings switched from page/limit to
+  opaque cursor pagination (`meta: { limit, nextCursor }`, `total` dropped).
+
 - Restructured the repository into a Bun workspace (Track W1): the backend
   moved to `apps/api` (`@nslinkhub/api`) with history-preserving renames,
   shared TypeScript base config landed in `packages/config`, and root

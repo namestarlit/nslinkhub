@@ -18,7 +18,7 @@ import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 import { AuthGuard } from 'src/common/guards/auth.guard';
 import { OptionalAuthGuard } from 'src/common/guards/optional-auth.guard';
 import type { AuthUser } from 'src/common/interfaces/auth-user.interface';
-import { PaginationQueryDto } from 'src/common/dto/pagination-query.dto';
+import { CursorQueryDto } from 'src/common/dto/cursor-query.dto';
 import { apiOk } from 'src/common/utils/response.util';
 import { CreateExternalEntryDto } from './dto/create-external-entry.dto';
 import { CreateRepositoryLinkEntryDto } from './dto/create-repository-link-entry.dto';
@@ -70,10 +70,10 @@ export class EntriesController {
     @CurrentUser() user: AuthUser | null,
     @Headers('x-share-token') headerToken?: string,
     @Req() req?: Request,
-    @Query() query?: PaginationQueryDto,
+    @Query() query?: CursorQueryDto,
   ) {
     const shareToken = headerToken ?? (req?.query.s as string | undefined);
-    const safeQuery = query ?? { page: 1, limit: 20 };
+    const safeQuery = query ?? { limit: 20 };
     const data = await this.entriesService.getByRepository(
       repositoryId,
       user,

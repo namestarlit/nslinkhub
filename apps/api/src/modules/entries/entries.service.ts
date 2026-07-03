@@ -12,7 +12,8 @@ import { RepositoryVisibility } from 'src/common/enums/repository-visibility.enu
 import { UserRole } from 'src/common/enums/user-role.enum';
 import { AuthUser } from 'src/common/interfaces/auth-user.interface';
 import { canonicalizeUrl } from 'src/common/utils/url.util';
-import { PaginationQueryDto } from 'src/common/dto/pagination-query.dto';
+import { CursorQueryDto } from 'src/common/dto/cursor-query.dto';
+import { decodeCursor, encodeCursor } from 'src/common/utils/cursor.util';
 import { Entry } from 'src/generated/prisma/client';
 import { CreateExternalEntryDto } from './dto/create-external-entry.dto';
 import { CreateRepositoryLinkEntryDto } from './dto/create-repository-link-entry.dto';
@@ -103,28 +104,39 @@ export class EntriesService {
     repositoryId: string,
     viewer: AuthUser | null,
     shareToken: string | undefined,
-    query: PaginationQueryDto,
+    query: CursorQueryDto,
   ) {
     await this.requireReadableRepository(repositoryId, viewer, shareToken);
 
-    const page = query.page ?? 1;
     const limit = query.limit ?? 20;
-    const [items, total] = await this.prisma.$transaction([
-      this.prisma.entry.findMany({
-        where: { repositoryId },
-        include: { link: true, linkedRepository: true },
-        orderBy: { position: 'asc' },
-        skip: (page - 1) * limit,
-        take: limit,
-      }),
-      this.prisma.entry.count({ where: { repositoryId } }),
-    ]);
+    const cursor = query.cursor
+      ? decodeCursor<{ p: number }>(query.cursor)
+      : null;
+    if (query.cursor && (cursor === null || typeof cursor.p !== 'number')) {
+      throw new BadRequestException('Invalid cursor');
+    }
+
+    const rows = await this.prisma.entry.findMany({
+      where: {
+        repositoryId,
+        ...(cursor ? { position: { gt: cursor.p } } : {}),
+      },
+      include: { link: true, linkedRepository: true },
+      orderBy: { position: 'asc' },
+      take: limit + 1,
+    });
+
+    const items = rows.slice(0, limit);
+    const nextCursor =
+      rows.length > limit
+        ? encodeCursor({ p: items[items.length - 1].position })
+        : null;
 
     return {
       items: items.map((item) =>
         this.toPublicEntry(item, item.link?.canonicalUrl),
       ),
-      meta: { page, limit, total },
+      meta: { limit, nextCursor },
     };
   }
 

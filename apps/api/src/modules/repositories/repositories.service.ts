@@ -11,7 +11,9 @@ import { EntryKind } from 'src/common/enums/entry-kind.enum';
 import { RepositoryVisibility } from 'src/common/enums/repository-visibility.enum';
 import { UserRole } from 'src/common/enums/user-role.enum';
 import { AuthUser } from 'src/common/interfaces/auth-user.interface';
+import { CursorQueryDto } from 'src/common/dto/cursor-query.dto';
 import { PaginationQueryDto } from 'src/common/dto/pagination-query.dto';
+import { decodeCursor, encodeCursor } from 'src/common/utils/cursor.util';
 import { parseIfMatchVersion, toVersionEtag } from 'src/common/utils/etag.util';
 import { Repository } from 'src/generated/prisma/client';
 import { CreateChildRepositoryDto } from './dto/create-child-repository.dto';
@@ -66,27 +68,52 @@ export class RepositoriesService {
     return this.toPublicRepository(saved);
   }
 
-  async getPublic(query: PaginationQueryDto) {
-    const page = query.page ?? 1;
+  async getPublic(query: CursorQueryDto) {
     const limit = query.limit ?? 20;
-    const where = { visibility: RepositoryVisibility.PUBLIC as string };
-    const [items, count] = await this.prisma.$transaction([
-      this.prisma.repository.findMany({
-        where,
-        orderBy: { updatedAt: 'desc' },
-        skip: (page - 1) * limit,
-        take: limit,
-      }),
-      this.prisma.repository.count({ where }),
-    ]);
+    const cursor = query.cursor
+      ? decodeCursor<{ u: string; id: string }>(query.cursor)
+      : null;
+    if (
+      query.cursor &&
+      (cursor === null ||
+        typeof cursor.u !== 'string' ||
+        typeof cursor.id !== 'string' ||
+        Number.isNaN(Date.parse(cursor.u)))
+    ) {
+      throw new BadRequestException('Invalid cursor');
+    }
+
+    const visibility = RepositoryVisibility.PUBLIC as string;
+    // Keyset on (updatedAt desc, id desc); id breaks updatedAt ties.
+    const rows = await this.prisma.repository.findMany({
+      where: {
+        visibility,
+        ...(cursor
+          ? {
+              OR: [
+                { updatedAt: { lt: new Date(cursor.u) } },
+                {
+                  updatedAt: new Date(cursor.u),
+                  id: { lt: cursor.id },
+                },
+              ],
+            }
+          : {}),
+      },
+      orderBy: [{ updatedAt: 'desc' }, { id: 'desc' }],
+      take: limit + 1,
+    });
+
+    const items = rows.slice(0, limit);
+    const last = items[items.length - 1];
+    const nextCursor =
+      rows.length > limit && last
+        ? encodeCursor({ u: last.updatedAt.toISOString(), id: last.id })
+        : null;
 
     return {
       items: items.map((item) => this.toPublicRepository(item)),
-      meta: {
-        page,
-        limit,
-        total: count,
-      },
+      meta: { limit, nextCursor },
     };
   }
 

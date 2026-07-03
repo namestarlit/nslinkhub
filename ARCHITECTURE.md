@@ -79,8 +79,10 @@ ref/               disposable, git-ignored implementation context
 3. Guards resolve the session (`resolveSessionUser`) and attach `AuthUser`.
 4. Services enforce access and business rules, reading/writing through
    Prisma.
-5. Responses use the `{ data, meta? }` envelope; errors will use the stable
-   error envelope (hub work, Phase A).
+5. Successes use the `{ data, meta? }` envelope; failures use the stable
+   error envelope `{ error: { code, message, requestId, details } }`, and
+   every response carries a server-generated `X-Request-Id`. Growth-prone
+   lists paginate by opaque cursor (`meta: { limit, nextCursor }`).
 
 Async export flow: service writes an `export_jobs` row, enqueues a BullMQ
 job; the processor updates status (`queued → running → completed|failed`);
