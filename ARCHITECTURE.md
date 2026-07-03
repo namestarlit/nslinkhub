@@ -67,13 +67,15 @@ NSLinkHub is a backend API for organizing and sharing curated link repositories.
 - `src/database/` — `PrismaModule`/`PrismaService`
 - `prisma/` — Prisma schema, config, and migrations
 - `src/generated/prisma/` — generated Prisma client (gitignored; `bun install` regenerates)
-- `docs/` — project spec and session handoff docs
-- `.codex/` — AI session workflow and restart instructions
+- `docs/` — design directions, product spec, and execution plans
+  (`docs/exec-plans/` per `PLANS.md`)
+- `ref/` — disposable, git-ignored implementation context
+- `AGENTS.md` — repository map and working conventions (start here)
 
 ## 6. Data Flow Overview
 
 Typical request flow:
-1. Request hits controller endpoint (`/api/v2/*`).
+1. Request hits controller endpoint (`/api/v1/*`).
 2. DTO validation/transformation runs via global `ValidationPipe`.
 3. Guard/auth strategy may authenticate and attach current user context.
 4. Service executes business logic and access checks.

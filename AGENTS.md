@@ -29,7 +29,6 @@ authoritative.
   namestarlit", nsauth) and the constraints current work must respect.
 - `docs/infra-deployment-direction.md`: ns-series deployment (namestarlit VPS,
   Dokploy Stack mode, GHCR images, topology-file conventions).
-- `PROJECT_STATE.md`: component overview.
 - `docs/nestjs-v2-feature-spec.md`: original product spec (historical
   background; the hub plan supersedes it where they conflict).
 - `PLANS.md`: required format for substantial execution plans.
