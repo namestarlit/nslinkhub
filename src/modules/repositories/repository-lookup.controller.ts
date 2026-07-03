@@ -21,7 +21,7 @@ import { RepositoriesService } from './repositories.service';
 // ':owner/:slug' under /repositories shadowed ':id/entries' and
 // ':id/children').
 @ApiTags('repositories')
-@Controller('api/v2/users/:username/repositories')
+@Controller('api/v1/users/:username/repositories')
 export class RepositoryLookupController {
   constructor(private readonly repositoriesService: RepositoriesService) {}
 

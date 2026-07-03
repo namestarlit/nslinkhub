@@ -18,7 +18,7 @@ import { TagsService } from './tags.service';
 @ApiTags('tags')
 @ApiBearerAuth()
 @UseGuards(AuthGuard)
-@Controller('api/v2')
+@Controller('api/v1')
 export class TagsController {
   constructor(private readonly tagsService: TagsService) {}
 

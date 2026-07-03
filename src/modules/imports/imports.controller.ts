@@ -18,7 +18,7 @@ import { ImportsService } from './imports.service';
 @ApiTags('imports')
 @ApiBearerAuth()
 @UseGuards(AuthGuard)
-@Controller('api/v2/imports')
+@Controller('api/v1/imports')
 export class ImportsController {
   constructor(private readonly importsService: ImportsService) {}
 

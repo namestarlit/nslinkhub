@@ -74,7 +74,7 @@ tracked alongside).
 
 ## Known coupling to remove (tracked in the plan)
 
-- `GET /api/v2/users/:username/repositories/:slug` routes on a mutable
+- `GET /api/v1/users/:username/repositories/:slug` routes on a mutable
   username — replaced by `GET /hubs/:hubId/collections/:slug` in Phase C.
 - `ownerId === userId` checks across services — replaced by the hub policy
   service in Phase C.

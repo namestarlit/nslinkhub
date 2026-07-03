@@ -175,7 +175,7 @@ Leak prevention:
 
 ## 8. API Contract (v2)
 
-Base path: `/api/v2`
+Base path: `/api/v1`
 
 ### Auth
 - `POST /auth/register`

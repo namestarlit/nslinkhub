@@ -103,13 +103,13 @@ bun test test   # e2e (needs PostgreSQL + Redis running)
 
 ## Auth
 
-Auth endpoints are served by better-auth under `/api/v2/auth/*`. The main ones:
+Auth endpoints are served by better-auth under `/api/v1/auth/*`. The main ones:
 
-- `POST /api/v2/auth/sign-up/email` — `{ email, password, name, username }`
-- `POST /api/v2/auth/sign-in/email` — `{ email, password }`
-- `POST /api/v2/auth/sign-in/username` — `{ username, password }`
-- `POST /api/v2/auth/sign-out`
-- `GET  /api/v2/auth/get-session`
+- `POST /api/v1/auth/sign-up/email` — `{ email, password, name, username }`
+- `POST /api/v1/auth/sign-in/email` — `{ email, password }`
+- `POST /api/v1/auth/sign-in/username` — `{ username, password }`
+- `POST /api/v1/auth/sign-out`
+- `GET  /api/v1/auth/get-session`
 
 Browser clients get an HttpOnly session cookie. API clients read the session
 token from the `set-auth-token` response header on sign-in and send it as

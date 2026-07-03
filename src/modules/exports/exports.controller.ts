@@ -16,7 +16,7 @@ import { ExportsService } from './exports.service';
 @ApiTags('exports')
 @ApiBearerAuth()
 @UseGuards(AuthGuard)
-@Controller('api/v2')
+@Controller('api/v1')
 export class ExportsController {
   constructor(private readonly exportsService: ExportsService) {}
 

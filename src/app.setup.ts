@@ -9,7 +9,7 @@ import { auth } from './auth/auth';
 // handler must see the raw request, so parsers are re-added after its mount.
 export function configureApp(app: INestApplication): void {
   const expressApp = app.getHttpAdapter().getInstance() as Express;
-  expressApp.all('/api/v2/auth/{*any}', toNodeHandler(auth));
+  expressApp.all('/api/v1/auth/{*any}', toNodeHandler(auth));
 
   app.use(json({ limit: '1mb' }));
   app.use(urlencoded({ extended: true }));

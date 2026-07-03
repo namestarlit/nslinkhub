@@ -14,7 +14,7 @@ async function bootstrap() {
   const config = new DocumentBuilder()
     .setTitle('NSLinkHub API')
     .setDescription('NSLinkHub Sprint 1 API')
-    .setVersion('2.0')
+    .setVersion('1.0')
     .addBearerAuth()
     .build();
   const document = SwaggerModule.createDocument(app, config);

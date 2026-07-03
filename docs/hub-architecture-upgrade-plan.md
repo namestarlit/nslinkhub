@@ -135,28 +135,28 @@ ExportJob       — belongs to hub + collection; requestedByUserId kept for audi
 Route consequences (breaking, fine — nothing is deployed):
 
 ```txt
-POST   /api/v2/hubs                                  create hub (creator = owner)
-GET    /api/v2/hubs/:hubId                           hub page (public: display info
+POST   /api/v1/hubs                                  create hub (creator = owner)
+GET    /api/v1/hubs/:hubId                           hub page (public: display info
                                                      + published collections; more for members)
-POST   /api/v2/hubs/:hubId/invitations               invite (owner/admin)
-POST   /api/v2/invitations/accept                    token in body
-GET    /api/v2/hubs/:hubId/collections               list (member; published subset otherwise)
-POST   /api/v2/hubs/:hubId/collections               create (member)
-GET    /api/v2/hubs/:hubId/collections/:slug         lookup (replaces /users/:username/...;
+POST   /api/v1/hubs/:hubId/invitations               invite (owner/admin)
+POST   /api/v1/invitations/accept                    token in body
+GET    /api/v1/hubs/:hubId/collections               list (member; published subset otherwise)
+POST   /api/v1/hubs/:hubId/collections               create (member)
+GET    /api/v1/hubs/:hubId/collections/:slug         lookup (replaces /users/:username/...;
        hubId is canonical; a mutable vanity handle can alias it later,
        resolving handle -> hubId at the edge, never stored in references)
-/api/v2/collections/:id/*                            resources, tags, children,
+/api/v1/collections/:id/*                            resources, tags, children,
        exports — authorized via publication + membership + shares
-POST   /api/v2/collections/:id/publish               publish to explore
-POST   /api/v2/collections/:id/unpublish
-PUT    /api/v2/collections/:id/link-sharing          enable/disable/rotate link
-POST   /api/v2/collections/:id/shares                direct share {email, role}
-DELETE /api/v2/collections/:id/shares/:userId        revoke
-POST   /api/v2/collections/:id/save                  save/bookmark (auth; published only)
-DELETE /api/v2/collections/:id/save                  unsave
-GET    /api/v2/explore                               published collections (public, cursor)
-GET    /api/v2/me/shared                             the user's shared/ surface
-GET    /api/v2/me/saved                              the user's saved/ surface
+POST   /api/v1/collections/:id/publish               publish to explore
+POST   /api/v1/collections/:id/unpublish
+PUT    /api/v1/collections/:id/link-sharing          enable/disable/rotate link
+POST   /api/v1/collections/:id/shares                direct share {email, role}
+DELETE /api/v1/collections/:id/shares/:userId        revoke
+POST   /api/v1/collections/:id/save                  save/bookmark (auth; published only)
+DELETE /api/v1/collections/:id/save                  unsave
+GET    /api/v1/explore                               published collections (public, cursor)
+GET    /api/v1/me/shared                             the user's shared/ surface
+GET    /api/v1/me/saved                              the user's saved/ surface
 ```
 
 ## Publication And Discovery (the explore surface)
@@ -164,7 +164,7 @@ GET    /api/v2/me/saved                              the user's saved/ surface
 Publishing is not merely "public if you have the URL" — it is **publication to
 NSLinkHub's product-wide public page** (the explore surface):
 
-- Published collections are listed on `GET /api/v2/explore` (public,
+- Published collections are listed on `GET /api/v1/explore` (public,
   cursor-paginated) and on their hub's public page. Anyone, signed in or not,
   can view them.
 - Visitors are prompted to create an account to **save** a published
@@ -336,7 +336,7 @@ data-shuffling migrations.
 - Implement the access-resolution chain from "Sharing Model": published →
   membership → direct share → active link. Collection access answers come
   from one policy service so resources/tags/exports can't drift.
-- Public surfaces: `GET /api/v2/explore` (published collections,
+- Public surfaces: `GET /api/v1/explore` (published collections,
   cursor-paginated) and the public hub page (decision 3).
 - Sharing endpoints: publish/unpublish, link-sharing toggle+rotate, direct
   shares CRUD, `GET /me/shared`; record link-sourced shares when a signed-in

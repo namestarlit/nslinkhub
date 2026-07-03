@@ -27,7 +27,7 @@ import { UpdateEntryDto } from './dto/update-entry.dto';
 import { EntriesService } from './entries.service';
 
 @ApiTags('entries')
-@Controller('api/v2/repositories/:id/entries')
+@Controller('api/v1/repositories/:id/entries')
 export class EntriesController {
   constructor(private readonly entriesService: EntriesService) {}
 

@@ -26,7 +26,7 @@ import { UpdateRepositoryDto } from './dto/update-repository.dto';
 import { RepositoriesService } from './repositories.service';
 
 @ApiTags('repositories')
-@Controller('api/v2/repositories')
+@Controller('api/v1/repositories')
 export class RepositoriesController {
   constructor(private readonly repositoriesService: RepositoriesService) {}
 

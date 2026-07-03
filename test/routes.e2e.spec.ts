@@ -31,7 +31,7 @@ describe('Repository routes (e2e)', () => {
     const server = app.getHttpServer();
 
     const signUp = await request(server)
-      .post('/api/v2/auth/sign-up/email')
+      .post('/api/v1/auth/sign-up/email')
       .send({
         email: `${username}@example.com`,
         password: 'Password123!',
@@ -43,14 +43,14 @@ describe('Repository routes (e2e)', () => {
     expect(bearer).toBeTruthy();
 
     const repo = await request(server)
-      .post('/api/v2/repositories')
+      .post('/api/v1/repositories')
       .set('Authorization', `Bearer ${bearer}`)
       .send({ slug, title: 'E2E Repo', visibility: 'public' })
       .expect(201);
     repoId = (repo.body as { data: { id: string } }).data.id;
 
     await request(server)
-      .post(`/api/v2/repositories/${repoId}/entries/external`)
+      .post(`/api/v1/repositories/${repoId}/entries/external`)
       .set('Authorization', `Bearer ${bearer}`)
       .send({ url: `https://example.com/e2e-${sfx}`, position: 0 })
       .expect(201);
@@ -62,7 +62,7 @@ describe('Repository routes (e2e)', () => {
 
   it('lists entries of a public repository unauthenticated', async () => {
     const res = await request(app.getHttpServer())
-      .get(`/api/v2/repositories/${repoId}/entries`)
+      .get(`/api/v1/repositories/${repoId}/entries`)
       .expect(200);
 
     const body = res.body as { data: Array<{ url?: string }> };
@@ -75,13 +75,13 @@ describe('Repository routes (e2e)', () => {
   // route as a 404.
   it('rejects a non-uuid repository id on the entries route with 400', async () => {
     await request(app.getHttpServer())
-      .get('/api/v2/repositories/not-a-uuid/entries')
+      .get('/api/v1/repositories/not-a-uuid/entries')
       .expect(400);
   });
 
   it('lists children of a public repository unauthenticated', async () => {
     const res = await request(app.getHttpServer())
-      .get(`/api/v2/repositories/${repoId}/children`)
+      .get(`/api/v1/repositories/${repoId}/children`)
       .expect(200);
 
     const body = res.body as { data: unknown[] };
@@ -90,7 +90,7 @@ describe('Repository routes (e2e)', () => {
 
   it('looks up a repository by owner and slug', async () => {
     const res = await request(app.getHttpServer())
-      .get(`/api/v2/users/${username}/repositories/${slug}`)
+      .get(`/api/v1/users/${username}/repositories/${slug}`)
       .expect(200);
 
     const body = res.body as { data: { slug: string } };

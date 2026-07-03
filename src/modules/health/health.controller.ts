@@ -4,7 +4,7 @@ import { apiOk } from 'src/common/utils/response.util';
 import { HealthService } from './health.service';
 
 @ApiTags('system')
-@Controller('api/v2')
+@Controller('api/v1')
 export class HealthController {
   constructor(private readonly healthService: HealthService) {}
 
