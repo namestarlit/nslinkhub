@@ -4,20 +4,24 @@ Direction document, recorded 2026-07-03. Not scheduled work — this shapes how
 NSLinkHub's auth must stay structured so the later centralization is an
 integration, not a rewrite.
 
-## Naming
+## Naming (resolved 2026-07-03)
 
 **Hashikome is the company** and stays out of product and account naming
 (the naming-boundaries rule — replaceable branding never becomes a durable
-identifier — applies doubly to the corporate brand). The identity service's
-working name is **nsauth**.
+identifier — applies doubly to the corporate brand).
 
-The *consumer-facing* account brand is an open naming question: the analog of
-what "Log in with Facebook" was to Meta products — a consumer identity brand
-distinct from the company (Meta) and from any single product. Candidates to
-explore later: "ns account", a membership-style name, or a coined brand.
-Because branding stays configurable, the button label and account name can be
-decided (and re-decided) without touching schemas, contracts, or operational
-identifiers. This document uses "nsauth account" as a placeholder throughout.
+The consumer-facing account brand is **Namestarlit**: the button reads
+**"Continue with Namestarlit"** and the account is a **Namestarlit account**.
+Rationale: the ns prefix in every product name already points at namestarlit —
+it is the publisher umbrella, which is exactly what "Meta account" is to Meta
+products: publisher brand, not corporate brand (hashikome), not any single
+product (rejected: branding identity as NSLinkHub would read oddly on
+nsworklog, inherit product renames, and clash with "hubs" being a concept
+inside the product).
+
+**nsauth** remains the internal working name for the service/repo. Branding
+stays configurable, so the label lives in configuration and copy — never in
+schemas, contracts, or operational identifiers.
 
 ## The Goal
 
@@ -29,9 +33,9 @@ work for future reference; Flask-era today, same modernization candidate).
 Instead of each product owning credentials:
 
 - One self-hosted identity service — **nsauth** — owns credentials, and every
-  ns product offers a "Continue with …" SSO button.
+  ns product offers **"Continue with Namestarlit"**.
 - **SSO authenticates identity; it does not enroll.** Unlike Google (where a
-  Google account implicitly belongs to every Google service), an nsauth
+  Google account implicitly belongs to every Google service), a Namestarlit
   account grants membership to nothing. Each product runs its own explicit
   sign-up the first time a user continues into it; users opt in per product
   and can leave per product.
@@ -51,7 +55,7 @@ nsauth (its own repo/product, later)
         the Accounts-Center surface
 
 ns products (nslinkhub, nsworklog, future ns*)
-  OIDC relying parties: the "Continue with …" button
+  OIDC relying parties: the "Continue with Namestarlit" button
   own: product user record, product sessions, authorization
        (hubs/memberships/shares), onboarding (e.g. personal hub),
        all product data

@@ -67,8 +67,8 @@ tracked alongside).
 ## Future constraint to respect while implementing
 
 A central identity service for the ns series is planned (working name:
-nsauth; hashikome is the company and stays out of product/account naming;
-the consumer account brand is an open question) —
+nsauth; consumer brand: **"Continue with Namestarlit"** / Namestarlit
+account; hashikome is the company and stays out of product/account naming) —
 see `docs/identity-sso-direction.md`. Concretely for this upgrade: keep
 sign-up onboarding (personal hub creation) in an app-owned service callable
 from any auth path (not hard-wired to one better-auth hook), keep
