@@ -1,9 +1,9 @@
 # Product Definition
 
 NSLinkHub is the canonical product definition for contributors and agents.
-Where this document and older specs conflict, this document and
-`docs/design-docs/hub-architecture.md` win. The original v2 feature spec is
-kept as historical background at `docs/nestjs-v2-feature-spec.md`.
+Where this document and any older material conflict, this document and
+`docs/design-docs/hub-architecture.md` win. (The original v2 feature spec was
+retired after its durable content was absorbed here; git history keeps it.)
 
 ## 1. Product Overview
 
@@ -59,7 +59,14 @@ Hub → Collections → Resources
 - Create collections (nested), add resources with commentary, reorder with
   optimistic-concurrency version checks, tag, and deduplicate URLs by
   canonical form.
-- Import from CSV, browser-bookmarks HTML, and WhatsApp chat exports.
+- Import from CSV, browser-bookmarks HTML, and WhatsApp chat exports, with a
+  partial-failure report (imported/skipped/error counts plus per-row errors).
+  Target behavior for bookmarks: map the folder tree to nested collections
+  (each folder a collection, subfolders linked as collection resources) —
+  the current importer is flat (tracked as import-parser debt).
+- Canonical URL identity: lowercase scheme/host, normalized paths, sorted
+  query params, tracking params stripped (`utm_*`, `fbclid`, `gclid`) — so
+  the same resource captured twice converges.
 - Capture from the browser via the extension (popup, context menu, keyboard
   shortcut) into a chosen hub + collection.
 
@@ -123,6 +130,9 @@ defined in a dedicated design pass before web implementation (Track W3).
   silently overwriting concurrent edits.
 - Imported files that are malformed produce per-row errors, not partial
   silent corruption.
+- Read endpoints that expose versioned representations honor conditional
+  requests: ETag primary (`If-None-Match` → 304), `Last-Modified` as
+  secondary compatibility.
 - All identifiers exposed in routes are immutable UUIDv7 values; changing a
   username, hub name, or collection title never breaks a stored reference.
 

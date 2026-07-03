@@ -41,8 +41,6 @@ authoritative.
 - `docs/runbooks/verification.md`: the canonical verification gate.
 - `docs/runbooks/migrations.md`: Prisma migration discipline.
 - `docs/runbooks/reference-context.md`: disposable `ref/` usage and cleanup.
-- `docs/nestjs-v2-feature-spec.md`: original product spec (historical
-  background; `PRODUCT.md` and the hub design supersede it).
 - `PLANS.md`: required format for substantial execution plans.
 - `docs/exec-plans/tech-debt-tracker.md`: accepted compromises and follow-ups.
 - `CHANGELOG.md`: durable summary of completed project changes.

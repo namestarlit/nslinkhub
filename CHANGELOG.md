@@ -11,6 +11,11 @@ summary of what changed after completed work has been promoted out of `ref/`.
 
 ### Changed
 
+- Retired the v2 feature spec after absorbing its durable content into
+  PRODUCT.md (bookmarks folder-tree import target, canonical-URL rules,
+  conditional-request behavior) and the tech-debt tracker (tag cleanup,
+  export retention defaults).
+
 - Migrated the stack to Bun (runtime + package manager), Prisma 7 (driver
   adapter, generated client, single `0_init` migration owning triggers and
   CHECK constraints), and self-hosted better-auth (bearer + username plugins,
