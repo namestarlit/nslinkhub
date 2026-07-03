@@ -6,9 +6,8 @@ integration, not a rewrite.
 
 ## Naming (resolved 2026-07-03)
 
-**Hashikome is the company** and stays out of product and account naming
-(the naming-boundaries rule — replaceable branding never becomes a durable
-identifier — applies doubly to the corporate brand).
+The ns series consists of **personal projects** belonging to the author's
+personal brand — they have no company affiliation.
 
 The consumer-facing account brand is **namestarlit** — always lowercase, as a
 wordmark, even at the start of a sentence. It is the author's personal brand:
@@ -18,10 +17,9 @@ a book of faces.) The button reads **"Continue with namestarlit"** and the
 account is a **namestarlit account**.
 Rationale: the ns prefix in every product name already points at namestarlit —
 it is the publisher umbrella, which is exactly what "Meta account" is to Meta
-products: publisher brand, not corporate brand (hashikome), not any single
-product (rejected: branding identity as NSLinkHub would read oddly on
-nsworklog, inherit product renames, and clash with "hubs" being a concept
-inside the product).
+products: the publisher brand, not any single product (rejected: branding
+identity as NSLinkHub would read oddly on nsworklog, inherit product renames,
+and clash with "hubs" being a concept inside the product).
 
 **nsauth** remains the internal working name for the service/repo. Branding
 stays configurable, so the label lives in configuration and copy — never in
