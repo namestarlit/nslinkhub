@@ -15,31 +15,47 @@ design documents, which are the authoritative source:
 - `pigfarm/docs/design-docs/controlled-onboarding.md`
 - `pigfarm/docs/CORE_BELIEFS.md`
 
+## Vocabulary
+
+The container concept is renamed (decision 12): what the code today calls a
+"repository" becomes a **collection** — the "folder" of NSLinkHub, what
+folders are to Google Drive. What the code calls an "entry" becomes a
+**resource**. A collection contains resources; a resource is an external link
+or a link to another collection. The internal `links` URL-dedupe table keeps
+its name. The rename lands with the Phase B/C reshaping (nothing is deployed)
+and applies everywhere: schema, API routes, module/service names, docs, UI
+copy.
+
+```txt
+Hub → Collections → Resources
+```
+
 ## Concept Mapping
 
 | Pigfarm | NSLinkHub | Notes |
 | --- | --- | --- |
 | Organization (tenant root) | **Hub** | Owns everything; the only true identity boundary |
-| Farm (team boundary in tenant) | — (not needed initially) | Repositories hang directly off the hub; a sub-boundary can be added later if needed |
+| Farm (team boundary in tenant) | — (not needed initially) | Collections hang directly off the hub; a sub-boundary can be added later if needed |
 | OrganizationMembership | **HubMembership** | `owner \| admin \| member` |
-| FarmUserRole | — (defer) | Revisit per-repository roles only when a concrete workflow needs them |
+| FarmUserRole | **CollectionShare** (non-members only) | Per-collection reader/editor grants; member-level restriction intentionally not planned |
 | User (global identity, many orgs) | User (global identity, many hubs) | A user is just a user |
 
 ## Core Inherited Decisions
 
 1. **Immutable IDs are the only identity.** Every entity keys on an immutable
-   UUIDv7 (`hubId`, `userId`, `repositoryId`). Human-facing values — usernames,
+   UUIDv7 (`hubId`, `userId`, `collectionId`). Human-facing values — usernames,
    display names, hub names, emails — are mutable attributes. Never encode a
    mutable display value into authorization rules, foreign keys, route
    contracts, or durable integrations. (NSLinkHub already violates this in one
    place: `GET /users/:username/repositories/:slug`. Phase C fixes it.)
-2. **The hub is the tenant root.** A hub owns repositories (and their entries,
-   tags, share links, exports, imports). Users belong to hubs through
+2. **The hub is the tenant root.** A hub owns collections (and their
+   resources, tags, shares, exports, imports). Users belong to hubs through
    `HubMembership` and can belong to many hubs. Nothing domain-owned hangs off
-   a user directly.
+   a user directly (user-level surfaces like shared/ and saved/ are views over
+   grants and saves, not ownership).
 3. **Tenant-scoped query contract.** Every hub-owned lookup requires `hubId`
    in the query, not just the record id. Route IDs never prove access.
-   Repository/service methods should make unscoped queries hard to express.
+   Data-access methods should make unscoped queries hard to express.
 4. **Membership roles, minimal set.** `owner | admin | member`.
    - `owner`: administers the hub; invite/remove members, grant/revoke admin,
      transfer ownership, delete/archive the hub. A hub must always retain at
@@ -68,8 +84,9 @@ design documents, which are the authoritative source:
    creator's `owner` membership, and (once auditing exists) the audit record —
    one transaction, no partially-created tenants.
 9. **Audit sensitive actions.** Hub creation/archival, invitations, membership
-   changes, role changes, ownership transfer, share-link rotation. Audit
-   records are part of the product, tenant-scoped, in PostgreSQL.
+   changes, role changes, ownership transfer, publication changes, share-link
+   rotation. Audit records are part of the product, tenant-scoped, in
+   PostgreSQL.
 10. **Stable API error envelope.** Machine-readable `code`, human `message`,
     server-generated PII-free `requestId`, optional `details`. Keep codes
     stable so clients can act on them.
@@ -99,51 +116,85 @@ HubMembership   — (hubId, userId, role: owner|admin|member, status). A user's
                   authority in a hub. Unique per (hubId, userId).
 HubInvitation   — (hubId, email, role, tokenHash, expiresAt, status). Accepted
                   by an authenticated user; produces a membership.
-Repository      — belongs to a hub (hubId replaces ownerId). Publication is a
-                  boolean: published (public) or unpublished (hub members +
-                  explicit shares). The public/unlisted/private triad is gone;
-                  see "Sharing Model" below.
-RepositoryShare — (repositoryId, userId, role: reader|editor, source:
-                  direct|link) — per-user access to one repository without hub
+Collection      — (was: repository) belongs to a hub. Publication is a
+                  boolean: published (on the product-wide explore surface) or
+                  unpublished (hub members + explicit shares). Nests via
+                  parentCollectionId.
+CollectionShare — (collectionId, userId, role: reader|editor, source:
+                  direct|link) — per-user access to one collection without hub
                   membership. Feeds each user's shared/ surface.
-Entry/Link/Tag  — unchanged shape; access derives from the owning repository's
-                  hub. Hub-scoped queries carry hubId.
-ExportJob       — belongs to hub + repository; requestedByUserId kept for audit.
+CollectionSave  — (collectionId, userId, savedAt) — a social-style bookmark of
+                  a published collection. Feeds each user's saved/ surface;
+                  viewable only while the collection stays published.
+Resource        — (was: entry) external link or collection link inside a
+                  collection; access derives from the owning collection.
+Link/Tag        — unchanged; `links` stays the internal URL-dedupe table.
+ExportJob       — belongs to hub + collection; requestedByUserId kept for audit.
 ```
 
 Route consequences (breaking, fine — nothing is deployed):
 
 ```txt
 POST   /api/v2/hubs                                  create hub (creator = owner)
-GET    /api/v2/hubs/:hubId                           hub details (member)
+GET    /api/v2/hubs/:hubId                           hub page (public: display info
+                                                     + published collections; more for members)
 POST   /api/v2/hubs/:hubId/invitations               invite (owner/admin)
 POST   /api/v2/invitations/accept                    token in body
-GET    /api/v2/hubs/:hubId/repositories              list (member; published subset for non-members)
-POST   /api/v2/hubs/:hubId/repositories              create (member)
-GET    /api/v2/hubs/:hubId/repositories/:slug        public lookup replaces /users/:username/...
-       (hubId is canonical; a mutable vanity handle can alias it later,
-        resolving handle -> hubId at the edge, never stored in references)
-/api/v2/repositories/:id/*                           unchanged (entries, tags,
-       children, exports) but authorized via publication + membership + shares
-POST   /api/v2/repositories/:id/publish              publish / unpublish
-POST   /api/v2/repositories/:id/unpublish
-PUT    /api/v2/repositories/:id/link-sharing         enable/disable/rotate link
-POST   /api/v2/repositories/:id/shares               direct share {email, role}
-DELETE /api/v2/repositories/:id/shares/:userId       revoke
+GET    /api/v2/hubs/:hubId/collections               list (member; published subset otherwise)
+POST   /api/v2/hubs/:hubId/collections               create (member)
+GET    /api/v2/hubs/:hubId/collections/:slug         lookup (replaces /users/:username/...;
+       hubId is canonical; a mutable vanity handle can alias it later,
+       resolving handle -> hubId at the edge, never stored in references)
+/api/v2/collections/:id/*                            resources, tags, children,
+       exports — authorized via publication + membership + shares
+POST   /api/v2/collections/:id/publish               publish to explore
+POST   /api/v2/collections/:id/unpublish
+PUT    /api/v2/collections/:id/link-sharing          enable/disable/rotate link
+POST   /api/v2/collections/:id/shares                direct share {email, role}
+DELETE /api/v2/collections/:id/shares/:userId        revoke
+POST   /api/v2/collections/:id/save                  save/bookmark (auth; published only)
+DELETE /api/v2/collections/:id/save                  unsave
+GET    /api/v2/explore                               published collections (public, cursor)
 GET    /api/v2/me/shared                             the user's shared/ surface
+GET    /api/v2/me/saved                              the user's saved/ surface
 ```
+
+## Publication And Discovery (the explore surface)
+
+Publishing is not merely "public if you have the URL" — it is **publication to
+NSLinkHub's product-wide public page** (the explore surface):
+
+- Published collections are listed on `GET /api/v2/explore` (public,
+  cursor-paginated) and on their hub's public page. Anyone, signed in or not,
+  can view them.
+- Visitors are prompted to create an account to **save** a published
+  collection — the social-media bookmark gesture. Saves land in the user's
+  **saved/** surface.
+- A save is viewable only while the collection stays published. Unpublishing
+  does not delete save rows; the saved item goes dormant (listed as
+  unavailable or hidden — web UX decides the presentation), exactly like a
+  bookmarked social post whose author restricted it. Republishing revives it.
+- Signed-in users get the same explore surface as a browsing destination.
+- Publishing/unpublishing is a hub-member action (per hub-role rules) and an
+  audited event.
+
+**shared/ vs saved/:** both are user-level (not hub-scoped) surfaces.
+shared/ is access *granted to you* (CollectionShare — Drive "Shared with me");
+saved/ is what *you chose to keep* from the public surface (CollectionSave —
+social bookmarks). They never mix: a share grants access; a save grants
+nothing, it just remembers a published thing.
 
 ## Sharing Model (Google Drive philosophy)
 
 Hub membership is intentionally heavyweight — it is for people who belong in
-the hub, not a workaround for letting one person see one repository. The
+the hub, not a workaround for letting one person see one collection. The
 gap it would otherwise create ("how many users must I invite just so someone
-can *see* this?") is closed by per-repository sharing, modeled on how Google
+can *see* this?") is closed by per-collection sharing, modeled on how Google
 Drive shares files. Without this, recipients of a link fall back to storing
 it in browser bookmarks — the exact behavior the product exists to replace.
 
-**Publication (replaces public/unlisted/private).** A repository is either
-**published** — visible to everyone, listed on the hub's public page — or
+**Publication (replaces public/unlisted/private).** A collection is either
+**published** — on the explore surface, visible to everyone — or
 **unpublished** — visible to hub members and explicit shares only. Default:
 unpublished. The old `unlisted` state is subsumed by unpublished +
 link-sharing enabled; the CHECK constraints and share-token-required rules
@@ -151,34 +202,31 @@ around `unlisted` disappear.
 
 **Two sharing mechanisms on top of publication:**
 
-1. **Link sharing (anyone with the link → read).** A per-repository toggle
+1. **Link sharing (anyone with the link → read).** A per-collection toggle
    with a rotatable unguessable token (the existing share-token
    infrastructure, reframed). Always read-only. When a signed-in user opens
-   a valid share link, the repository is recorded under their **shared/**
-   surface (`RepositoryShare` with `source: link`, role `reader`); that
+   a valid share link, the collection is recorded under their **shared/**
+   surface (`CollectionShare` with `source: link`, role `reader`); that
    recorded access remains valid only while link sharing stays enabled —
    disabling or rotating the link cuts it off, exactly like Drive.
 2. **Direct sharing (specific person → read or write).** Share to an email
    address; requires a linkhub account (resolve email → userId; sharing to
    an unregistered email is an open item — start by requiring an existing
-   account). Creates `RepositoryShare` with `source: direct` and role
+   account). Creates `CollectionShare` with `source: direct` and role
    `reader` (default) or `editor`. Direct grants are independent of the
-   link toggle and revocable individually. The repository appears under the
+   link toggle and revocable individually. The collection appears under the
    recipient's **shared/** surface.
 
-**Editor scope.** An `editor` writes content inside that one repository —
-entries, tags, imports. Editors do not publish/unpublish, manage sharing,
-delete the repository, or touch anything else in the hub. Publication and
+**Editor scope.** An `editor` writes content inside that one collection —
+resources, tags, imports. Editors do not publish/unpublish, manage sharing,
+delete the collection, or touch anything else in the hub. Publication and
 share management stay with hub members (per hub-role rules).
 
-**shared/ surface.** A user-level (not hub-scoped) listing of everything
-shared with the user across hubs — the Drive "Shared with me" equivalent.
-Backed entirely by `RepositoryShare` rows.
-
-**Access resolution for a repository** (first match wins):
-published → anyone reads; hub membership → per hub role; direct share →
-per share role; active link + valid token (or link-sourced share row while
-the link stays enabled) → read; otherwise → not found.
+**Access resolution for a collection** (first match wins):
+published → anyone reads (and signed-in users may save); hub membership →
+per hub role; direct share → per share role; active link + valid token (or
+link-sourced share row while the link stays enabled) → read; otherwise →
+not found.
 
 ## Workspace And Client Surfaces
 
@@ -219,12 +267,12 @@ Surface roles (pigfarm `client-surfaces.md`, mobile stance applied to the
 extension):
 
 ```txt
-Web        Full surface: hubs, memberships, invitations, repositories,
-           entries, tags, imports, exports, sharing, account security.
-Extension  Constrained companion: authenticate, pick hub + repository,
+Web        Full surface: explore, hubs, memberships, invitations, collections,
+           resources, tags, imports, exports, sharing, saves, account security.
+Extension  Constrained companion: authenticate, pick hub + collection,
            capture current tab / selection / context-menu link (title, URL,
            note), see capture status. No management, no settings, no
-           second implementation of visibility or dedupe rules — it submits
+           second implementation of publication or dedupe rules — it submits
            commands and renders results.
 ```
 
@@ -232,7 +280,9 @@ Extension  Constrained companion: authenticate, pick hub + repository,
   impeccable pass before building (pigfarm's pattern: its
   `web-product-experience.md`, `web-interface-system.md`, and
   `web-design-tokens.md` were produced first and the UI built against them).
-  Produce the same three documents for NSLinkHub.
+  Produce the same three documents for NSLinkHub. The explore surface,
+  shared/, and saved/ are first-class in that pass — they are the public face
+  and the retention loop of the product.
 - Extension auth: better-auth bearer tokens (already configured). Treat token
   storage in the extension as the main design risk — prefer
   `chrome.storage.session`-backed short-lived tokens obtained through an
@@ -251,16 +301,18 @@ data-shuffling migrations.
 - Stable error envelope (`code`, `message`, `requestId`, `details`) via a
   global exception filter + request-id middleware; keep codes stable.
 - Validate configuration at startup (`@nestjs/config` schema validation).
-- Decide cursor pagination for growth-prone lists (entries, repositories);
+- Cursor pagination for growth-prone lists (resources, collections, explore);
   keep page/limit only where lists stay small.
 
-### Phase B — Hub tenancy schema
+### Phase B — Hub tenancy schema (+ the rename)
 
-- Add `hubs`, `hub_memberships`, `repository_shares` (+ `hub_invitations` if
-  Phase D lands together) to `prisma/schema.prisma`; reshape `0_init` rather
-  than adding a data migration.
-- `repositories.owner_id` → `repositories.hub_id` (FK to hubs, cascade).
-- `repositories.visibility` → `published` boolean (default false) +
+- Rename tables/models with the reshape: `repositories` → `collections`,
+  `entries` → `resources` (module, service, controller, DTO names follow).
+- Add `hubs`, `hub_memberships`, `collection_shares`, `collection_saves`
+  (+ `hub_invitations` if Phase D lands together) to `prisma/schema.prisma`;
+  reshape `0_init` rather than adding a data migration.
+- `collections.owner_id` → `collections.hub_id` (FK to hubs, cascade).
+- `collections.visibility` → `published` boolean (default false) +
   `link_sharing_enabled` boolean alongside the existing rotatable
   `share_token_hash`; drop the unlisted CHECK constraints.
 - Keep `users.username` as mutable convenience (login via better-auth username
@@ -271,26 +323,32 @@ data-shuffling migrations.
   this keeps "individual user" a special case of the same model, not a
   parallel code path.
 
-### Phase C — Authorization rework
+### Phase C — Authorization rework + public surfaces
 
 - Replace `ownerId === user.userId` checks in services with a hub policy
   service: `requireHubRole(hubId, userId, minRole)` backed by memberships;
   keep the `UserRole.ADMIN` platform bypass.
-- Enforce the scoped-query contract: repository lookups take `hubId` +
-  `repositoryId`; entry/tag/export lookups resolve the repository first and
+- Enforce the scoped-query contract: collection lookups take `hubId` +
+  `collectionId`; resource/tag/export lookups resolve the collection first and
   carry its hub. Route IDs never prove access.
-- Move the owner/slug public lookup to `GET /hubs/:hubId/repositories/:slug`;
+- Move the owner/slug public lookup to `GET /hubs/:hubId/collections/:slug`;
   delete the `/users/:username/...` route (username is mutable — decision 1).
 - Implement the access-resolution chain from "Sharing Model": published →
-  membership → direct share → active link. Repository access answers come
-  from one policy service so entries/tags/exports can't drift.
+  membership → direct share → active link. Collection access answers come
+  from one policy service so resources/tags/exports can't drift.
+- Public surfaces: `GET /api/v2/explore` (published collections,
+  cursor-paginated) and the public hub page (decision 3).
 - Sharing endpoints: publish/unpublish, link-sharing toggle+rotate, direct
   shares CRUD, `GET /me/shared`; record link-sourced shares when a signed-in
   user opens a valid share link.
+- Saves: save/unsave endpoints (published collections only), `GET /me/saved`
+  with dormant handling for unpublished items.
 - Update smoke scripts and e2e regression tests (`test/routes.e2e.spec.ts`)
-  including: unpublished repo invisible to strangers, direct-share reader
-  can read but not write, editor can write entries but not publish or
-  manage shares, link rotation cuts off link-sourced access.
+  including: unpublished collection invisible to strangers and absent from
+  explore, direct-share reader can read but not write, editor can write
+  resources but not publish or manage shares, link rotation cuts off
+  link-sourced access, saving an unpublished collection is rejected, a save
+  goes dormant on unpublish and revives on republish.
 
 ### Phase D — Invitations + membership management
 
@@ -320,12 +378,13 @@ against the user-owned routes being removed.
   producing the NSLinkHub equivalents of pigfarm's web-product-experience /
   web-interface-system / web-design-tokens docs; then scaffold
   `apps/web` (Next.js App Router, Tailwind, Bun-run) and build the first
-  vertical slices: sign-in, hub switcher, repository list/detail, entry
-  capture, share-link management. Cookie sessions (better-auth) — same
-  origin or configured CORS + trusted origins.
+  vertical slices: explore (public), sign-in, hub switcher, collection
+  list/detail, resource capture, sharing management, shared/ and saved/.
+  Cookie sessions (better-auth) — same origin or configured CORS + trusted
+  origins.
 - **W4 — Browser extension.** `apps/extension` (MV3, Chrome/Edge/Firefox):
-  sign-in, default hub+repository picker, one-click capture of the current
-  tab (uses the existing external-entry endpoint; dedupe/canonicalization
+  sign-in, default hub+collection picker, one-click capture of the current
+  tab (uses the existing external-resource endpoint; dedupe/canonicalization
   stay backend-owned), context-menu "Save to NSLinkHub". Bearer-token auth
   with session-scoped storage.
 
@@ -336,9 +395,13 @@ against the user-owned routes being removed.
 - Vanity hub handles (mutable, unique-while-active, resolve to hubId).
 - Sharing to unregistered emails (pending share + invitation-style email,
   activated on sign-up) — Phase C starts with existing accounts only.
-- Per-repository roles for *hub members* are intentionally not planned:
+- Resource-level saves (bookmarking a single resource, not just a
+  collection) — evaluate after collection saves prove the loop.
+- Explore ranking/curation (recency first; anything smarter is a product
+  decision for the web pass).
+- Per-collection roles for *hub members* are intentionally not planned:
   members already have full content write (decision 2), and non-members are
-  covered by repository shares (decision 8). Revisit only if a concrete
+  covered by collection shares (decision 8). Revisit only if a concrete
   workflow needs member-level restriction.
 
 ## Resolved Decisions (with the user, 2026-07-03)
@@ -348,13 +411,13 @@ against the user-owned routes being removed.
    completely normal hub — renameable, deletable, invitable; no "personal"
    special-casing anywhere. Users may legitimately have zero hubs.
 2. **`member` has full content write.** Members create/edit/delete
-   repositories, entries, tags, imports, exports within the hub. `admin`
+   collections, resources, tags, imports, exports within the hub. `admin`
    adds member management; `owner` adds hub administration.
 3. **Public hub page ships in Phase C.** Minimal unauthenticated
    `GET /hubs/:hubId` returning hub display info + its published
-   repositories. Locks the public URL shape before the web app builds on it.
-4. **Cursor pagination, adopted in Phase A** for entries and repository
-   listings — the contract locks once, before any client exists.
+   collections. Locks the public URL shape before the web app builds on it.
+4. **Cursor pagination, adopted in Phase A** for resource, collection, and
+   explore listings — the contract locks once, before any client exists.
 5. **Pigfarm error envelope for errors**: failures return
    `{ "error": { code, message, requestId, details } }` with stable codes;
    successes keep the existing `{ data, meta }` shape.
@@ -364,19 +427,29 @@ against the user-owned routes being removed.
    with E tracked alongside.
 7. **Extension first cut: popup + context menu + keyboard shortcut.** All
    three capture paths from the start.
-8. **Drive-style per-repository sharing** (2026-07-03, follow-up): hub
+8. **Drive-style per-collection sharing** (2026-07-03, follow-up): hub
    invitations are for people who belong in the hub; seeing or editing one
-   repository never requires membership. Repositories get link sharing
+   collection never requires membership. Collections get link sharing
    (anyone with the link → read) and direct sharing by email (requires a
    linkhub account; `reader` default or `editor`), both surfacing under the
    recipient's user-level **shared/** view. See "Sharing Model".
-9. **Publish/unpublish replaces public/unlisted/private.** A repository is
-   published (public) or unpublished (hub members + shares). Unlisted is
-   subsumed by unpublished + link sharing enabled.
+9. **Publish/unpublish replaces public/unlisted/private**, and publishing
+   means **publication to the product-wide explore surface** — listed on
+   `GET /explore` and the hub's public page, viewable by anyone, savable by
+   account holders. Unpublished = hub members + shares. Unlisted is subsumed
+   by unpublished + link sharing enabled.
 10. **Link shares are always read-only**, and link-derived shared/ entries
     stay valid only while the link is enabled (rotation/disable cuts them
     off). Direct shares are independent and individually revocable.
-11. **Editor scope is content-only**: entries/tags/imports inside that one
-    repository — no publish/unpublish, no share management, no delete, no
+11. **Editor scope is content-only**: resources/tags/imports inside that one
+    collection — no publish/unpublish, no share management, no delete, no
     other hub access. Direct sharing starts with existing accounts;
     unregistered-email sharing is a tracked Phase E item.
+12. **Rename: repository → collection, entry → resource** (2026-07-03,
+    follow-up). "Collection" chosen over basket/stack/shelf as the folder
+    analog of NSLinkHub; a collection contains resources. The rename applies
+    to schema, routes, code modules, and product copy, landing with Phase B/C.
+13. **Saves are social-style bookmarks of published collections.** Stored as
+    `CollectionSave` rows, surfaced under **saved/**, viewable only while the
+    collection stays published (dormant on unpublish, revived on republish).
+    saved/ (what you kept) and shared/ (what you were granted) never mix.

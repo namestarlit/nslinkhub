@@ -6,17 +6,25 @@ and the phased plan.
 
 ## The one-line model
 
-A **hub** is the tenant root and the only true identity (`hubId`, immutable
-UUIDv7). Hubs own repositories. Users are global identities that belong to
+**Hub → Collections → Resources.** A **hub** is the tenant root and the only
+true identity (`hubId`, immutable UUIDv7). Hubs own **collections** (the
+"folders" of NSLinkHub — today's "repositories", renamed) which contain
+**resources** (today's "entries"). Users are global identities that belong to
 hubs via memberships (`owner | admin | member`) and join by invitation.
 Usernames, display names, and hub names are mutable attributes — never
 authorization keys, route keys, or foreign keys.
 
-Sharing is Drive-style and per-repository (see "Sharing Model" in the plan):
-publish/unpublish replaces public/unlisted/private; link sharing = read for
-anyone with the link; direct email sharing = reader/editor for a specific
-account, appearing under the recipient's user-level **shared/** surface.
-Hub invitations are only for people who belong in the hub.
+Publication and sharing (see "Publication And Discovery" + "Sharing Model" in
+the plan):
+
+- **Publish** = list the collection on NSLinkHub's product-wide **explore**
+  surface; anyone can view, account holders can **save** it (social-style
+  bookmark → their **saved/** surface, dormant while unpublished).
+- **Unpublished** = hub members + explicit shares only (replaces
+  public/unlisted/private).
+- **Link sharing** = read for anyone with the rotatable link; **direct email
+  sharing** = reader/editor for a specific account → recipient's **shared/**
+  surface. Hub invitations are only for people who belong in the hub.
 
 ## The target shape
 
@@ -30,11 +38,10 @@ Surfaces" + Track W in the plan doc.
 
 ## Where to start
 
-All open decisions are RESOLVED with the user (see "Resolved Decisions" in the
-plan doc): personal hub auto-created as a normal hub; members get full content
-write; minimal public hub page in Phase C; cursor pagination in Phase A;
-pigfarm error envelope for failures alongside `{ data, meta }` successes;
-extension ships popup + context menu + shortcut.
+All open decisions are RESOLVED with the user (see "Resolved Decisions" 1–13
+in the plan doc) — including the rename (collection/resource), the explore +
+saves direction, member full content write, cursor pagination, the pigfarm
+error envelope, and the workspace-move-first ordering.
 
 Implementation order is locked: **W1 → A → B → C → D → W2 → W3 → W4** (E
 tracked alongside).
@@ -44,15 +51,18 @@ tracked alongside).
    together; compose + root scripts delegate). No behavior change; everything
    green from the root before and after.
 2. Phase A: error envelope + request IDs + config validation + cursor
-   pagination for entries/repositories.
+   pagination.
 3. Phase B reshapes `prisma/migrations/0_init` (nothing is deployed — squash,
-   don't stack; see `ref/migration-plan.md` for the established pattern),
-   swaps `repositories.owner_id` → `hub_id`, and auto-creates the personal
-   hub at sign-up.
-4. `apps/web` (W3) only starts after Phases B–C (build against hub routes),
-   and after the impeccable design/product pass produces the NSLinkHub
-   equivalents of pigfarm's web-product-experience / web-interface-system /
-   web-design-tokens docs.
+   don't stack; see `ref/migration-plan.md` for the established pattern):
+   the collection/resource rename, `hub_id` ownership, `published` +
+   `link_sharing_enabled` booleans, shares/saves tables, personal hub at
+   sign-up.
+4. Phase C: hub policy service, access-resolution chain, explore + public hub
+   page, sharing + saves endpoints, regression tests per the plan's list.
+5. `apps/web` (W3) only starts after Phases B–C, and after the impeccable
+   design/product pass produces the NSLinkHub equivalents of pigfarm's
+   web-product-experience / web-interface-system / web-design-tokens docs —
+   with explore, shared/, and saved/ as first-class surfaces.
 
 ## Verification setup that already exists
 
@@ -65,6 +75,8 @@ tracked alongside).
 ## Known coupling to remove (tracked in the plan)
 
 - `GET /api/v2/users/:username/repositories/:slug` routes on a mutable
-  username — replaced by `GET /hubs/:hubId/repositories/:slug` in Phase C.
+  username — replaced by `GET /hubs/:hubId/collections/:slug` in Phase C.
 - `ownerId === userId` checks across services — replaced by the hub policy
   service in Phase C.
+- The `visibility` enum and unlisted CHECK constraints — replaced by
+  `published` + link sharing in Phase B.
