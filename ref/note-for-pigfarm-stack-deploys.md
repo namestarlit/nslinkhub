@@ -41,15 +41,30 @@ production topology in the swarm dialect from day one.
 - Private-registry pulls (GHCR) with replicas require `--with-registry-auth`
   on the deploy invocation, or worker nodes fail image pulls.
 
-## Suggested file convention (what nslinkhub adopted)
+## File convention (what nslinkhub adopted)
+
+Environment-suffixed stack files, `docker.stack.<env>.yml`:
 
 - `compose.yml` — local development only, full compose dialect (pigfarm
   already does this).
-- `docker.stack.<env>.yml` — swarm-dialect topology per deployed
-  environment (`docker.stack.prod.yml`, `docker.stack.stag.yml`,
-  `docker.stack.local.yml` for rehearsing stack behavior on a local
-  single-node swarm), consumed by Dokploy Stack mode; never used for
-  ordinary local dev, never contains `build:`.
+- `docker.stack.prod.yml` — the production topology consumed by Dokploy
+  Stack mode; never used for ordinary local dev, never contains `build:`.
+- `docker.stack.local.yml` — a required artifact: the local
+  single-node-swarm simulation of the production topology
+  (`docker swarm init` + `docker stack deploy`), already the practice in
+  other namestarlit projects. This is where stack-dialect behavior —
+  swarm secrets, `deploy.*` policies, ordering without `depends_on` — gets
+  rehearsed before touching the VPS.
+- `docker.stack.stag.yml` — only if a dedicated staging environment ever
+  exists.
 
 Keeping the files separate avoids the trap of one file trying to serve both
 dialects and silently degrading in whichever mode wasn't tested.
+
+## Environment strategy (nslinkhub's; worth considering for pigfarm)
+
+No dedicated staging environment: pre-release verification is **Dokploy
+preview deployments** (per-branch/PR previews on the same VPS) combined with
+the `docker.stack.local.yml` simulation. A permanent staging environment is
+added only if previews prove insufficient — pigfarm's single-VPS reality
+makes the same trade-off likely to fit.

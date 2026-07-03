@@ -38,16 +38,24 @@ single namestarlit VPS managed by **self-hosted Dokploy**:
   `--with-registry-auth` on deploys since GHCR images are private. Swarm's
   native secrets (`/run/secrets/<name>`) are exactly the `_FILE` convention.
 - **Topology files per product, one purpose each** (local convention matches
-  pigfarm; stack files are environment-suffixed):
+  pigfarm; stack files are environment-suffixed `docker.stack.<env>.yml`):
   - `compose.yml` — local development only (the modern Compose default
     filename). Full compose dialect is fine here: localhost-bound published
     ports, healthchecks, whatever makes `docker compose up -d` pleasant.
-  - `docker.stack.<env>.yml` — swarm-dialect topology per deployed
-    environment, consumed by Dokploy's Stack mode: `docker.stack.prod.yml`
-    first, `docker.stack.stag.yml` when a staging environment exists,
-    `docker.stack.local.yml` only if a local single-node swarm is ever
-    needed to rehearse stack behavior. Never used for ordinary local dev;
-    never contains `build:`.
+  - `docker.stack.prod.yml` — the production topology, consumed by Dokploy's
+    Stack mode. Never contains `build:`.
+  - `docker.stack.local.yml` — a required artifact, not a contingency: the
+    local single-node-swarm simulation of the production topology
+    (`docker swarm init` + `docker stack deploy`), the established practice
+    in other namestarlit projects. It is how stack-dialect behavior
+    (secrets, `deploy.*` policies, ordering without `depends_on`) is
+    rehearsed before anything reaches the VPS.
+  - `docker.stack.stag.yml` only if a dedicated staging environment ever
+    materializes — see the environment strategy below.
+- **No dedicated staging environment.** Pre-release verification is
+  **Dokploy preview deployments** (per-branch/PR previews on the same VPS)
+  plus the `docker.stack.local.yml` simulation. A permanent staging
+  environment is added only if previews prove insufficient.
 - **Each product repository owns its own runtime definition**: Dockerfiles,
   both topology files above, health/readiness checks, environment and
   secret-file contracts, migration commands, and release ordering. Dokploy
