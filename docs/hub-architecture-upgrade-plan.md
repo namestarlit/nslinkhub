@@ -390,6 +390,10 @@ against the user-owned routes being removed.
 
 ### Phase E — Later hardening (track, don't block)
 
+- "Continue with Hashikome" SSO once the central identity service exists —
+  direction and the constraints Phase B/C must respect are in
+  `docs/identity-sso-direction.md` (keep onboarding app-owned and
+  auth-path-agnostic; product userId stays authoritative).
 - Audit records for the sensitive actions in decision 9.
 - Transactional outbox + worker split for exports/email (decision 11).
 - Vanity hub handles (mutable, unique-while-active, resolve to hubId).

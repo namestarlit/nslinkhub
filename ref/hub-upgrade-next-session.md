@@ -64,6 +64,16 @@ tracked alongside).
    web-product-experience / web-interface-system / web-design-tokens docs —
    with explore, shared/, and saved/ as first-class surfaces.
 
+## Future constraint to respect while implementing
+
+A central "hashikome account" IdP (SSO across the ns series) is planned —
+see `docs/identity-sso-direction.md`. Concretely for this upgrade: keep
+sign-up onboarding (personal hub creation) in an app-owned service callable
+from any auth path (not hard-wired to one better-auth hook), keep
+`resolveSessionUser` the single session entry point, and keep the product
+userId authoritative so a linked SSO subject is just another mutable user
+attribute.
+
 ## Verification setup that already exists
 
 - `docker compose up -d` (PG 18 + Redis 7), `.env` defaults work.
