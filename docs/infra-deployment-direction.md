@@ -22,10 +22,21 @@ single namestarlit VPS managed by **self-hosted Dokploy**:
   added, never replacing the SHA tag), pushes them to **GHCR**, and triggers
   Dokploy only after every required image exists.
 - **Dokploy owns running them.** It pulls the prebuilt images and runs each
-  product's repository-owned Docker Compose topology, and manages domains,
-  TLS, Traefik routing, deployment history, logs, and shared services.
+  product's repository-owned topology, and manages domains, TLS, Traefik
+  routing, deployment history, logs, and shared services.
   **No source builds on the VPS** — Dokploy must never clone and compile a
   product on the production host.
+- **Swarm stack mode, not standalone compose.** Dokploy runs on Docker Swarm
+  underneath, and its Compose service type offers an explicit **Stack** mode
+  (`docker stack deploy`); ns products use it. Production topology files are
+  written in the swarm dialect from day one: no `build:` (unavailable in
+  stack mode — which mechanically enforces the prebuilt-image rule), no
+  reliance on `depends_on` (ignored by swarm; migration-before-serve ordering
+  is an explicit release step anyway), `deploy.restart_policy` and
+  `deploy.resources` instead of top-level `restart:`/limits, **named volumes
+  only** (relative-path bind mounts don't persist reliably), and
+  `--with-registry-auth` on deploys since GHCR images are private. Swarm's
+  native secrets (`/run/secrets/<name>`) are exactly the `_FILE` convention.
 - **Each product repository owns its own runtime definition**: Dockerfiles,
   the production compose topology for its services, health/readiness checks,
   environment and secret-file contracts, migration commands, and release
