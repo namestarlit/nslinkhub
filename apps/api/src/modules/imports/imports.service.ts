@@ -175,11 +175,11 @@ export class ImportsService {
     }
 
     return {
-      total_rows: rows.length,
-      processed_rows: rows.length,
-      imported_count: importedCount,
-      skipped_count: skippedCount,
-      error_count: errors.length,
+      totalRows: rows.length,
+      processedRows: rows.length,
+      importedCount,
+      skippedCount,
+      errorCount: errors.length,
       errors,
     };
   }

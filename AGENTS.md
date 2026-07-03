@@ -42,6 +42,7 @@ authoritative.
   boundary rules.
 - `docs/RELIABILITY.md`: idempotency, concurrency, jobs, and data rules.
 - `docs/design-docs/index.md`: deeper design documents.
+- `docs/design-docs/conventions.md`: API/persistence casing and envelope rules.
 - `docs/design-docs/hub-architecture.md`: authoritative target design and
   phased implementation plan.
 - `docs/design-docs/identity-sso.md`: ns-series identity ("Continue with

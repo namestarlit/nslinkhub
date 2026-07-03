@@ -11,6 +11,13 @@ summary of what changed after completed work has been promoted out of `ref/`.
 
 ### Changed
 
+- Documented the API/persistence casing convention
+  (`docs/design-docs/conventions.md`): camelCase JSON keys, snake-token enum
+  values, snake_case DB columns via Prisma `@map`. Fixed the one endpoint
+  that broke it — the import response now returns camelCase counts
+  (`totalRows`, `importedCount`, `errorCount`, …) instead of snake_case, and
+  gained its first e2e coverage.
+
 - Hub tenancy (Phase B): the domain model became **Hub → Collections →
   Resources**. Hubs are the tenant root and own collections through a
   `hub_id` foreign key; users belong to hubs via `hub_memberships`

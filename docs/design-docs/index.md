@@ -5,6 +5,9 @@ change too frequently for the root `ARCHITECTURE.md`.
 
 ## Current Documents
 
+- `conventions.md`: API and persistence conventions — casing (camelCase keys,
+  snake-token values, snake_case DB columns via Prisma `@map`) and the
+  response envelope.
 - `hub-architecture.md`: the authoritative target design — hub tenancy,
   collection/resource vocabulary, sharing model, publication/discovery,
   workspace and client surfaces, and the locked implementation order
