@@ -10,6 +10,9 @@ Related documents:
 
 - `docs/identity-sso-direction.md` — ns-series identity ("Continue with
   namestarlit"); imposes constraints noted in Phase B/C.
+- `docs/infra-deployment-direction.md` — ns-series deployment platform
+  (namestarlit VPS + Dokploy, GHCR images via GitHub Actions); Track W's
+  app split is the image boundary it consumes.
 - `ref/hub-upgrade-next-session.md` — implementation session starter.
 - `ref/migration-plan.md` — the completed Bun/Prisma/better-auth stack
   migration this plan builds on (including the squash-don't-stack migration

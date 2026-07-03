@@ -1,0 +1,100 @@
+# Infrastructure & Deployment Direction (ns series)
+
+Direction document, recorded 2026-07-03. Not scheduled work — like the
+identity direction (`docs/identity-sso-direction.md`), this records the shared
+platform the ns series deploys onto so each product builds toward it instead
+of inventing its own operations story.
+
+The deployment model is inherited from the pigfarm design documents
+(`/home/ns/Person/stack/hashikome/pigfarm/docs/design-docs/deployment-vps.md`).
+Patterns only: the ns series is personal work under the namestarlit brand and
+runs on its **own** VPS and Dokploy instance — completely separate
+infrastructure from anything the author's company operates.
+
+## Direction
+
+All ns products (nslinkhub, nsworklog, later nsauth, future ns*) deploy to a
+single namestarlit VPS managed by **self-hosted Dokploy**:
+
+- **GitHub Actions owns verification and builds.** It runs the repository's
+  verify workflow, builds immutable production images from the reviewed
+  commit, tags them with the full git commit SHA (human-readable tags may be
+  added, never replacing the SHA tag), pushes them to **GHCR**, and triggers
+  Dokploy only after every required image exists.
+- **Dokploy owns running them.** It pulls the prebuilt images and runs each
+  product's repository-owned Docker Compose topology, and manages domains,
+  TLS, Traefik routing, deployment history, logs, and shared services.
+  **No source builds on the VPS** — Dokploy must never clone and compile a
+  product on the production host.
+- **Each product repository owns its own runtime definition**: Dockerfiles,
+  the production compose topology for its services, health/readiness checks,
+  environment and secret-file contracts, migration commands, and release
+  ordering. Dokploy values are deployment inputs; durable runtime decisions
+  stay documented in source control.
+- **A private ns infrastructure repository (working name: nsinfra) owns the
+  shared operational layer**: VPS provisioning, host hardening, firewall and
+  SSH policy, pinned Dokploy installation/upgrades/backup/recovery, DNS and
+  TLS policy, registry integration, shared backup destinations with
+  restore-drill automation, and shared observability/uptime services. It
+  references versioned product artifacts but owns no product code.
+
+## Initial Topology
+
+```txt
+GitHub Actions (per product repo)
+  -> verify and build
+  -> push immutable SHA-tagged images to GHCR
+  -> update release inputs and trigger Dokploy
+
+namestarlit VPS
+  -> Dokploy management services and deployment queue
+  -> Dokploy-managed Traefik
+       -> nslinkhub web + api
+       -> nsworklog
+       -> nsauth (when it exists)
+  -> product workers (e.g. nslinkhub exports)
+  -> PostgreSQL 18 (one instance, one database per product)
+  -> dedicated queue Redis per product that needs one
+  -> shared services (uptime/observability) as nsinfra adds them
+```
+
+Defaults, revisitable when load or isolation needs justify it: one PostgreSQL
+instance with per-product databases; a dedicated queue Redis per product that
+runs queues (AOF persistence, `noeviction`, never reused as a cache). The VPS
+is one failure domain: apply explicit resource limits, monitor disk and
+memory pressure, keep builds off-host, and keep required backups **off-host**
+with tested restores.
+
+## Conventions (inherited, apply to every ns product)
+
+- Production images are immutable and pinned by SHA tag and digest.
+- Secrets reach services through deployment-secret `_FILE` inputs; secret
+  values are never logged and never baked into images.
+- Health and readiness endpoints are part of each product's API contract.
+- Migrations run as an explicit release step owned by the product repo
+  (`prisma migrate deploy` for nslinkhub), ordered before the new app
+  version serves traffic.
+- Dokploy project/environment names stay configurable — operational naming is
+  not a durable contract (the naming-boundaries rule).
+- GitHub environments and required approvals gate production deploys when the
+  release risk warrants them; workflows get only the GHCR and Dokploy
+  permissions they need.
+
+## What This Means For NSLinkHub Now
+
+Nothing blocks the hub upgrade. The pieces the plan already produces line up
+with this direction:
+
+1. Track W's workspace split (`apps/api`, `apps/web`) is exactly the image
+   boundary: one API image (also runnable as a worker process later), one web
+   image.
+2. When deployment nears, the repo adds: Dockerfiles per app, the production
+   compose topology, health/readiness endpoints beyond the current basic
+   health route, and `_FILE` variants for `DATABASE_URL`,
+   `BETTER_AUTH_SECRET`, and Redis credentials.
+3. The existing `docker-compose.yml` remains a **local development** file; the
+   production topology is a separate repository-owned artifact consumed by
+   Dokploy.
+4. nsauth, when built, deploys to the same platform — which is what makes the
+   "Continue with namestarlit" flow operationally cheap for every future ns
+   product.
