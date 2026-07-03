@@ -1,6 +1,5 @@
 import {
   IsBoolean,
-  IsEnum,
   IsOptional,
   IsString,
   IsUUID,
@@ -8,12 +7,11 @@ import {
   MaxLength,
 } from 'class-validator';
 import { Transform } from 'class-transformer';
-import { RepositoryVisibility } from 'src/common/enums/repository-visibility.enum';
 
 export class ImportTargetDto {
   @IsOptional()
   @IsUUID()
-  targetRepositoryId?: string;
+  targetCollectionId?: string;
 
   @IsOptional()
   @Transform(({ value }: { value: unknown }) => {
@@ -32,20 +30,16 @@ export class ImportTargetDto {
     return value;
   })
   @IsBoolean()
-  createRepository?: boolean;
+  createCollection?: boolean;
 
   @IsOptional()
   @IsString()
   @MaxLength(255)
-  repositoryTitle?: string;
+  collectionTitle?: string;
 
   @IsOptional()
   @IsString()
   @Matches(/^[a-z0-9-]+$/)
   @MaxLength(120)
-  repositorySlug?: string;
-
-  @IsOptional()
-  @IsEnum(RepositoryVisibility)
-  visibility?: RepositoryVisibility;
+  collectionSlug?: string;
 }

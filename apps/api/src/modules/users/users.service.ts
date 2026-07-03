@@ -101,12 +101,12 @@ export class UsersService {
     return { id: user.id, deleted: true };
   }
 
-  private ensureWriteAccess(actor: AuthUser, ownerId: string) {
+  private ensureWriteAccess(actor: AuthUser, targetUserId: string) {
     if (actor.role === UserRole.ADMIN) {
       return;
     }
 
-    if (actor.userId !== ownerId) {
+    if (actor.userId !== targetUserId) {
       throw new ForbiddenException('Forbidden');
     }
   }

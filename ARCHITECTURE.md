@@ -8,9 +8,11 @@ resources and are shared per-collection (Drive model) or published to the
 product-wide explore surface. See `PRODUCT.md` for the product definition and
 `docs/design-docs/hub-architecture.md` for the authoritative target design.
 
-The codebase is mid-transition: the current code still uses the
-repository/entry vocabulary and user-ownership; the hub design lands in the
-locked order W1 → A → B → C → D → W2 → W3 → W4.
+The codebase is mid-transition on the locked order
+W1 → A → B → C → D → W2 → W3 → W4. Through Phase B the domain model is
+Hub → Collections → Resources with hub-membership access; Phase C adds the
+hub policy service, publish/share/save endpoints, explore, and the
+hub-scoped lookup route.
 
 ## System Shape
 
@@ -48,17 +50,16 @@ ref/               disposable, git-ignored implementation context
 
 | Area | Owns |
 | --- | --- |
-| `auth` (`apps/api/src/auth`) | better-auth instance; handler mounted in `app.setup.ts` |
+| `auth` (`apps/api/src/auth`) | better-auth instance + personal-hub onboarding hook; handler mounted in `app.setup.ts` |
 | `common/guards` | `AuthGuard`/`OptionalAuthGuard` via `resolveSessionUser` |
+| `hubs` | hub creation, membership checks (interim authority; grows into the Phase C policy service) |
 | `users` | profile read/update/delete |
-| `repositories`* | collection CRUD, visibility/share-link, nesting, lookup |
-| `entries`* | resource CRUD, reorder with version checks |
-| `tags` | normalized tags on collections* and resources* |
+| `collections` | collection CRUD, publish/share-link, nesting, owner/slug lookup |
+| `resources` | resource CRUD, reorder with version checks |
+| `tags` | normalized tags on collections and resources |
 | `imports` | CSV / bookmarks-HTML / WhatsApp-TXT ingestion |
 | `exports` | markdown export; queued PDF jobs (BullMQ + `export_jobs`) |
 | `health` | liveness endpoints |
-
-\* renamed to collections/resources during Phase B of the hub work.
 
 ## Dependency Rules
 

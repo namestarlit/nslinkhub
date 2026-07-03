@@ -20,21 +20,21 @@ import { ExportsService } from './exports.service';
 export class ExportsController {
   constructor(private readonly exportsService: ExportsService) {}
 
-  @Post('repositories/:id/export/markdown')
+  @Post('collections/:id/export/markdown')
   async exportMarkdown(
-    @Param('id', new ParseUUIDPipe()) repositoryId: string,
+    @Param('id', new ParseUUIDPipe()) collectionId: string,
     @CurrentUser() user: AuthUser,
   ) {
-    const data = await this.exportsService.exportMarkdown(repositoryId, user);
+    const data = await this.exportsService.exportMarkdown(collectionId, user);
     return apiOk(data);
   }
 
-  @Post('repositories/:id/export/pdf')
+  @Post('collections/:id/export/pdf')
   async exportPdf(
-    @Param('id', new ParseUUIDPipe()) repositoryId: string,
+    @Param('id', new ParseUUIDPipe()) collectionId: string,
     @CurrentUser() user: AuthUser,
   ) {
-    const data = await this.exportsService.exportPdf(repositoryId, user);
+    const data = await this.exportsService.exportPdf(collectionId, user);
     return apiOk(data);
   }
 

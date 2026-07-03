@@ -6,15 +6,16 @@ import {
 } from '@nestjs/common';
 import { Queue } from 'bullmq';
 import { PrismaService } from 'src/database/prisma.service';
-import { RepositoryVisibility } from 'src/common/enums/repository-visibility.enum';
 import { UserRole } from 'src/common/enums/user-role.enum';
 import { AuthUser } from 'src/common/interfaces/auth-user.interface';
-import { ExportJob } from 'src/generated/prisma/client';
+import { Collection, ExportJob } from 'src/generated/prisma/client';
+import { HubsService } from '../hubs/hubs.service';
 import { buildMarkdown } from './export-markdown.util';
 
 export interface ExportJobView {
   id: string;
-  repositoryId: string;
+  hubId: string;
+  collectionId: string;
   requestedByUserId: string | null;
   format: 'pdf';
   status: 'queued' | 'running' | 'completed' | 'failed';
@@ -28,37 +29,35 @@ export interface ExportJobView {
 export class ExportsService {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly hubs: HubsService,
     @InjectQueue('exports')
     private readonly exportsQueue: Queue,
   ) {}
 
-  async exportMarkdown(repositoryId: string, user: AuthUser) {
-    const repository = await this.requireReadableRepository(repositoryId, user);
+  async exportMarkdown(collectionId: string, user: AuthUser) {
+    const collection = await this.requireReadableCollection(collectionId, user);
 
-    const entries = await this.prisma.entry.findMany({
-      where: { repositoryId: repository.id },
+    const resources = await this.prisma.resource.findMany({
+      where: { collectionId: collection.id },
       include: {
         link: true,
-        linkedRepository: true,
-        entryTags: { include: { tag: true } },
+        linkedCollection: true,
+        resourceTags: { include: { tag: true } },
       },
       orderBy: { position: 'asc' },
     });
 
-    const markdown = buildMarkdown(repository, entries);
-    return {
-      repositoryId,
-      format: 'markdown',
-      content: markdown,
-    };
+    const markdown = buildMarkdown(collection, resources);
+    return { collectionId, format: 'markdown', content: markdown };
   }
 
-  async exportPdf(repositoryId: string, user: AuthUser) {
-    await this.requireReadableRepository(repositoryId, user);
+  async exportPdf(collectionId: string, user: AuthUser) {
+    const collection = await this.requireReadableCollection(collectionId, user);
 
     const saved = await this.prisma.exportJob.create({
       data: {
-        repositoryId,
+        hubId: collection.hubId,
+        collectionId,
         requestedByUserId: user.userId,
         format: 'pdf',
         status: 'queued',
@@ -69,73 +68,53 @@ export class ExportsService {
 
     await this.exportsQueue.add(
       'generate-pdf',
-      {
-        exportJobId: saved.id,
-        repositoryId,
-      },
-      {
-        jobId: saved.id,
-        removeOnComplete: 100,
-        removeOnFail: 500,
-      },
+      { exportJobId: saved.id, collectionId },
+      { jobId: saved.id, removeOnComplete: 100, removeOnFail: 500 },
     );
 
-    return {
-      jobId: saved.id,
-      status: saved.status,
-    };
+    return { jobId: saved.id, status: saved.status };
   }
 
   async getJob(jobId: string, user: AuthUser): Promise<ExportJobView> {
     const job = await this.prisma.exportJob.findUnique({
       where: { id: jobId },
-      include: { repository: true },
     });
-
     if (!job) {
       throw new NotFoundException('Export job not found');
     }
 
-    if (
-      user.role !== UserRole.ADMIN &&
-      job.repository.ownerId !== user.userId
-    ) {
-      throw new ForbiddenException('Forbidden');
+    if (user.role !== UserRole.ADMIN) {
+      await this.hubs.assertMember(job.hubId, user);
     }
 
     return this.toView(job);
   }
 
-  private async requireReadableRepository(
-    repositoryId: string,
+  private async requireReadableCollection(
+    collectionId: string,
     user: AuthUser,
-  ) {
-    const repository = await this.prisma.repository.findUnique({
-      where: { id: repositoryId },
+  ): Promise<Collection> {
+    const collection = await this.prisma.collection.findUnique({
+      where: { id: collectionId },
     });
-
-    if (!repository) {
-      throw new NotFoundException('Repository not found');
+    if (!collection) {
+      throw new NotFoundException('Collection not found');
     }
 
-    if (
-      (repository.visibility as RepositoryVisibility) ===
-      RepositoryVisibility.PUBLIC
-    ) {
-      return repository;
+    if (collection.published || user.role === UserRole.ADMIN) {
+      return collection;
     }
-
-    if (user.role === UserRole.ADMIN || user.userId === repository.ownerId) {
-      return repository;
+    if (await this.hubs.isMember(collection.hubId, user.userId)) {
+      return collection;
     }
-
     throw new ForbiddenException('Forbidden');
   }
 
   private toView(job: ExportJob): ExportJobView {
     return {
       id: job.id,
-      repositoryId: job.repositoryId,
+      hubId: job.hubId,
+      collectionId: job.collectionId,
       requestedByUserId: job.requestedByUserId,
       format: job.format as ExportJobView['format'],
       status: job.status as ExportJobView['status'],

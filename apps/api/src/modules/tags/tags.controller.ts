@@ -22,51 +22,55 @@ import { TagsService } from './tags.service';
 export class TagsController {
   constructor(private readonly tagsService: TagsService) {}
 
-  @Post('repositories/:id/tags')
-  async attachToRepository(
-    @Param('id', new ParseUUIDPipe()) repositoryId: string,
+  @Post('collections/:id/tags')
+  async attachToCollection(
+    @Param('id', new ParseUUIDPipe()) collectionId: string,
     @CurrentUser() user: AuthUser,
     @Body() dto: AttachTagDto,
   ) {
-    const data = await this.tagsService.attachToRepository(
-      repositoryId,
+    const data = await this.tagsService.attachToCollection(
+      collectionId,
       user,
       dto,
     );
     return apiOk(data);
   }
 
-  @Delete('repositories/:id/tags/:tagName')
-  async removeFromRepository(
-    @Param('id', new ParseUUIDPipe()) repositoryId: string,
+  @Delete('collections/:id/tags/:tagName')
+  async removeFromCollection(
+    @Param('id', new ParseUUIDPipe()) collectionId: string,
     @CurrentUser() user: AuthUser,
     @Param('tagName') tagName: string,
   ) {
-    const data = await this.tagsService.removeFromRepository(
-      repositoryId,
+    const data = await this.tagsService.removeFromCollection(
+      collectionId,
       user,
       tagName,
     );
     return apiOk(data);
   }
 
-  @Post('entries/:entryId/tags')
-  async attachToEntry(
-    @Param('entryId', new ParseUUIDPipe()) entryId: string,
+  @Post('resources/:resourceId/tags')
+  async attachToResource(
+    @Param('resourceId', new ParseUUIDPipe()) resourceId: string,
     @CurrentUser() user: AuthUser,
     @Body() dto: AttachTagDto,
   ) {
-    const data = await this.tagsService.attachToEntry(entryId, user, dto);
+    const data = await this.tagsService.attachToResource(resourceId, user, dto);
     return apiOk(data);
   }
 
-  @Delete('entries/:entryId/tags/:tagName')
-  async removeFromEntry(
-    @Param('entryId', new ParseUUIDPipe()) entryId: string,
+  @Delete('resources/:resourceId/tags/:tagName')
+  async removeFromResource(
+    @Param('resourceId', new ParseUUIDPipe()) resourceId: string,
     @CurrentUser() user: AuthUser,
     @Param('tagName') tagName: string,
   ) {
-    const data = await this.tagsService.removeFromEntry(entryId, user, tagName);
+    const data = await this.tagsService.removeFromResource(
+      resourceId,
+      user,
+      tagName,
+    );
     return apiOk(data);
   }
 }

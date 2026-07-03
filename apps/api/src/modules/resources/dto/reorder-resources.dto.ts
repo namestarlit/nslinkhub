@@ -11,7 +11,7 @@ import { Type } from 'class-transformer';
 
 export class ReorderItemDto {
   @IsUUID()
-  entryId: string;
+  resourceId: string;
 
   @IsInt()
   @Min(0)
@@ -22,10 +22,10 @@ export class ReorderItemDto {
   version: number;
 }
 
-export class ReorderEntriesDto {
+export class ReorderResourcesDto {
   @IsArray()
   @ArrayMinSize(1)
-  @ArrayUnique((item: ReorderItemDto) => item.entryId)
+  @ArrayUnique((item: ReorderItemDto) => item.resourceId)
   @ValidateNested({ each: true })
   @Type(() => ReorderItemDto)
   items: ReorderItemDto[];

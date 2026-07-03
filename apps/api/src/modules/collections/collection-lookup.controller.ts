@@ -14,16 +14,16 @@ import { OptionalAuthGuard } from 'src/common/guards/optional-auth.guard';
 import type { AuthUser } from 'src/common/interfaces/auth-user.interface';
 import { ifNoneMatchHit } from 'src/common/utils/etag.util';
 import { apiOk } from 'src/common/utils/response.util';
-import { RepositoriesService } from './repositories.service';
+import { CollectionsService } from './collections.service';
 
-// Owner+slug lookup lives under /users/:username/repositories/:slug so it can
-// never collide with the /repositories/:id/* routes (a catch-all
-// ':owner/:slug' under /repositories shadowed ':id/entries' and
-// ':id/children').
-@ApiTags('repositories')
-@Controller('api/v1/users/:username/repositories')
-export class RepositoryLookupController {
-  constructor(private readonly repositoriesService: RepositoriesService) {}
+// Interim owner+slug lookup under /users/:username/collections/:slug. It
+// resolves the owner's personal hub, so it cannot collide with the
+// /collections/:id/* routes. Phase C replaces it with the hub-scoped route
+// GET /hubs/:hubId/collections/:slug.
+@ApiTags('collections')
+@Controller('api/v1/users/:username/collections')
+export class CollectionLookupController {
+  constructor(private readonly collectionsService: CollectionsService) {}
 
   @UseGuards(OptionalAuthGuard)
   @Get(':slug')
@@ -36,7 +36,7 @@ export class RepositoryLookupController {
     @Res({ passthrough: true }) res?: Response,
   ) {
     const shareToken = headerToken ?? (req?.query.s as string | undefined);
-    const data = await this.repositoriesService.getByOwnerAndSlug(
+    const data = await this.collectionsService.getByOwnerAndSlug(
       username,
       slug,
       user,
@@ -58,6 +58,6 @@ export class RepositoryLookupController {
       return;
     }
 
-    return apiOk(data.repository, { etag: data.etag });
+    return apiOk(data.collection, { etag: data.etag });
   }
 }

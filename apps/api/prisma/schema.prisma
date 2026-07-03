@@ -1,9 +1,9 @@
-// Schema hand-translated from src/database/migrations/0001 + 0002 (the DDL
-// remains the source of truth for objects Prisma cannot model: the
-// app_uuid_v7() function, set_updated_at triggers, the repository-hierarchy
-// trigger, CHECK constraints, and the partial unique index
-// uq_entries_repository_link. Future migrations: use `prisma migrate dev
-// --create-only` and review the SQL so those objects are never dropped.
+// Schema for the hub tenancy model (Hub → Collections → Resources).
+// The migration SQL remains the source of truth for objects Prisma cannot
+// model: the app_uuid_v7() function, set_updated_at triggers, the
+// collection-hierarchy trigger, CHECK constraints, and the partial unique
+// index uq_resources_collection_link. Future migrations: use `prisma migrate
+// dev --create-only` and review the SQL so those objects are never dropped.
 
 generator client {
   provider     = "prisma-client"
@@ -28,12 +28,212 @@ model User {
   createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt       DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
 
-  repositories Repository[]
-  exportJobs   ExportJob[]
-  sessions     Session[]
-  accounts     Account[]
+  memberships HubMembership[]
+  shares      CollectionShare[]
+  saves       CollectionSave[]
+  exportJobs  ExportJob[]
+  sessions    Session[]
+  accounts    Account[]
 
   @@map("users")
+}
+
+model Hub {
+  id          String   @id @default(dbgenerated("app_uuid_v7()")) @db.Uuid
+  name        String   @db.VarChar(120)
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  memberships HubMembership[]
+  invitations HubInvitation[]
+  collections Collection[]
+  exportJobs  ExportJob[]
+
+  @@map("hubs")
+}
+
+model HubMembership {
+  hubId     String   @map("hub_id") @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  role      String   @db.VarChar(16)
+  status    String   @default("active") @db.VarChar(16)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  hub  Hub  @relation(fields: [hubId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([hubId, userId])
+  @@index([userId], map: "idx_hub_memberships_user_id")
+  @@map("hub_memberships")
+}
+
+model HubInvitation {
+  id        String   @id @default(dbgenerated("app_uuid_v7()")) @db.Uuid
+  hubId     String   @map("hub_id") @db.Uuid
+  email     String   @db.VarChar(255)
+  role      String   @db.VarChar(16)
+  tokenHash String   @unique @map("token_hash")
+  status    String   @default("pending") @db.VarChar(16)
+  expiresAt DateTime @map("expires_at") @db.Timestamptz(6)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  hub Hub @relation(fields: [hubId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([hubId], map: "idx_hub_invitations_hub_id")
+  @@map("hub_invitations")
+}
+
+model Collection {
+  id                 String   @id @default(dbgenerated("app_uuid_v7()")) @db.Uuid
+  hubId              String   @map("hub_id") @db.Uuid
+  slug               String   @db.VarChar(120)
+  title              String   @db.VarChar(255)
+  description        String?
+  published          Boolean  @default(false)
+  linkSharingEnabled Boolean  @default(false) @map("link_sharing_enabled")
+  shareTokenHash     String?  @map("share_token_hash") @db.VarChar(255)
+  parentCollectionId String?  @map("parent_collection_id") @db.Uuid
+  version            BigInt   @default(1)
+  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  hub              Hub               @relation(fields: [hubId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  parentCollection Collection?       @relation("CollectionHierarchy", fields: [parentCollectionId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  children         Collection[]      @relation("CollectionHierarchy")
+  resources        Resource[]        @relation("CollectionResources")
+  linkedBy         Resource[]        @relation("ResourceLinkedCollection")
+  collectionTags   CollectionTag[]
+  shares           CollectionShare[]
+  saves            CollectionSave[]
+  exportJobs       ExportJob[]
+
+  @@unique([hubId, slug], map: "collections_hub_slug_unique")
+  @@index([published, updatedAt(sort: Desc)], map: "idx_collections_published_updated_at")
+  @@index([parentCollectionId], map: "idx_collections_parent_collection_id")
+  @@map("collections")
+}
+
+model CollectionShare {
+  collectionId String   @map("collection_id") @db.Uuid
+  userId       String   @map("user_id") @db.Uuid
+  role         String   @db.VarChar(16)
+  source       String   @db.VarChar(16)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  collection Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([collectionId, userId])
+  @@index([userId], map: "idx_collection_shares_user_id")
+  @@map("collection_shares")
+}
+
+model CollectionSave {
+  collectionId String   @map("collection_id") @db.Uuid
+  userId       String   @map("user_id") @db.Uuid
+  savedAt      DateTime @default(now()) @map("saved_at") @db.Timestamptz(6)
+
+  collection Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([collectionId, userId])
+  @@index([userId], map: "idx_collection_saves_user_id")
+  @@map("collection_saves")
+}
+
+model Link {
+  id           String   @id @default(dbgenerated("app_uuid_v7()")) @db.Uuid
+  canonicalUrl String   @unique @map("canonical_url")
+  urlHash      String   @unique @map("url_hash") @db.VarChar(64)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  resources Resource[]
+
+  @@map("links")
+}
+
+model Resource {
+  id                 String   @id @default(dbgenerated("app_uuid_v7()")) @db.Uuid
+  collectionId       String   @map("collection_id") @db.Uuid
+  linkId             String?  @map("link_id") @db.Uuid
+  kind               String   @db.VarChar(24)
+  linkedCollectionId String?  @map("linked_collection_id") @db.Uuid
+  titleOverride      String?  @map("title_override") @db.VarChar(255)
+  description        String?
+  note               String?
+  position           Int
+  version            BigInt   @default(1)
+  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  collection       Collection    @relation("CollectionResources", fields: [collectionId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  link             Link?         @relation(fields: [linkId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  linkedCollection Collection?   @relation("ResourceLinkedCollection", fields: [linkedCollectionId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  resourceTags     ResourceTag[]
+
+  @@unique([collectionId, position], map: "resources_collection_position_unique")
+  @@index([collectionId, updatedAt(sort: Desc)], map: "idx_resources_collection_updated_at")
+  @@map("resources")
+}
+
+model Tag {
+  id        String   @id @default(dbgenerated("app_uuid_v7()")) @db.Uuid
+  name      String   @unique @db.VarChar(80)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  collectionTags CollectionTag[]
+  resourceTags   ResourceTag[]
+
+  @@map("tags")
+}
+
+model CollectionTag {
+  collectionId String @map("collection_id") @db.Uuid
+  tagId        String @map("tag_id") @db.Uuid
+
+  collection Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  tag        Tag        @relation(fields: [tagId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([collectionId, tagId])
+  @@map("collection_tags")
+}
+
+model ResourceTag {
+  resourceId String @map("resource_id") @db.Uuid
+  tagId      String @map("tag_id") @db.Uuid
+
+  resource Resource @relation(fields: [resourceId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  tag      Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([resourceId, tagId])
+  @@map("resource_tags")
+}
+
+model ExportJob {
+  id                String   @id @default(dbgenerated("app_uuid_v7()")) @db.Uuid
+  hubId             String   @map("hub_id") @db.Uuid
+  collectionId      String   @map("collection_id") @db.Uuid
+  requestedByUserId String?  @map("requested_by_user_id") @db.Uuid
+  format            String   @db.VarChar(16)
+  status            String   @db.VarChar(16)
+  outputRef         String?  @map("output_ref")
+  errorMessage      String?  @map("error_message")
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  hub         Hub        @relation(fields: [hubId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  collection  Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  requestedBy User?      @relation(fields: [requestedByUserId], references: [id], onDelete: SetNull, onUpdate: NoAction)
+
+  @@index([collectionId, createdAt(sort: Desc)], map: "idx_export_jobs_collection_created_at")
+  @@index([status, createdAt(sort: Desc)], map: "idx_export_jobs_status_created_at")
+  @@map("export_jobs")
 }
 
 model Session {
@@ -83,120 +283,4 @@ model Verification {
 
   @@index([identifier], map: "idx_verifications_identifier")
   @@map("verifications")
-}
-
-model Repository {
-  id                 String   @id @default(dbgenerated("app_uuid_v7()")) @db.Uuid
-  ownerId            String   @map("owner_id") @db.Uuid
-  slug               String   @db.VarChar(120)
-  title              String   @db.VarChar(255)
-  description        String?
-  visibility         String   @default("private") @db.VarChar(16)
-  shareTokenHash     String?  @map("share_token_hash") @db.VarChar(255)
-  parentRepositoryId String?  @map("parent_repository_id") @db.Uuid
-  version            BigInt   @default(1)
-  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt          DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
-
-  owner            User            @relation(fields: [ownerId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  parentRepository Repository?     @relation("RepositoryHierarchy", fields: [parentRepositoryId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  children         Repository[]    @relation("RepositoryHierarchy")
-  entries          Entry[]         @relation("RepositoryEntries")
-  linkedByEntries  Entry[]         @relation("EntryLinkedRepository")
-  repositoryTags   RepositoryTag[]
-  exportJobs       ExportJob[]
-
-  @@unique([ownerId, slug], map: "repositories_owner_slug_unique")
-  @@index([visibility, updatedAt(sort: Desc)], map: "idx_repositories_visibility_updated_at")
-  @@index([parentRepositoryId], map: "idx_repositories_parent_repository_id")
-  @@map("repositories")
-}
-
-model Link {
-  id           String   @id @default(dbgenerated("app_uuid_v7()")) @db.Uuid
-  canonicalUrl String   @unique @map("canonical_url")
-  urlHash      String   @unique @map("url_hash") @db.VarChar(64)
-  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt    DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
-
-  entries Entry[]
-
-  @@map("links")
-}
-
-model Entry {
-  id                 String   @id @default(dbgenerated("app_uuid_v7()")) @db.Uuid
-  repositoryId       String   @map("repository_id") @db.Uuid
-  linkId             String?  @map("link_id") @db.Uuid
-  kind               String   @db.VarChar(24)
-  linkedRepositoryId String?  @map("linked_repository_id") @db.Uuid
-  titleOverride      String?  @map("title_override") @db.VarChar(255)
-  description        String?
-  note               String?
-  position           Int
-  version            BigInt   @default(1)
-  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt          DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
-
-  repository       Repository  @relation("RepositoryEntries", fields: [repositoryId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  link             Link?       @relation(fields: [linkId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  linkedRepository Repository? @relation("EntryLinkedRepository", fields: [linkedRepositoryId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  entryTags        EntryTag[]
-
-  @@unique([repositoryId, position], map: "entries_repository_position_unique")
-  @@index([repositoryId, updatedAt(sort: Desc)], map: "idx_entries_repository_updated_at")
-  @@map("entries")
-}
-
-model Tag {
-  id        String   @id @default(dbgenerated("app_uuid_v7()")) @db.Uuid
-  name      String   @unique @db.VarChar(80)
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
-
-  repositoryTags RepositoryTag[]
-  entryTags      EntryTag[]
-
-  @@map("tags")
-}
-
-model RepositoryTag {
-  repositoryId String @map("repository_id") @db.Uuid
-  tagId        String @map("tag_id") @db.Uuid
-
-  repository Repository @relation(fields: [repositoryId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  tag        Tag        @relation(fields: [tagId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-
-  @@id([repositoryId, tagId])
-  @@map("repository_tags")
-}
-
-model EntryTag {
-  entryId String @map("entry_id") @db.Uuid
-  tagId   String @map("tag_id") @db.Uuid
-
-  entry Entry @relation(fields: [entryId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  tag   Tag   @relation(fields: [tagId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-
-  @@id([entryId, tagId])
-  @@map("entry_tags")
-}
-
-model ExportJob {
-  id                String   @id @default(dbgenerated("app_uuid_v7()")) @db.Uuid
-  repositoryId      String   @map("repository_id") @db.Uuid
-  requestedByUserId String?  @map("requested_by_user_id") @db.Uuid
-  format            String   @db.VarChar(16)
-  status            String   @db.VarChar(16)
-  outputRef         String?  @map("output_ref")
-  errorMessage      String?  @map("error_message")
-  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt         DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
-
-  repository  Repository @relation(fields: [repositoryId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  requestedBy User?      @relation(fields: [requestedByUserId], references: [id], onDelete: SetNull, onUpdate: NoAction)
-
-  @@index([repositoryId, createdAt(sort: Desc)], map: "idx_export_jobs_repository_created_at")
-  @@index([status, createdAt(sort: Desc)], map: "idx_export_jobs_status_created_at")
-  @@map("export_jobs")
 }

@@ -11,6 +11,23 @@ summary of what changed after completed work has been promoted out of `ref/`.
 
 ### Changed
 
+- Hub tenancy (Phase B): the domain model became **Hub → Collections →
+  Resources**. Hubs are the tenant root and own collections through a
+  `hub_id` foreign key; users belong to hubs via `hub_memberships`
+  (`owner | admin | member`) and every sign-up atomically creates a personal
+  hub (owner membership) through an app-owned, auth-path-agnostic onboarding
+  hook. The visibility triad was replaced by a `published` boolean plus
+  `link_sharing_enabled` (rotatable share token); `collection_shares`,
+  `collection_saves`, and `hub_invitations` tables were added (schema now;
+  endpoints in Phases C/D). The `0_init` migration was reshaped (nothing is
+  deployed) and the `repositories`/`entries` modules, routes, and vocabulary
+  were renamed to `collections`/`resources` — API routes move to
+  `/api/v1/collections/:id/resources|tags|children|export` and
+  `/api/v1/users/:username/collections/:slug`. Interim access is
+  hub-membership based; Phase C installs the full policy service. Fixed a
+  latent bug found in passing: the browser-friendly `?s=<token>` share-link
+  query was rejected by the global `forbidNonWhitelisted` pipe.
+
 - Foundation conventions (Phase A): failures now return the stable error
   envelope `{ error: { code, message, requestId, details } }` with stable
   machine-readable codes; every response carries a server-generated

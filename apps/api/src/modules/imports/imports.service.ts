@@ -1,26 +1,27 @@
 import {
   BadRequestException,
-  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { createHash } from 'crypto';
 import { PrismaService } from 'src/database/prisma.service';
-import { EntryKind } from 'src/common/enums/entry-kind.enum';
-import { RepositoryVisibility } from 'src/common/enums/repository-visibility.enum';
-import { UserRole } from 'src/common/enums/user-role.enum';
+import { ResourceKind } from 'src/common/enums/resource-kind.enum';
 import { AuthUser } from 'src/common/interfaces/auth-user.interface';
 import { canonicalizeUrl } from 'src/common/utils/url.util';
+import { HubsService } from '../hubs/hubs.service';
 import { ImportTargetDto } from './dto/import-target.dto';
 
 const MAX_IMPORT_SIZE_BYTES = 10 * 1024 * 1024;
 
 @Injectable()
 export class ImportsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly hubs: HubsService,
+  ) {}
 
   async importCsv(user: AuthUser, file: unknown, dto: ImportTargetDto) {
-    const repository = await this.resolveTargetRepository(user, dto);
+    const collection = await this.resolveTargetCollection(user, dto);
     this.ensureValidFile(file);
 
     const text = file.buffer.toString('utf8');
@@ -43,7 +44,7 @@ export class ImportsService {
 
     const rows = lines.slice(1);
     return this.ingestRows(
-      repository.id,
+      collection.id,
       rows.map((row, index) => {
         const columns = row.split(',').map((column) => column.trim());
         return {
@@ -63,7 +64,7 @@ export class ImportsService {
     file: unknown,
     dto: ImportTargetDto,
   ) {
-    const repository = await this.resolveTargetRepository(user, dto);
+    const collection = await this.resolveTargetCollection(user, dto);
     this.ensureValidFile(file);
 
     const text = file.buffer.toString('utf8');
@@ -73,19 +74,15 @@ export class ImportsService {
     let match: RegExpExecArray | null;
     let i = 1;
     while ((match = linkRegex.exec(text)) !== null) {
-      rows.push({
-        index: i,
-        url: match[1],
-        title: stripHtml(match[2]),
-      });
+      rows.push({ index: i, url: match[1], title: stripHtml(match[2]) });
       i += 1;
     }
 
-    return this.ingestRows(repository.id, rows);
+    return this.ingestRows(collection.id, rows);
   }
 
   async importWhatsappTxt(user: AuthUser, file: unknown, dto: ImportTargetDto) {
-    const repository = await this.resolveTargetRepository(user, dto);
+    const collection = await this.resolveTargetCollection(user, dto);
     this.ensureValidFile(file);
 
     const utf8 = file.buffer.toString('utf8');
@@ -103,11 +100,11 @@ export class ImportsService {
       }
     });
 
-    return this.ingestRows(repository.id, rows);
+    return this.ingestRows(collection.id, rows);
   }
 
   private async ingestRows(
-    repositoryId: string,
+    collectionId: string,
     rows: Array<{
       index: number;
       url: string;
@@ -116,19 +113,19 @@ export class ImportsService {
       note?: string;
     }>,
   ) {
-    const existingEntries = await this.prisma.entry.findMany({
-      where: { repositoryId },
+    const existingResources = await this.prisma.resource.findMany({
+      where: { collectionId },
       include: { link: true },
     });
 
-    const maxPosition = existingEntries.reduce(
-      (max, entry) => Math.max(max, entry.position),
+    const maxPosition = existingResources.reduce(
+      (max, resource) => Math.max(max, resource.position),
       -1,
     );
     let nextPosition = maxPosition + 1;
     const existingHashes = new Set(
-      existingEntries
-        .map((entry) => entry.link?.urlHash)
+      existingResources
+        .map((resource) => resource.link?.urlHash)
         .filter(Boolean) as string[],
     );
 
@@ -153,10 +150,10 @@ export class ImportsService {
           });
         }
 
-        await this.prisma.entry.create({
+        await this.prisma.resource.create({
           data: {
-            repositoryId,
-            kind: EntryKind.EXTERNAL_LINK,
+            collectionId,
+            kind: ResourceKind.EXTERNAL_LINK,
             linkId: link.id,
             titleOverride: row.title ?? null,
             description: row.description ?? null,
@@ -193,52 +190,48 @@ export class ImportsService {
     if (!file) {
       throw new BadRequestException('File is required');
     }
-
     const candidate = file as { buffer?: Buffer; size?: number };
     if (!candidate.buffer || typeof candidate.size !== 'number') {
       throw new BadRequestException('Invalid upload payload');
     }
-
     if (candidate.size > MAX_IMPORT_SIZE_BYTES) {
       throw new BadRequestException('File exceeds 10MB limit');
     }
   }
 
-  private async resolveTargetRepository(user: AuthUser, dto: ImportTargetDto) {
-    if (dto.targetRepositoryId) {
-      const repository = await this.prisma.repository.findUnique({
-        where: { id: dto.targetRepositoryId },
+  private async resolveTargetCollection(user: AuthUser, dto: ImportTargetDto) {
+    if (dto.targetCollectionId) {
+      const collection = await this.prisma.collection.findUnique({
+        where: { id: dto.targetCollectionId },
       });
-
-      if (!repository) {
-        throw new NotFoundException('Target repository not found');
+      if (!collection) {
+        throw new NotFoundException('Target collection not found');
       }
-
-      if (user.role !== UserRole.ADMIN && repository.ownerId !== user.userId) {
-        throw new ForbiddenException('Forbidden');
-      }
-
-      return repository;
+      await this.hubs.assertMember(collection.hubId, user);
+      return collection;
     }
 
-    if (!dto.createRepository) {
+    if (!dto.createCollection) {
       throw new BadRequestException(
-        'Provide targetRepositoryId or set createRepository=true',
+        'Provide targetCollectionId or set createCollection=true',
+      );
+    }
+    if (!dto.collectionTitle || !dto.collectionSlug) {
+      throw new BadRequestException(
+        'collectionTitle and collectionSlug are required when createCollection=true',
       );
     }
 
-    if (!dto.repositoryTitle || !dto.repositorySlug) {
-      throw new BadRequestException(
-        'repositoryTitle and repositorySlug are required when createRepository=true',
-      );
+    const hubId = await this.hubs.getPrimaryHubId(user.userId);
+    if (!hubId) {
+      throw new BadRequestException('No hub available for this user');
     }
 
-    return this.prisma.repository.create({
+    return this.prisma.collection.create({
       data: {
-        ownerId: user.userId,
-        title: dto.repositoryTitle,
-        slug: dto.repositorySlug,
-        visibility: dto.visibility ?? RepositoryVisibility.PRIVATE,
+        hubId,
+        title: dto.collectionTitle,
+        slug: dto.collectionSlug,
       },
     });
   }

@@ -13,11 +13,10 @@ export class ExportsProcessor extends WorkerHost {
     super();
   }
 
-  async process(job: Job<{ exportJobId: string; repositoryId: string }>) {
+  async process(job: Job<{ exportJobId: string; collectionId: string }>) {
     const exportJob = await this.prisma.exportJob.findUnique({
       where: { id: job.data.exportJobId },
     });
-
     if (!exportJob) {
       this.logger.warn(`Export job not found: ${job.data.exportJobId}`);
       return;
@@ -29,24 +28,24 @@ export class ExportsProcessor extends WorkerHost {
     });
 
     try {
-      const repository = await this.prisma.repository.findUnique({
-        where: { id: job.data.repositoryId },
+      const collection = await this.prisma.collection.findUnique({
+        where: { id: job.data.collectionId },
       });
-      if (!repository) {
-        throw new Error('Repository not found for export processing');
+      if (!collection) {
+        throw new Error('Collection not found for export processing');
       }
 
-      const entries = await this.prisma.entry.findMany({
-        where: { repositoryId: repository.id },
+      const resources = await this.prisma.resource.findMany({
+        where: { collectionId: collection.id },
         include: {
           link: true,
-          linkedRepository: true,
-          entryTags: { include: { tag: true } },
+          linkedCollection: true,
+          resourceTags: { include: { tag: true } },
         },
         orderBy: { position: 'asc' },
       });
 
-      const markdown = buildMarkdown(repository, entries);
+      const markdown = buildMarkdown(collection, resources);
       await this.prisma.exportJob.update({
         where: { id: exportJob.id },
         data: {

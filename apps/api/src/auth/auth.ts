@@ -4,6 +4,7 @@ import { betterAuth } from 'better-auth';
 import { prismaAdapter } from 'better-auth/adapters/prisma';
 import { bearer, username } from 'better-auth/plugins';
 import { PrismaClient } from '../generated/prisma/client';
+import { createPersonalHub } from '../modules/hubs/hub-onboarding';
 
 function databaseUrl(): string {
   return (
@@ -42,6 +43,20 @@ export const auth = betterAuth({
     database: {
       // Let PostgreSQL generate uuid-v7 ids (app_uuid_v7 defaults).
       generateId: false,
+    },
+  },
+  databaseHooks: {
+    user: {
+      create: {
+        // Every new user gets a personal hub (owner membership) at sign-up.
+        // App-owned and auth-path-agnostic: SSO later reuses this hook.
+        after: async (user) => {
+          await createPersonalHub(prisma, {
+            userId: user.id,
+            name: user.name,
+          });
+        },
+      },
     },
   },
   plugins: [username(), bearer()],

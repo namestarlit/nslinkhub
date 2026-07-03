@@ -11,7 +11,7 @@ import { configureApp } from '../src/app.setup';
 describe('Foundation conventions (e2e)', () => {
   let app: INestApplication<App>;
   let bearer: string;
-  let repoId: string;
+  let collectionId: string;
 
   const sfx = Date.now().toString(36);
   const username = `fnd_${sfx}`;
@@ -40,20 +40,20 @@ describe('Foundation conventions (e2e)', () => {
       .expect(200);
     bearer = signUp.headers['set-auth-token'];
 
-    const repo = await request(server)
-      .post('/api/v1/repositories')
+    const collection = await request(server)
+      .post('/api/v1/collections')
       .set('Authorization', `Bearer ${bearer}`)
       .send({
-        slug: `fnd-repo-${sfx}`,
-        title: 'Fnd Repo',
-        visibility: 'public',
+        slug: `fnd-col-${sfx}`,
+        title: 'Fnd Collection',
+        published: true,
       })
       .expect(201);
-    repoId = (repo.body as { data: { id: string } }).data.id;
+    collectionId = (collection.body as { data: { id: string } }).data.id;
 
     for (let position = 0; position < 3; position += 1) {
       await request(server)
-        .post(`/api/v1/repositories/${repoId}/entries/external`)
+        .post(`/api/v1/collections/${collectionId}/resources/external`)
         .set('Authorization', `Bearer ${bearer}`)
         .send({ url: `https://example.com/fnd-${sfx}-${position}`, position })
         .expect(201);
@@ -92,7 +92,7 @@ describe('Foundation conventions (e2e)', () => {
 
   it('maps DTO validation failures to validation_failed with messages', async () => {
     const res = await request(app.getHttpServer())
-      .post('/api/v1/repositories')
+      .post('/api/v1/collections')
       .set('Authorization', `Bearer ${bearer}`)
       .send({ slug: 'x y z!!', title: '' })
       .expect(400);
@@ -104,11 +104,11 @@ describe('Foundation conventions (e2e)', () => {
     expect(Array.isArray(body.error.details.messages)).toBe(true);
   });
 
-  it('walks entries with cursor pagination, each item exactly once', async () => {
+  it('walks resources with cursor pagination, each item exactly once', async () => {
     const server = app.getHttpServer();
 
     const first = await request(server)
-      .get(`/api/v1/repositories/${repoId}/entries?limit=2`)
+      .get(`/api/v1/collections/${collectionId}/resources?limit=2`)
       .expect(200);
     const firstBody = first.body as {
       data: Array<{ position: number }>;
@@ -119,7 +119,7 @@ describe('Foundation conventions (e2e)', () => {
 
     const second = await request(server)
       .get(
-        `/api/v1/repositories/${repoId}/entries?limit=2&cursor=${encodeURIComponent(
+        `/api/v1/collections/${collectionId}/resources?limit=2&cursor=${encodeURIComponent(
           firstBody.meta.nextCursor as string,
         )}`,
       )
@@ -134,7 +134,7 @@ describe('Foundation conventions (e2e)', () => {
 
   it('rejects a malformed cursor with the envelope', async () => {
     const res = await request(app.getHttpServer())
-      .get(`/api/v1/repositories/${repoId}/entries?cursor=%%%garbage`)
+      .get(`/api/v1/collections/${collectionId}/resources?cursor=%%%garbage`)
       .expect(400);
     expect((res.body as { error: { code: string } }).error.code).toBe(
       'bad_request',
@@ -143,7 +143,7 @@ describe('Foundation conventions (e2e)', () => {
 
   it('paginates the public listing by cursor', async () => {
     const res = await request(app.getHttpServer())
-      .get('/api/v1/repositories/public?limit=1')
+      .get('/api/v1/collections/public?limit=1')
       .expect(200);
     const body = res.body as {
       data: unknown[];

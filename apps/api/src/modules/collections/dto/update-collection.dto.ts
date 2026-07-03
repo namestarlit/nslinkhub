@@ -1,5 +1,5 @@
 import {
-  IsEnum,
+  IsBoolean,
   IsInt,
   IsOptional,
   IsString,
@@ -9,9 +9,8 @@ import {
   Min,
   MinLength,
 } from 'class-validator';
-import { RepositoryVisibility } from 'src/common/enums/repository-visibility.enum';
 
-export class UpdateRepositoryDto {
+export class UpdateCollectionDto {
   @IsOptional()
   @IsString()
   @Matches(/^[a-z0-9-]+$/)
@@ -31,12 +30,12 @@ export class UpdateRepositoryDto {
   description?: string;
 
   @IsOptional()
-  @IsEnum(RepositoryVisibility)
-  visibility?: RepositoryVisibility;
+  @IsBoolean()
+  published?: boolean;
 
   @IsOptional()
   @IsUUID()
-  parentRepositoryId?: string | null;
+  parentCollectionId?: string | null;
 
   @IsInt()
   @Min(1)

@@ -7,15 +7,16 @@ import { AppModule } from '../src/app.module';
 import { configureApp } from '../src/app.setup';
 
 // Regression tests for route shadowing: a catch-all GET ':owner/:slug' under
-// /repositories used to swallow GET ':id/entries' and GET ':id/children'.
-describe('Repository routes (e2e)', () => {
+// the collection routes used to swallow GET ':id/resources' and
+// ':id/children'.
+describe('Collection routes (e2e)', () => {
   let app: INestApplication<App>;
   let bearer: string;
-  let repoId: string;
+  let collectionId: string;
 
   const sfx = Date.now().toString(36);
   const username = `e2e_${sfx}`;
-  const slug = `e2e-repo-${sfx}`;
+  const slug = `e2e-col-${sfx}`;
 
   beforeAll(async () => {
     const moduleFixture = await Test.createTestingModule({
@@ -42,15 +43,15 @@ describe('Repository routes (e2e)', () => {
     bearer = signUp.headers['set-auth-token'];
     expect(bearer).toBeTruthy();
 
-    const repo = await request(server)
-      .post('/api/v1/repositories')
+    const collection = await request(server)
+      .post('/api/v1/collections')
       .set('Authorization', `Bearer ${bearer}`)
-      .send({ slug, title: 'E2E Repo', visibility: 'public' })
+      .send({ slug, title: 'E2E Collection', published: true })
       .expect(201);
-    repoId = (repo.body as { data: { id: string } }).data.id;
+    collectionId = (collection.body as { data: { id: string } }).data.id;
 
     await request(server)
-      .post(`/api/v1/repositories/${repoId}/entries/external`)
+      .post(`/api/v1/collections/${collectionId}/resources/external`)
       .set('Authorization', `Bearer ${bearer}`)
       .send({ url: `https://example.com/e2e-${sfx}`, position: 0 })
       .expect(201);
@@ -60,9 +61,9 @@ describe('Repository routes (e2e)', () => {
     await app.close();
   });
 
-  it('lists entries of a public repository unauthenticated', async () => {
+  it('lists resources of a published collection unauthenticated', async () => {
     const res = await request(app.getHttpServer())
-      .get(`/api/v1/repositories/${repoId}/entries`)
+      .get(`/api/v1/collections/${collectionId}/resources`)
       .expect(200);
 
     const body = res.body as { data: Array<{ url?: string }> };
@@ -71,26 +72,26 @@ describe('Repository routes (e2e)', () => {
   });
 
   // Canary for the shadowing regressing: a non-uuid id must be rejected by
-  // the entries controller's ParseUUIDPipe (400), not swallowed by another
+  // the resources controller's ParseUUIDPipe (400), not swallowed by another
   // route as a 404.
-  it('rejects a non-uuid repository id on the entries route with 400', async () => {
+  it('rejects a non-uuid collection id on the resources route with 400', async () => {
     await request(app.getHttpServer())
-      .get('/api/v1/repositories/not-a-uuid/entries')
+      .get('/api/v1/collections/not-a-uuid/resources')
       .expect(400);
   });
 
-  it('lists children of a public repository unauthenticated', async () => {
+  it('lists children of a published collection unauthenticated', async () => {
     const res = await request(app.getHttpServer())
-      .get(`/api/v1/repositories/${repoId}/children`)
+      .get(`/api/v1/collections/${collectionId}/children`)
       .expect(200);
 
     const body = res.body as { data: unknown[] };
     expect(Array.isArray(body.data)).toBe(true);
   });
 
-  it('looks up a repository by owner and slug', async () => {
+  it('looks up a collection by owner and slug', async () => {
     const res = await request(app.getHttpServer())
-      .get(`/api/v1/users/${username}/repositories/${slug}`)
+      .get(`/api/v1/users/${username}/collections/${slug}`)
       .expect(200);
 
     const body = res.body as { data: { slug: string } };

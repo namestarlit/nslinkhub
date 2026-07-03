@@ -2,12 +2,16 @@ import {
   IsInt,
   IsOptional,
   IsString,
+  IsUUID,
   MaxLength,
   Min,
   MinLength,
 } from 'class-validator';
 
-export class UpdateEntryDto {
+export class CreateCollectionLinkResourceDto {
+  @IsUUID()
+  linkedCollectionId: string;
+
   @IsOptional()
   @IsString()
   @MinLength(1)
@@ -24,12 +28,7 @@ export class UpdateEntryDto {
   @MaxLength(10000)
   note?: string;
 
-  @IsOptional()
   @IsInt()
   @Min(0)
-  position?: number;
-
-  @IsInt()
-  @Min(1)
-  version: number;
+  position: number;
 }

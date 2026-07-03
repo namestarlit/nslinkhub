@@ -1,121 +1,104 @@
-import {
-  ForbiddenException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'src/database/prisma.service';
-import { UserRole } from 'src/common/enums/user-role.enum';
 import { AuthUser } from 'src/common/interfaces/auth-user.interface';
+import { HubsService } from '../hubs/hubs.service';
 import { AttachTagDto } from './dto/attach-tag.dto';
 
 @Injectable()
 export class TagsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly hubs: HubsService,
+  ) {}
 
-  async attachToRepository(
-    repositoryId: string,
+  async attachToCollection(
+    collectionId: string,
     user: AuthUser,
     dto: AttachTagDto,
   ) {
-    const repository = await this.requireWritableRepository(repositoryId, user);
+    const collection = await this.requireWritableCollection(collectionId, user);
     const tag = await this.getOrCreateTag(dto.name);
 
-    const exists = await this.prisma.repositoryTag.findUnique({
+    const exists = await this.prisma.collectionTag.findUnique({
       where: {
-        repositoryId_tagId: {
-          repositoryId: repository.id,
-          tagId: tag.id,
-        },
+        collectionId_tagId: { collectionId: collection.id, tagId: tag.id },
       },
     });
-
     if (!exists) {
-      await this.prisma.repositoryTag.create({
-        data: {
-          repositoryId: repository.id,
-          tagId: tag.id,
-        },
+      await this.prisma.collectionTag.create({
+        data: { collectionId: collection.id, tagId: tag.id },
       });
     }
 
     return {
-      repositoryId: repository.id,
+      collectionId: collection.id,
       tag: { id: tag.id, name: tag.name },
     };
   }
 
-  async removeFromRepository(
-    repositoryId: string,
+  async removeFromCollection(
+    collectionId: string,
     user: AuthUser,
     tagName: string,
   ) {
-    const repository = await this.requireWritableRepository(repositoryId, user);
+    const collection = await this.requireWritableCollection(collectionId, user);
     const tag = await this.prisma.tag.findUnique({
       where: { name: tagName.toLowerCase() },
     });
-
     if (!tag) {
       throw new NotFoundException('Tag not found');
     }
 
-    await this.prisma.repositoryTag.deleteMany({
-      where: {
-        repositoryId: repository.id,
-        tagId: tag.id,
-      },
+    await this.prisma.collectionTag.deleteMany({
+      where: { collectionId: collection.id, tagId: tag.id },
     });
 
-    return {
-      repositoryId: repository.id,
-      tag: tag.name,
-      removed: true,
-    };
+    return { collectionId: collection.id, tag: tag.name, removed: true };
   }
 
-  async attachToEntry(entryId: string, user: AuthUser, dto: AttachTagDto) {
-    const entry = await this.prisma.entry.findUnique({
-      where: { id: entryId },
+  async attachToResource(
+    resourceId: string,
+    user: AuthUser,
+    dto: AttachTagDto,
+  ) {
+    const resource = await this.prisma.resource.findUnique({
+      where: { id: resourceId },
     });
-    if (!entry) {
-      throw new NotFoundException('Entry not found');
+    if (!resource) {
+      throw new NotFoundException('Resource not found');
     }
 
-    await this.requireWritableRepository(entry.repositoryId, user);
+    await this.requireWritableCollection(resource.collectionId, user);
     const tag = await this.getOrCreateTag(dto.name);
 
-    const exists = await this.prisma.entryTag.findUnique({
-      where: {
-        entryId_tagId: {
-          entryId: entry.id,
-          tagId: tag.id,
-        },
-      },
+    const exists = await this.prisma.resourceTag.findUnique({
+      where: { resourceId_tagId: { resourceId: resource.id, tagId: tag.id } },
     });
-
     if (!exists) {
-      await this.prisma.entryTag.create({
-        data: {
-          entryId: entry.id,
-          tagId: tag.id,
-        },
+      await this.prisma.resourceTag.create({
+        data: { resourceId: resource.id, tagId: tag.id },
       });
     }
 
     return {
-      entryId: entry.id,
+      resourceId: resource.id,
       tag: { id: tag.id, name: tag.name },
     };
   }
 
-  async removeFromEntry(entryId: string, user: AuthUser, tagName: string) {
-    const entry = await this.prisma.entry.findUnique({
-      where: { id: entryId },
+  async removeFromResource(
+    resourceId: string,
+    user: AuthUser,
+    tagName: string,
+  ) {
+    const resource = await this.prisma.resource.findUnique({
+      where: { id: resourceId },
     });
-    if (!entry) {
-      throw new NotFoundException('Entry not found');
+    if (!resource) {
+      throw new NotFoundException('Resource not found');
     }
 
-    await this.requireWritableRepository(entry.repositoryId, user);
+    await this.requireWritableCollection(resource.collectionId, user);
 
     const tag = await this.prisma.tag.findUnique({
       where: { name: tagName.toLowerCase() },
@@ -124,48 +107,33 @@ export class TagsService {
       throw new NotFoundException('Tag not found');
     }
 
-    await this.prisma.entryTag.deleteMany({
-      where: {
-        entryId: entry.id,
-        tagId: tag.id,
-      },
+    await this.prisma.resourceTag.deleteMany({
+      where: { resourceId: resource.id, tagId: tag.id },
     });
 
-    return {
-      entryId: entry.id,
-      tag: tag.name,
-      removed: true,
-    };
+    return { resourceId: resource.id, tag: tag.name, removed: true };
   }
 
   private async getOrCreateTag(rawName: string) {
     const normalized = rawName.trim().replace(/\s+/g, ' ').toLowerCase();
-
-    let tag = await this.prisma.tag.findUnique({
-      where: { name: normalized },
-    });
+    let tag = await this.prisma.tag.findUnique({ where: { name: normalized } });
     if (!tag) {
       tag = await this.prisma.tag.create({ data: { name: normalized } });
     }
-
     return tag;
   }
 
-  private async requireWritableRepository(
-    repositoryId: string,
+  private async requireWritableCollection(
+    collectionId: string,
     actor: AuthUser,
   ) {
-    const repository = await this.prisma.repository.findUnique({
-      where: { id: repositoryId },
+    const collection = await this.prisma.collection.findUnique({
+      where: { id: collectionId },
     });
-    if (!repository) {
-      throw new NotFoundException('Repository not found');
+    if (!collection) {
+      throw new NotFoundException('Collection not found');
     }
-
-    if (actor.role !== UserRole.ADMIN && repository.ownerId !== actor.userId) {
-      throw new ForbiddenException('Forbidden');
-    }
-
-    return repository;
+    await this.hubs.assertMember(collection.hubId, actor);
+    return collection;
   }
 }

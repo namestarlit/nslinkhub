@@ -21,30 +21,30 @@ import type { AuthUser } from 'src/common/interfaces/auth-user.interface';
 import { CursorQueryDto } from 'src/common/dto/cursor-query.dto';
 import { PaginationQueryDto } from 'src/common/dto/pagination-query.dto';
 import { apiOk } from 'src/common/utils/response.util';
-import { CreateChildRepositoryDto } from './dto/create-child-repository.dto';
-import { CreateRepositoryDto } from './dto/create-repository.dto';
-import { UpdateRepositoryDto } from './dto/update-repository.dto';
-import { RepositoriesService } from './repositories.service';
+import { CreateChildCollectionDto } from './dto/create-child-collection.dto';
+import { CreateCollectionDto } from './dto/create-collection.dto';
+import { UpdateCollectionDto } from './dto/update-collection.dto';
+import { CollectionsService } from './collections.service';
 
-@ApiTags('repositories')
-@Controller('api/v1/repositories')
-export class RepositoriesController {
-  constructor(private readonly repositoriesService: RepositoriesService) {}
+@ApiTags('collections')
+@Controller('api/v1/collections')
+export class CollectionsController {
+  constructor(private readonly collectionsService: CollectionsService) {}
 
   @ApiBearerAuth()
   @UseGuards(AuthGuard)
   @Post()
   async create(
     @CurrentUser() user: AuthUser,
-    @Body() dto: CreateRepositoryDto,
+    @Body() dto: CreateCollectionDto,
   ) {
-    const data = await this.repositoriesService.create(user, dto);
+    const data = await this.collectionsService.create(user, dto);
     return apiOk(data);
   }
 
   @Get('public')
   async getPublic(@Query() query: CursorQueryDto) {
-    const data = await this.repositoriesService.getPublic(query);
+    const data = await this.collectionsService.getPublic(query);
     return apiOk(data.items, data.meta);
   }
 
@@ -54,10 +54,10 @@ export class RepositoriesController {
   async update(
     @Param('id', new ParseUUIDPipe()) id: string,
     @CurrentUser() user: AuthUser,
-    @Body() dto: UpdateRepositoryDto,
+    @Body() dto: UpdateCollectionDto,
     @Headers('if-match') ifMatch?: string,
   ) {
-    const data = await this.repositoriesService.update(id, user, dto, ifMatch);
+    const data = await this.collectionsService.update(id, user, dto, ifMatch);
     return apiOk(data);
   }
 
@@ -68,7 +68,7 @@ export class RepositoriesController {
     @Param('id', new ParseUUIDPipe()) id: string,
     @CurrentUser() user: AuthUser,
   ) {
-    const data = await this.repositoriesService.remove(id, user);
+    const data = await this.collectionsService.remove(id, user);
     return apiOk(data);
   }
 
@@ -79,7 +79,7 @@ export class RepositoriesController {
     @Param('id', new ParseUUIDPipe()) id: string,
     @CurrentUser() user: AuthUser,
   ) {
-    const data = await this.repositoriesService.createOrRotateShareLink(
+    const data = await this.collectionsService.createOrRotateShareLink(
       id,
       user,
     );
@@ -92,9 +92,9 @@ export class RepositoriesController {
   async createChild(
     @Param('id', new ParseUUIDPipe()) id: string,
     @CurrentUser() user: AuthUser,
-    @Body() dto: CreateChildRepositoryDto,
+    @Body() dto: CreateChildCollectionDto,
   ) {
-    const data = await this.repositoriesService.createChild(id, user, dto);
+    const data = await this.collectionsService.createChild(id, user, dto);
     return apiOk(data);
   }
 
@@ -108,7 +108,7 @@ export class RepositoriesController {
     @Req() req?: Request,
   ) {
     const shareToken = headerToken ?? (req?.query.s as string | undefined);
-    const data = await this.repositoriesService.getChildren(
+    const data = await this.collectionsService.getChildren(
       id,
       user,
       shareToken,

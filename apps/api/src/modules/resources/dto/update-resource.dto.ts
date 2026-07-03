@@ -2,16 +2,12 @@ import {
   IsInt,
   IsOptional,
   IsString,
-  IsUUID,
   MaxLength,
   Min,
   MinLength,
 } from 'class-validator';
 
-export class CreateRepositoryLinkEntryDto {
-  @IsUUID()
-  linkedRepositoryId: string;
-
+export class UpdateResourceDto {
   @IsOptional()
   @IsString()
   @MinLength(1)
@@ -28,7 +24,12 @@ export class CreateRepositoryLinkEntryDto {
   @MaxLength(10000)
   note?: string;
 
+  @IsOptional()
   @IsInt()
   @Min(0)
-  position: number;
+  position?: number;
+
+  @IsInt()
+  @Min(1)
+  version: number;
 }

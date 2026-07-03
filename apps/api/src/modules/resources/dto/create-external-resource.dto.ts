@@ -8,7 +8,7 @@ import {
   MinLength,
 } from 'class-validator';
 
-export class CreateExternalEntryDto {
+export class CreateExternalResourceDto {
   @IsUrl({ require_protocol: true })
   @MaxLength(2048)
   url: string;

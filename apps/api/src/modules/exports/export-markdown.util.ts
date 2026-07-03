@@ -1,59 +1,62 @@
-import { EntryKind } from 'src/common/enums/entry-kind.enum';
+import { ResourceKind } from 'src/common/enums/resource-kind.enum';
 import {
-  Entry,
-  EntryTag,
+  Collection,
   Link,
-  Repository,
+  Resource,
+  ResourceTag,
   Tag,
 } from 'src/generated/prisma/client';
 
-export type EntryForExport = Entry & {
+export type ResourceForExport = Resource & {
   link: Link | null;
-  linkedRepository: Repository | null;
-  entryTags: (EntryTag & { tag: Tag | null })[];
+  linkedCollection: Collection | null;
+  resourceTags: (ResourceTag & { tag: Tag | null })[];
 };
 
 export function buildMarkdown(
-  repository: Repository,
-  entries: EntryForExport[],
+  collection: Collection,
+  resources: ResourceForExport[],
 ) {
   const lines: string[] = [];
-  lines.push(`# ${repository.title}`);
+  lines.push(`# ${collection.title}`);
 
-  if (repository.description) {
+  if (collection.description) {
     lines.push('');
-    lines.push(repository.description);
+    lines.push(collection.description);
   }
 
   lines.push('');
-  lines.push(`- Visibility: ${repository.visibility}`);
-  lines.push(`- Updated: ${repository.updatedAt.toISOString()}`);
+  lines.push(`- Published: ${collection.published ? 'yes' : 'no'}`);
+  lines.push(`- Updated: ${collection.updatedAt.toISOString()}`);
 
   lines.push('');
   lines.push('## Resources');
 
-  for (const entry of entries) {
-    if ((entry.kind as EntryKind) === EntryKind.EXTERNAL_LINK) {
+  for (const resource of resources) {
+    if ((resource.kind as ResourceKind) === ResourceKind.EXTERNAL_LINK) {
       const title =
-        entry.titleOverride ?? entry.link?.canonicalUrl ?? 'Untitled Link';
-      const url = entry.link?.canonicalUrl ?? '';
+        resource.titleOverride ??
+        resource.link?.canonicalUrl ??
+        'Untitled Link';
+      const url = resource.link?.canonicalUrl ?? '';
       lines.push(`- [${title}](${url})`);
     } else {
       const title =
-        entry.titleOverride ?? entry.linkedRepository?.title ?? 'Repository';
-      lines.push(`- [Repository] ${title}`);
+        resource.titleOverride ??
+        resource.linkedCollection?.title ??
+        'Collection';
+      lines.push(`- [Collection] ${title}`);
     }
 
-    if (entry.description) {
-      lines.push(`  - Description: ${entry.description}`);
+    if (resource.description) {
+      lines.push(`  - Description: ${resource.description}`);
+    }
+    if (resource.note) {
+      lines.push(`  - Note: ${resource.note}`);
     }
 
-    if (entry.note) {
-      lines.push(`  - Note: ${entry.note}`);
-    }
-
-    const tagNames = entry.entryTags
-      ?.map((entryTag) => entryTag.tag?.name)
+    const tagNames = resource.resourceTags
+      ?.map((resourceTag) => resourceTag.tag?.name)
       .filter(Boolean);
     if (tagNames && tagNames.length > 0) {
       lines.push(`  - Tags: ${tagNames.join(', ')}`);
