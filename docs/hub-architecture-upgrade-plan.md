@@ -13,8 +13,9 @@ Related documents:
 - `docs/infra-deployment-direction.md` — ns-series deployment platform
   (namestarlit VPS + Dokploy, GHCR images via GitHub Actions); Track W's
   app split is the image boundary it consumes.
-- `ref/hub-upgrade-next-session.md` — implementation session starter.
-- `ref/migration-plan.md` — the completed Bun/Prisma/better-auth stack
+- `ref/hub-upgrade-next-session.md` — implementation session starter
+  (untracked local context; regenerate from this plan if absent).
+- `docs/exec-plans/completed/stack-migration-bun-prisma-better-auth.md` — the completed Bun/Prisma/better-auth stack
   migration this plan builds on (including the squash-don't-stack migration
   pattern).
 - Architectural conventions inherited from the pigfarm design documents

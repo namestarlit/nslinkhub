@@ -4,12 +4,20 @@ NSLinkHub is a link-organization API for creating and sharing curated repositori
 
 This repository is a greenfield NestJS v2 rewrite. The old Flask v1 is retained for historical record only.
 
+## Working In This Repository
+
+Start with `AGENTS.md` — the contributor/agent map: reading order, toolchain
+rules, non-negotiable invariants, and documentation conventions (ExecPlans in
+`docs/exec-plans/`, disposable context in git-ignored `ref/`, completed work
+in `CHANGELOG.md`).
+
 ## Current Documentation
 
-- Product + architecture spec: `docs/nestjs-v2-feature-spec.md`
-- Implementation status + next steps: `docs/implementation-status.md`
-- Stack migration plan/log (Bun + Prisma + better-auth): `ref/migration-plan.md`
-- Hub architecture upgrade plan (next major change): `docs/hub-architecture-upgrade-plan.md`
+- Hub architecture plan (authoritative target design): `docs/hub-architecture-upgrade-plan.md`
+- ns-series identity direction: `docs/identity-sso-direction.md`
+- ns-series deployment direction: `docs/infra-deployment-direction.md`
+- Product spec (historical background): `docs/nestjs-v2-feature-spec.md`
+- Stack migration log (Bun + Prisma + better-auth): `docs/exec-plans/completed/stack-migration-bun-prisma-better-auth.md`
 
 ## Implemented So Far
 
