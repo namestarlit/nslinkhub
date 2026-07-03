@@ -99,9 +99,13 @@ HubMembership   — (hubId, userId, role: owner|admin|member, status). A user's
                   authority in a hub. Unique per (hubId, userId).
 HubInvitation   — (hubId, email, role, tokenHash, expiresAt, status). Accepted
                   by an authenticated user; produces a membership.
-Repository      — belongs to a hub (hubId replaces ownerId). Visibility rules
-                  (public/unlisted+share-token/private) unchanged, but
-                  "private" now means "hub members" rather than "one user".
+Repository      — belongs to a hub (hubId replaces ownerId). Publication is a
+                  boolean: published (public) or unpublished (hub members +
+                  explicit shares). The public/unlisted/private triad is gone;
+                  see "Sharing Model" below.
+RepositoryShare — (repositoryId, userId, role: reader|editor, source:
+                  direct|link) — per-user access to one repository without hub
+                  membership. Feeds each user's shared/ surface.
 Entry/Link/Tag  — unchanged shape; access derives from the owning repository's
                   hub. Hub-scoped queries carry hubId.
 ExportJob       — belongs to hub + repository; requestedByUserId kept for audit.
@@ -114,14 +118,67 @@ POST   /api/v2/hubs                                  create hub (creator = owner
 GET    /api/v2/hubs/:hubId                           hub details (member)
 POST   /api/v2/hubs/:hubId/invitations               invite (owner/admin)
 POST   /api/v2/invitations/accept                    token in body
-GET    /api/v2/hubs/:hubId/repositories              list (member; public subset for non-members)
+GET    /api/v2/hubs/:hubId/repositories              list (member; published subset for non-members)
 POST   /api/v2/hubs/:hubId/repositories              create (member)
 GET    /api/v2/hubs/:hubId/repositories/:slug        public lookup replaces /users/:username/...
        (hubId is canonical; a mutable vanity handle can alias it later,
         resolving handle -> hubId at the edge, never stored in references)
 /api/v2/repositories/:id/*                           unchanged (entries, tags,
-       share-link, children, exports) but authorized via hub membership
+       children, exports) but authorized via publication + membership + shares
+POST   /api/v2/repositories/:id/publish              publish / unpublish
+POST   /api/v2/repositories/:id/unpublish
+PUT    /api/v2/repositories/:id/link-sharing         enable/disable/rotate link
+POST   /api/v2/repositories/:id/shares               direct share {email, role}
+DELETE /api/v2/repositories/:id/shares/:userId       revoke
+GET    /api/v2/me/shared                             the user's shared/ surface
 ```
+
+## Sharing Model (Google Drive philosophy)
+
+Hub membership is intentionally heavyweight — it is for people who belong in
+the hub, not a workaround for letting one person see one repository. The
+gap it would otherwise create ("how many users must I invite just so someone
+can *see* this?") is closed by per-repository sharing, modeled on how Google
+Drive shares files. Without this, recipients of a link fall back to storing
+it in browser bookmarks — the exact behavior the product exists to replace.
+
+**Publication (replaces public/unlisted/private).** A repository is either
+**published** — visible to everyone, listed on the hub's public page — or
+**unpublished** — visible to hub members and explicit shares only. Default:
+unpublished. The old `unlisted` state is subsumed by unpublished +
+link-sharing enabled; the CHECK constraints and share-token-required rules
+around `unlisted` disappear.
+
+**Two sharing mechanisms on top of publication:**
+
+1. **Link sharing (anyone with the link → read).** A per-repository toggle
+   with a rotatable unguessable token (the existing share-token
+   infrastructure, reframed). Always read-only. When a signed-in user opens
+   a valid share link, the repository is recorded under their **shared/**
+   surface (`RepositoryShare` with `source: link`, role `reader`); that
+   recorded access remains valid only while link sharing stays enabled —
+   disabling or rotating the link cuts it off, exactly like Drive.
+2. **Direct sharing (specific person → read or write).** Share to an email
+   address; requires a linkhub account (resolve email → userId; sharing to
+   an unregistered email is an open item — start by requiring an existing
+   account). Creates `RepositoryShare` with `source: direct` and role
+   `reader` (default) or `editor`. Direct grants are independent of the
+   link toggle and revocable individually. The repository appears under the
+   recipient's **shared/** surface.
+
+**Editor scope.** An `editor` writes content inside that one repository —
+entries, tags, imports. Editors do not publish/unpublish, manage sharing,
+delete the repository, or touch anything else in the hub. Publication and
+share management stay with hub members (per hub-role rules).
+
+**shared/ surface.** A user-level (not hub-scoped) listing of everything
+shared with the user across hubs — the Drive "Shared with me" equivalent.
+Backed entirely by `RepositoryShare` rows.
+
+**Access resolution for a repository** (first match wins):
+published → anyone reads; hub membership → per hub role; direct share →
+per share role; active link + valid token (or link-sourced share row while
+the link stays enabled) → read; otherwise → not found.
 
 ## Workspace And Client Surfaces
 
@@ -199,10 +256,13 @@ data-shuffling migrations.
 
 ### Phase B — Hub tenancy schema
 
-- Add `hubs`, `hub_memberships` (+ `hub_invitations` if Phase D lands
-  together) to `prisma/schema.prisma`; reshape `0_init` rather than adding a
-  data migration.
+- Add `hubs`, `hub_memberships`, `repository_shares` (+ `hub_invitations` if
+  Phase D lands together) to `prisma/schema.prisma`; reshape `0_init` rather
+  than adding a data migration.
 - `repositories.owner_id` → `repositories.hub_id` (FK to hubs, cascade).
+- `repositories.visibility` → `published` boolean (default false) +
+  `link_sharing_enabled` boolean alongside the existing rotatable
+  `share_token_hash`; drop the unlisted CHECK constraints.
 - Keep `users.username` as mutable convenience (login via better-auth username
   plugin already works); it stops appearing in any route or FK.
 - Hub creation is atomic: hub + creator owner-membership in one transaction.
@@ -221,9 +281,16 @@ data-shuffling migrations.
   carry its hub. Route IDs never prove access.
 - Move the owner/slug public lookup to `GET /hubs/:hubId/repositories/:slug`;
   delete the `/users/:username/...` route (username is mutable — decision 1).
-- Visibility semantics: `private` = hub members; `unlisted` share-token and
-  `public` behavior unchanged.
-- Update smoke scripts and e2e regression tests (`test/routes.e2e.spec.ts`).
+- Implement the access-resolution chain from "Sharing Model": published →
+  membership → direct share → active link. Repository access answers come
+  from one policy service so entries/tags/exports can't drift.
+- Sharing endpoints: publish/unpublish, link-sharing toggle+rotate, direct
+  shares CRUD, `GET /me/shared`; record link-sourced shares when a signed-in
+  user opens a valid share link.
+- Update smoke scripts and e2e regression tests (`test/routes.e2e.spec.ts`)
+  including: unpublished repo invisible to strangers, direct-share reader
+  can read but not write, editor can write entries but not publish or
+  manage shares, link rotation cuts off link-sourced access.
 
 ### Phase D — Invitations + membership management
 
@@ -267,8 +334,12 @@ against the user-owned routes being removed.
 - Audit records for the sensitive actions in decision 9.
 - Transactional outbox + worker split for exports/email (decision 11).
 - Vanity hub handles (mutable, unique-while-active, resolve to hubId).
-- Per-repository roles (pigfarm's FarmUserRole analog) only if a workflow
-  demands finer grain than hub-wide roles.
+- Sharing to unregistered emails (pending share + invitation-style email,
+  activated on sign-up) — Phase C starts with existing accounts only.
+- Per-repository roles for *hub members* are intentionally not planned:
+  members already have full content write (decision 2), and non-members are
+  covered by repository shares (decision 8). Revisit only if a concrete
+  workflow needs member-level restriction.
 
 ## Resolved Decisions (with the user, 2026-07-03)
 
@@ -280,9 +351,8 @@ against the user-owned routes being removed.
    repositories, entries, tags, imports, exports within the hub. `admin`
    adds member management; `owner` adds hub administration.
 3. **Public hub page ships in Phase C.** Minimal unauthenticated
-   `GET /hubs/:hubId` returning hub display info + its public repositories
-   (the existing public listing scoped to one hub). Locks the public URL
-   shape before the web app builds on it.
+   `GET /hubs/:hubId` returning hub display info + its published
+   repositories. Locks the public URL shape before the web app builds on it.
 4. **Cursor pagination, adopted in Phase A** for entries and repository
    listings — the contract locks once, before any client exists.
 5. **Pigfarm error envelope for errors**: failures return
@@ -294,3 +364,19 @@ against the user-owned routes being removed.
    with E tracked alongside.
 7. **Extension first cut: popup + context menu + keyboard shortcut.** All
    three capture paths from the start.
+8. **Drive-style per-repository sharing** (2026-07-03, follow-up): hub
+   invitations are for people who belong in the hub; seeing or editing one
+   repository never requires membership. Repositories get link sharing
+   (anyone with the link → read) and direct sharing by email (requires a
+   linkhub account; `reader` default or `editor`), both surfacing under the
+   recipient's user-level **shared/** view. See "Sharing Model".
+9. **Publish/unpublish replaces public/unlisted/private.** A repository is
+   published (public) or unpublished (hub members + shares). Unlisted is
+   subsumed by unpublished + link sharing enabled.
+10. **Link shares are always read-only**, and link-derived shared/ entries
+    stay valid only while the link is enabled (rotation/disable cuts them
+    off). Direct shares are independent and individually revocable.
+11. **Editor scope is content-only**: entries/tags/imports inside that one
+    repository — no publish/unpublish, no share management, no delete, no
+    other hub access. Direct sharing starts with existing accounts;
+    unregistered-email sharing is a tracked Phase E item.

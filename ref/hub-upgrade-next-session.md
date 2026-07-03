@@ -12,6 +12,12 @@ hubs via memberships (`owner | admin | member`) and join by invitation.
 Usernames, display names, and hub names are mutable attributes — never
 authorization keys, route keys, or foreign keys.
 
+Sharing is Drive-style and per-repository (see "Sharing Model" in the plan):
+publish/unpublish replaces public/unlisted/private; link sharing = read for
+anyone with the link; direct email sharing = reader/editor for a specific
+account, appearing under the recipient's user-level **shared/** surface.
+Hub invitations are only for people who belong in the hub.
+
 ## The target shape
 
 Pigfarm's monorepo is inherited too: Bun workspaces with `apps/api` (the
