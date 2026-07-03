@@ -10,8 +10,12 @@ integration, not a rewrite.
 (the naming-boundaries rule — replaceable branding never becomes a durable
 identifier — applies doubly to the corporate brand).
 
-The consumer-facing account brand is **Namestarlit**: the button reads
-**"Continue with Namestarlit"** and the account is a **Namestarlit account**.
+The consumer-facing account brand is **namestarlit** — always lowercase, as a
+wordmark, even at the start of a sentence. It is the author's personal brand:
+the username on all social platforms and the domain namestarlit.com. (The
+etymology — "name is starlit" — is trivia now, the way facebook stopped being
+a book of faces.) The button reads **"Continue with namestarlit"** and the
+account is a **namestarlit account**.
 Rationale: the ns prefix in every product name already points at namestarlit —
 it is the publisher umbrella, which is exactly what "Meta account" is to Meta
 products: publisher brand, not corporate brand (hashikome), not any single
@@ -33,9 +37,9 @@ work for future reference; Flask-era today, same modernization candidate).
 Instead of each product owning credentials:
 
 - One self-hosted identity service — **nsauth** — owns credentials, and every
-  ns product offers **"Continue with Namestarlit"**.
+  ns product offers **"Continue with namestarlit"**.
 - **SSO authenticates identity; it does not enroll.** Unlike Google (where a
-  Google account implicitly belongs to every Google service), a Namestarlit
+  Google account implicitly belongs to every Google service), a namestarlit
   account grants membership to nothing. Each product runs its own explicit
   sign-up the first time a user continues into it; users opt in per product
   and can leave per product.
@@ -55,7 +59,7 @@ nsauth (its own repo/product, later)
         the Accounts-Center surface
 
 ns products (nslinkhub, nsworklog, future ns*)
-  OIDC relying parties: the "Continue with Namestarlit" button
+  OIDC relying parties: the "Continue with namestarlit" button
   own: product user record, product sessions, authorization
        (hubs/memberships/shares), onboarding (e.g. personal hub),
        all product data
