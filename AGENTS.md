@@ -23,6 +23,17 @@ For web design work (Track W3), use the Impeccable skill after the design
 documents it produces exist; repository docs and acceptance criteria remain
 authoritative.
 
+## Working Rhythm
+
+1. **Brief before implementing.** State what is about to change and why — a
+   sentence or two, or the relevant ExecPlan section — before touching files,
+   so the direction can be corrected before the diff exists.
+2. **Implement the complete milestone**, not fragments.
+3. **Verify**: `bun run verify` green (plus any plan-specific checks).
+4. **Present for review**: summarize the result and the diff.
+5. **Commit once per completed, reviewed milestone — then push.** No
+   micro-commits, no pushing half-reviewed states.
+
 ## Focused References
 
 - `PRODUCT.md`: canonical product definition and acceptance criteria.
@@ -59,7 +70,8 @@ authoritative.
   `docker.stack.<env>.yml` in the swarm dialect (see the infra direction doc).
 - Use Conventional Commit style: `feat: ...`, `fix: ...`, `docs: ...`,
   `chore: ...`, `test: ...`, with `!` and a `BREAKING CHANGE:` footer for
-  breaking changes.
+  breaking changes. One commit per completed, reviewed milestone (see
+  Working Rhythm).
 
 ## Non-Negotiable Invariants
 
