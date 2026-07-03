@@ -123,6 +123,65 @@ GET    /api/v2/hubs/:hubId/repositories/:slug        public lookup replaces /use
        share-link, children, exports) but authorized via hub membership
 ```
 
+## Workspace And Client Surfaces
+
+NSLinkHub inherits pigfarm's monorepo shape. The current repository is
+backend-only by original intent (backend/frontend separation was the goal from
+the start); the restructure makes room for the clients.
+
+```txt
+apps/
+  api/        the existing NestJS backend moves here unchanged
+              (Prisma schema, migrations, generated client, PrismaService
+               stay inside apps/api — clients never touch persistence)
+  web/        Next.js product surface (App Router, src/, Tailwind, @/* alias,
+              run through Bun) — the FULL product surface
+  extension/  WebExtension (Manifest V3) for major browsers — a constrained
+              capture companion, not a second product surface
+
+packages/
+  types/      shared API contracts (request/response types) where sharing
+              reduces drift — start hand-curated, consider OpenAPI-generated
+              clients later (Swagger decorators already exist)
+  config/     shared TypeScript/lint/tooling configuration
+  (domain/, events/, email/ only when a concrete need appears)
+
+tooling/      repository checks (boundary checks worth porting from pigfarm:
+              no Prisma/persistence imports in clients, docs freshness)
+```
+
+Dependency rules (pigfarm `ARCHITECTURE.md`, adopted verbatim):
+
+- Clients depend on backend API contracts; they never become alternate domain
+  engines and never import backend persistence code.
+- API authorization is the source of truth; UI hiding is not a security rule.
+- Workspace packages use one scope (`@nslinkhub/*`); product branding stays
+  out of schemas, API fields, and env-var names.
+
+Surface roles (pigfarm `client-surfaces.md`, mobile stance applied to the
+extension):
+
+```txt
+Web        Full surface: hubs, memberships, invitations, repositories,
+           entries, tags, imports, exports, sharing, account security.
+Extension  Constrained companion: authenticate, pick hub + repository,
+           capture current tab / selection / context-menu link (title, URL,
+           note), see capture status. No management, no settings, no
+           second implementation of visibility or dedupe rules — it submits
+           commands and renders results.
+```
+
+- The web app's design and product philosophy get coined in a dedicated
+  impeccable pass before building (pigfarm's pattern: its
+  `web-product-experience.md`, `web-interface-system.md`, and
+  `web-design-tokens.md` were produced first and the UI built against them).
+  Produce the same three documents for NSLinkHub.
+- Extension auth: better-auth bearer tokens (already configured). Treat token
+  storage in the extension as the main design risk — prefer
+  `chrome.storage.session`-backed short-lived tokens obtained through an
+  explicit sign-in in the extension, never long-lived secrets in sync storage.
+  Target Chrome/Edge/Firefox first (MV3), Safari only if demand appears.
+
 ## Phased Upgrade Plan
 
 Each phase ends green (build, lint, `bun test`, smoke) and is committed
@@ -175,6 +234,34 @@ data-shuffling migrations.
   last-owner rule enforced.
 - Ownership transfer as an explicit workflow (two-step or immediate — decide).
 
+### Track W — Workspace and client surfaces
+
+Orthogonal to the tenancy phases. W1 is mechanical and can land any time; the
+web app should start only after Phases B–C so it is built against hub routes,
+never against the user-owned routes being removed.
+
+- **W1 — Workspace restructure.** Root becomes a Bun workspace; the backend
+  moves to `apps/api` (source, `prisma/`, `prisma.config.ts`, tsconfig, tests
+  move together; `docker-compose.yml` and root scripts stay and delegate).
+  Add `packages/config`; keep root `bun.lock`. Everything still builds/tests
+  from the root. No behavior change.
+- **W2 — Shared contracts.** Extract `packages/types` with the API
+  request/response types the web app will need (hand-curated to start).
+  Enforce the boundary mechanically (a `tooling/` check that clients import
+  neither `apps/api/src` internals nor Prisma).
+- **W3 — Web app.** First an impeccable design/product-philosophy pass
+  producing the NSLinkHub equivalents of pigfarm's web-product-experience /
+  web-interface-system / web-design-tokens docs; then scaffold
+  `apps/web` (Next.js App Router, Tailwind, Bun-run) and build the first
+  vertical slices: sign-in, hub switcher, repository list/detail, entry
+  capture, share-link management. Cookie sessions (better-auth) — same
+  origin or configured CORS + trusted origins.
+- **W4 — Browser extension.** `apps/extension` (MV3, Chrome/Edge/Firefox):
+  sign-in, default hub+repository picker, one-click capture of the current
+  tab (uses the existing external-entry endpoint; dedupe/canonicalization
+  stay backend-owned), context-menu "Save to NSLinkHub". Bearer-token auth
+  with session-scoped storage.
+
 ### Phase E — Later hardening (track, don't block)
 
 - Audit records for the sensitive actions in decision 9.
@@ -197,3 +284,8 @@ data-shuffling migrations.
 5. Error envelope shape: adopt pigfarm's exactly (`{ "error": { code, message,
    requestId, details } }`) or fold into the existing `{ data, meta }`
    convention.
+6. Workspace timing: land W1 (mechanical move to `apps/api`) before or after
+   the tenancy phases? Doing it first means every later diff lives at its
+   final path; doing it later avoids mixing a move with behavior changes.
+7. Extension capture UX: popup-only, or also a keyboard shortcut and
+   context-menu item in the first cut?
