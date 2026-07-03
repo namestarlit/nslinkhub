@@ -66,7 +66,9 @@ tracked alongside).
 
 ## Future constraint to respect while implementing
 
-A central "hashikome account" IdP (SSO across the ns series) is planned —
+A central identity service for the ns series is planned (working name:
+nsauth; hashikome is the company and stays out of product/account naming;
+the consumer account brand is an open question) —
 see `docs/identity-sso-direction.md`. Concretely for this upgrade: keep
 sign-up onboarding (personal hub creation) in an app-owned service callable
 from any auth path (not hard-wired to one better-auth hook), keep
