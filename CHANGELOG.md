@@ -11,10 +11,13 @@ summary of what changed after completed work has been promoted out of `ref/`.
 
 ### Changed
 
-- Retired the v2 feature spec after absorbing its durable content into
-  PRODUCT.md (bookmarks folder-tree import target, canonical-URL rules,
-  conditional-request behavior) and the tech-debt tracker (tag cleanup,
-  export retention defaults).
+- Retired the v2 feature spec. It described the pre-hub direction (user
+  ownership, visibility triad, JWT auth) and is superseded by PRODUCT.md and
+  the hub design; only currently-true behavior was carried over
+  (canonical-URL rules, import partial-failure reporting) plus two real gaps
+  into the tech-debt tracker (unused-tag cleanup, export retention). Its
+  spec-era API contracts (ETag/Last-Modified caching, folder-tree bookmark
+  mapping) were dropped — the hub-era API design decides those fresh.
 
 - Migrated the stack to Bun (runtime + package manager), Prisma 7 (driver
   adapter, generated client, single `0_init` migration owning triggers and

@@ -61,9 +61,6 @@ Hub → Collections → Resources
   canonical form.
 - Import from CSV, browser-bookmarks HTML, and WhatsApp chat exports, with a
   partial-failure report (imported/skipped/error counts plus per-row errors).
-  Target behavior for bookmarks: map the folder tree to nested collections
-  (each folder a collection, subfolders linked as collection resources) —
-  the current importer is flat (tracked as import-parser debt).
 - Canonical URL identity: lowercase scheme/host, normalized paths, sorted
   query params, tracking params stripped (`utm_*`, `fbclid`, `gclid`) — so
   the same resource captured twice converges.
@@ -130,9 +127,6 @@ defined in a dedicated design pass before web implementation (Track W3).
   silently overwriting concurrent edits.
 - Imported files that are malformed produce per-row errors, not partial
   silent corruption.
-- Read endpoints that expose versioned representations honor conditional
-  requests: ETag primary (`If-None-Match` → 304), `Last-Modified` as
-  secondary compatibility.
 - All identifiers exposed in routes are immutable UUIDv7 values; changing a
   username, hub name, or collection title never breaks a stored reference.
 
