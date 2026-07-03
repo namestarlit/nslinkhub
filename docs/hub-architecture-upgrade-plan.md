@@ -271,7 +271,7 @@ separately. Nothing is deployed: schema changes reshape
 
 - Root becomes a Bun workspace; the backend moves to `apps/api` (source,
   `prisma/`, `prisma.config.ts`, tsconfig, tests move together;
-  `docker-compose.yml` and root scripts stay and delegate).
+  `compose.yml` and root scripts stay and delegate).
 - Add `packages/config`; keep root `bun.lock`.
 - No behavior change; everything builds/tests from the root before and after.
 

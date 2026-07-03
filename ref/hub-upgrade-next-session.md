@@ -70,7 +70,7 @@ account — the ns series is personal work under the namestarlit brand) —
 see `docs/identity-sso-direction.md`. Deployment for the whole series is
 also centralized — namestarlit VPS + Dokploy, immutable GHCR images built by
 GitHub Actions, no builds on the VPS (`docs/infra-deployment-direction.md`);
-the current `docker-compose.yml` stays a local-dev file. Concretely for this
+the current `compose.yml` stays a local-dev file. Concretely for this
 upgrade: keep
 sign-up onboarding (personal hub creation) in an app-owned service callable
 from any auth path (not hard-wired to one better-auth hook), keep
