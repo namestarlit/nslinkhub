@@ -37,14 +37,17 @@ single namestarlit VPS managed by **self-hosted Dokploy**:
   only** (relative-path bind mounts don't persist reliably), and
   `--with-registry-auth` on deploys since GHCR images are private. Swarm's
   native secrets (`/run/secrets/<name>`) are exactly the `_FILE` convention.
-- **Two topology files per product, one purpose each** (matching pigfarm's
-  local convention):
+- **Topology files per product, one purpose each** (local convention matches
+  pigfarm; stack files are environment-suffixed):
   - `compose.yml` — local development only (the modern Compose default
     filename). Full compose dialect is fine here: localhost-bound published
     ports, healthchecks, whatever makes `docker compose up -d` pleasant.
-  - `docker.stack.yml` — the production topology in the swarm dialect,
-    consumed by Dokploy's Stack mode. Never used for local dev; never
-    contains `build:`.
+  - `docker.stack.<env>.yml` — swarm-dialect topology per deployed
+    environment, consumed by Dokploy's Stack mode: `docker.stack.prod.yml`
+    first, `docker.stack.stag.yml` when a staging environment exists,
+    `docker.stack.local.yml` only if a local single-node swarm is ever
+    needed to rehearse stack behavior. Never used for ordinary local dev;
+    never contains `build:`.
 - **Each product repository owns its own runtime definition**: Dockerfiles,
   both topology files above, health/readiness checks, environment and
   secret-file contracts, migration commands, and release ordering. Dokploy
@@ -112,8 +115,8 @@ with this direction:
    health route, and `_FILE` variants for `DATABASE_URL`,
    `BETTER_AUTH_SECRET`, and Redis credentials.
 3. The existing `compose.yml` remains a **local development** file; the
-   production topology is a separate repository-owned artifact consumed by
-   Dokploy.
+   production topology is a separate repository-owned
+   `docker.stack.prod.yml` consumed by Dokploy.
 4. nsauth, when built, deploys to the same platform — which is what makes the
    "Continue with namestarlit" flow operationally cheap for every future ns
    product.

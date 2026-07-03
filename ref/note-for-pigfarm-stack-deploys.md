@@ -45,9 +45,11 @@ production topology in the swarm dialect from day one.
 
 - `compose.yml` — local development only, full compose dialect (pigfarm
   already does this).
-- `docker.stack.yml` — the production topology in the swarm dialect,
-  consumed by Dokploy Stack mode; never used locally, never contains
-  `build:`.
+- `docker.stack.<env>.yml` — swarm-dialect topology per deployed
+  environment (`docker.stack.prod.yml`, `docker.stack.stag.yml`,
+  `docker.stack.local.yml` for rehearsing stack behavior on a local
+  single-node swarm), consumed by Dokploy Stack mode; never used for
+  ordinary local dev, never contains `build:`.
 
-Keeping the two files separate avoids the trap of one file trying to serve
-both dialects and silently degrading in whichever mode wasn't tested.
+Keeping the files separate avoids the trap of one file trying to serve both
+dialects and silently degrading in whichever mode wasn't tested.
