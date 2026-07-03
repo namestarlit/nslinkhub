@@ -16,4 +16,4 @@ decision.
 | Rate limiting | No rate limiting or abuse protection on any endpoint | Auth and capture endpoints are unprotected against abuse | Before first public exposure |
 | Export retention | Completed/failed export jobs and their artifacts are never cleaned up | `export_jobs` grows unbounded | Exports get real usage or storage pressure appears |
 | Tag cleanup | Unused tags are never removed | `tags` accumulates orphans as attach/remove churns | Tags get real usage |
-| Generated client in build | `src/generated/prisma` compiles inside the app build (`nest build` walks it) | Slower builds; moves into `apps/api` unchanged at W1 | Only if build times hurt |
+| Generated client in build | `apps/api/src/generated/prisma` compiles inside the app build (`nest build` walks it) | Slower builds | Only if build times hurt |

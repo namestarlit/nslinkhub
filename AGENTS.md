@@ -60,8 +60,9 @@ authoritative.
 
 - Use Bun for package installation, script execution, and tests. Commit
   `bun.lock`; do not add npm, Yarn, or pnpm lockfiles.
-- Run Prisma through `bunx prisma` (configuration in `prisma.config.ts`; the
-  datasource URL lives there, not in the schema).
+- Run Prisma through `bunx prisma` from `apps/api` (configuration in
+  `apps/api/prisma.config.ts`; the datasource URL lives there, not in the
+  schema).
 - Schema changes use `prisma migrate dev --create-only` + review: the
   `app_uuid_v7()` function, `set_updated_at` triggers, the hierarchy trigger,
   CHECK constraints, and partial unique indexes exist only in migration SQL

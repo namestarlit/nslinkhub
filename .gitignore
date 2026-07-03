@@ -1,6 +1,6 @@
 # compiled output
-/dist
-/node_modules
+dist/
+node_modules/
 /build
 
 # Logs
@@ -56,7 +56,7 @@ pids
 report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 
 # Prisma generated client
-/src/generated
+apps/api/src/generated/
 
 # Disposable implementation context (tracked README only)
 ref/*

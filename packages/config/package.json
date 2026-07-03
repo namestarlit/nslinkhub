@@ -1,0 +1,7 @@
+{
+  "name": "@nslinkhub/config",
+  "version": "0.0.1",
+  "private": true,
+  "license": "UNLICENSED",
+  "description": "Shared TypeScript and tooling configuration for the nslinkhub workspace."
+}

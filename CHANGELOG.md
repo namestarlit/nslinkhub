@@ -11,6 +11,13 @@ summary of what changed after completed work has been promoted out of `ref/`.
 
 ### Changed
 
+- Restructured the repository into a Bun workspace (Track W1): the backend
+  moved to `apps/api` (`@nslinkhub/api`) with history-preserving renames,
+  shared TypeScript base config landed in `packages/config`, and root
+  scripts delegate (`bun run verify` et al. keep working from the root).
+  The move surfaced and fixed two undeclared direct dependencies (`dotenv`,
+  `express`) and dropped library-style declaration emit from the app build.
+
 - Retired the v2 feature spec. It described the pre-hub direction (user
   ownership, visibility triad, JWT auth) and is superseded by PRODUCT.md and
   the hub design; only currently-true behavior was carried over

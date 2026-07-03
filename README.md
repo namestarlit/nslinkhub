@@ -78,15 +78,22 @@ bun install   # also runs `prisma generate` (postinstall)
 docker compose up -d   # PostgreSQL 18 + Redis 7
 ```
 
+## Repository Layout
+
+Bun workspace: the backend is `apps/api` (`@nslinkhub/api`); shared tooling
+config lives in `packages/config`. Root scripts delegate, so everything below
+runs from the repository root.
+
 ## Migrations
 
-Migrations are managed by Prisma Migrate in `prisma/migrations`:
+Migrations are managed by Prisma Migrate in `apps/api/prisma/migrations`
+(Prisma commands run from `apps/api`, where `prisma.config.ts` lives):
 
 ```bash
-bunx prisma migrate deploy
+cd apps/api && bunx prisma migrate deploy
 ```
 
-To evolve the schema, edit `prisma/schema.prisma` and use
+To evolve the schema, edit `apps/api/prisma/schema.prisma` and use
 `bunx prisma migrate dev --create-only`, then review the generated SQL —
 several database objects (the `app_uuid_v7()` function, `set_updated_at`
 triggers, the repository-hierarchy trigger, CHECK constraints, and the partial

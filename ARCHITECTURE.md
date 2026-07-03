@@ -19,30 +19,36 @@ backed by PostgreSQL 18 (Prisma 7 with the pg driver adapter) and BullMQ on
 Redis for queued exports. Auth is self-hosted better-auth (DB sessions,
 bearer + username plugins, argon2id via `Bun.password`) mounted as raw
 middleware ahead of body parsing. A Next.js web app and an MV3 browser
-extension are planned client surfaces; the workspace splits into
-`apps/api`, `apps/web`, `apps/extension`, and `packages/*` at Track W1.
+extension are planned client surfaces. The repository is a Bun workspace:
+the backend lives at `apps/api`; `apps/web`, `apps/extension`, and further
+`packages/*` join it in later tracks.
 Production deployment targets the shared namestarlit VPS via Dokploy Stack
 mode with prebuilt GHCR images.
 
 ```txt
-src/
-  modules/     domain modules (controllers, services, DTOs)
-  common/      guards, decorators, enums, utils, interfaces
-  auth/        better-auth instance/config
-  database/    PrismaModule / PrismaService
-  generated/   Prisma client (gitignored; regenerated on install)
-  app.setup.ts shared HTTP stack (auth mount, parsers, validation)
-prisma/        schema, prisma.config.ts, migrations
-test/          e2e specs (run the production HTTP stack)
-docs/          product/design docs, exec plans, runbooks
-ref/           disposable, git-ignored implementation context
+apps/
+  api/
+    src/
+      modules/     domain modules (controllers, services, DTOs)
+      common/      guards, decorators, enums, utils, interfaces
+      auth/        better-auth instance/config
+      database/    PrismaModule / PrismaService
+      generated/   Prisma client (gitignored; regenerated on install)
+      app.setup.ts shared HTTP stack (auth mount, parsers, validation)
+    prisma/        schema, migrations (prisma.config.ts beside them)
+    test/          e2e specs (run the production HTTP stack)
+packages/
+  config/          shared TypeScript base configuration
+compose.yml        local dev services (root; serves the whole workspace)
+docs/              product/design docs, exec plans, runbooks
+ref/               disposable, git-ignored implementation context
 ```
 
 ## Codemap
 
 | Area | Owns |
 | --- | --- |
-| `auth` (`src/auth`) | better-auth instance; handler mounted in `app.setup.ts` |
+| `auth` (`apps/api/src/auth`) | better-auth instance; handler mounted in `app.setup.ts` |
 | `common/guards` | `AuthGuard`/`OptionalAuthGuard` via `resolveSessionUser` |
 | `users` | profile read/update/delete |
 | `repositories`* | collection CRUD, visibility/share-link, nesting, lookup |

@@ -8,11 +8,16 @@
 ## First Run
 
 ```bash
-bun install              # also runs `prisma generate` (postinstall)
-docker compose up -d     # PostgreSQL 18 + Redis 7 (compose.yml, local dev only)
-bunx prisma migrate deploy
-bun run start:dev        # bun --watch src/main.ts on :3000
+bun install                                # also runs `prisma generate` (postinstall)
+docker compose up -d                       # PostgreSQL 18 + Redis 7 (compose.yml, local dev only)
+(cd apps/api && bunx prisma migrate deploy)
+bun run start:dev                          # delegates into apps/api; :3000
 ```
+
+The repository is a Bun workspace; the backend is `apps/api`. Root scripts
+delegate, so day-to-day commands run from the root. Prisma CLI commands run
+from `apps/api` (that is where `prisma.config.ts` lives). The app reads
+`.env` from `apps/api/.env`.
 
 `.env` is optional locally: without it, the code falls back to the standard
 local defaults (`postgresql://postgres:postgres@127.0.0.1:5432/nslinkhub`,
@@ -40,7 +45,7 @@ The dev database is disposable. To rebuild it from the migration baseline:
 ```bash
 docker exec nslinkhub-postgres psql -U postgres \
   -c "DROP DATABASE nslinkhub" -c "CREATE DATABASE nslinkhub"
-bunx prisma migrate deploy
+(cd apps/api && bunx prisma migrate deploy)
 ```
 
 (Terminate connections first if the drop is refused; stopping the dev server

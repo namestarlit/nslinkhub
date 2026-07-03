@@ -1,7 +1,8 @@
 # Migrations
 
-Prisma Migrate owns the schema. Migrations live in `prisma/migrations`;
-configuration (including the datasource URL) lives in `prisma.config.ts`.
+Prisma Migrate owns the schema. Migrations live in `apps/api/prisma/migrations`;
+configuration (including the datasource URL) lives in `apps/api/prisma.config.ts`.
+Run all Prisma CLI commands from `apps/api`.
 
 ## Rules
 
@@ -24,6 +25,7 @@ configuration (including the datasource URL) lives in `prisma.config.ts`.
 ## Applying
 
 ```bash
+cd apps/api
 bunx prisma migrate deploy   # applies pending migrations (local + production)
 bunx prisma migrate status   # inspection
 ```
@@ -38,7 +40,7 @@ Migrations must always work from empty. Cheap check against the local server:
 
 ```bash
 docker exec nslinkhub-postgres psql -U postgres -c "CREATE DATABASE scratch"
-DATABASE_URL="postgresql://postgres:postgres@127.0.0.1:5432/scratch" \
+cd apps/api && DATABASE_URL="postgresql://postgres:postgres@127.0.0.1:5432/scratch" \
   bunx prisma migrate deploy
 docker exec nslinkhub-postgres psql -U postgres -c "DROP DATABASE scratch"
 ```

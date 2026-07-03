@@ -21,26 +21,41 @@ the e2e suite passes — with the backend living under `apps/api`.
 
 ## Progress
 
-- [ ] Convert the root to a Bun workspace (`workspaces: ["apps/*", "packages/*"]`).
-- [ ] Move the backend to `apps/api` (src/, test/, prisma/, prisma.config.ts,
-      tsconfig*.json, nest-cli.json, eslint.config.mjs, .prettierrc/.prettierignore).
-- [ ] Create `apps/api/package.json` (`@nslinkhub/api`) with the app scripts
-      and dependencies; slim the root `package.json` to workspace management
-      and delegating scripts (`verify`, `build`, `lint`, `test`, `start:dev`).
-- [ ] Add `packages/config` (`@nslinkhub/config`) with the shared TypeScript
-      base config; `apps/api/tsconfig.json` extends it.
-- [ ] Fix all path-sensitive references (see Plan Of Work).
-- [ ] Re-run `bun install` at root; commit the updated `bun.lock`.
-- [ ] `bun run verify` green from the root; boot + smoke against docker
-      services; fresh-DB `prisma migrate deploy` check.
-- [ ] Update docs (`ARCHITECTURE.md` system-shape/codemap paths,
-      `docs/runbooks/local-development.md` commands if they change,
-      `CHANGELOG.md`); move this plan to `completed/`.
+- [x] (2026-07-03) Converted the root to a Bun workspace (`apps/*`, `packages/*`).
+- [x] (2026-07-03) Moved the backend to `apps/api` via `git mv` (src/, test/,
+      prisma/, prisma.config.ts, tsconfig*.json, nest-cli.json,
+      eslint.config.mjs, .prettierrc/.prettierignore; untracked `.env` and
+      `src/generated` moved with their directories).
+- [x] (2026-07-03) Created `apps/api/package.json` (`@nslinkhub/api`); root
+      `package.json` slimmed to workspace management + delegating scripts.
+- [x] (2026-07-03) Added `packages/config` with `tsconfig.base.json`;
+      `apps/api/tsconfig.json` extends it.
+- [x] (2026-07-03) Swept path-sensitive references (.gitignore, README,
+      AGENTS.md, ARCHITECTURE.md, runbooks).
+- [x] (2026-07-03) `bun install` regenerated the lock; postinstall
+      `prisma generate` produces `apps/api/src/generated/prisma`.
+- [x] (2026-07-03) `bun run verify` green from root (build + lint + unit +
+      e2e); API boots via root script; both smoke suites ALL PASS; fresh-DB
+      `migrate deploy` OK; `migrate diff` reports no drift.
+- [x] (2026-07-03) Docs updated; plan moved to `completed/`.
 
 ## Surprises & Discoveries
 
-- Observation: None yet.
-  Evidence: -
+- Observation: `dotenv` and `express` were consumed directly
+  (`prisma.config.ts`/`auth.ts` import `dotenv/config`; `app.setup.ts`
+  imports `express`) but were never declared — they resolved only via
+  single-package hoisting. The workspace layout broke both.
+  Evidence: postinstall failed with "Cannot find module 'dotenv/config'";
+  e2e failed with "Cannot find package 'express'". Fixed by declaring both
+  as real dependencies of `@nslinkhub/api`.
+- Observation: `declaration: true` broke the build under workspaces — tsc
+  emitted TS2742 ("inferred type of 'auth' cannot be named") because zod
+  types now resolve through Bun's `.bun/` store path.
+  Evidence: `nest build` error at `src/auth/auth.ts:22`. Fixed by dropping
+  declaration emit — the API is an app, not a library.
+- Observation: Bun's `--cwd` must follow `run` (`bun run --cwd apps/api X`);
+  `bun --cwd apps/api run X` prints the script list instead of executing.
+  Evidence: root `verify` no-op'd until the flag order was fixed.
 
 ## Decision Log
 
@@ -48,14 +63,28 @@ the e2e suite passes — with the backend living under `apps/api`.
   Rationale: The move is mechanical and the codebase is at its smallest;
   every later diff lives at its final path (hub design doc, settled).
   Date/Author: 2026-07-03 / namestarlit
-- Decision: `compose.yml` and `.env` stay at the repository root.
-  Rationale: They serve the whole workspace (future web/extension apps use
-  the same services); Dokploy topology files are separate artifacts anyway.
+- Decision: `compose.yml` stays at the repository root; `.env` moves into
+  `apps/api` (amends the original intent to keep both at root).
+  Rationale: compose serves the whole workspace, but dotenv and Nest's
+  ConfigModule resolve `.env` from the process cwd, which is `apps/api`
+  under the delegating scripts.
+  Date/Author: 2026-07-03 / namestarlit
+- Decision: Declare `dotenv` and `express` as direct dependencies; drop
+  `declaration` emit from the app tsconfig.
+  Rationale: imports must be declared where they are consumed; the API
+  emits no library types.
   Date/Author: 2026-07-03 / namestarlit
 
 ## Outcomes & Retrospective
 
-Not started.
+Shipped exactly as planned: the backend lives at `apps/api` under a Bun
+workspace with delegating root scripts and a shared tsconfig base in
+`packages/config`; behavior is unchanged (verify green, both smoke suites
+pass, no schema drift, fresh-DB migrations work). The main lesson: the
+single-package layout had been masking undeclared dependencies — the
+workspace boundary surfaced them immediately, which is precisely the kind of
+mechanical enforcement the monorepo is for. Next: Phase A (foundation
+conventions).
 
 ## Context And Orientation
 
