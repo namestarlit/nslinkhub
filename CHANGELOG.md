@@ -19,8 +19,17 @@ summary of what changed after completed work has been promoted out of `ref/`.
 - Renamed `docker-compose.yml` to `compose.yml` (local development only);
   production topology will live in swarm-dialect `docker.stack.<env>.yml`
   files.
-- Adopted pigfarm-style project organization: `AGENTS.md` map, ExecPlans under
-  `docs/exec-plans/`, git-ignored `ref/` scratch area, and this changelog.
+- Adopted the pigfarm workflow wholesale: `AGENTS.md` map + `CLAUDE.md`,
+  `PRODUCT.md` as the canonical product definition, ExecPlans under
+  `docs/exec-plans/` (`PLANS.md` format, tech-debt tracker), focused
+  principles docs (`docs/CORE_BELIEFS.md`, `docs/SECURITY.md`,
+  `docs/RELIABILITY.md`), design documents under `docs/design-docs/` with an
+  index, runbooks under `docs/runbooks/` (local development, verification,
+  migrations, reference context), a root `bun run verify` gate, a rewritten
+  concise `ARCHITECTURE.md` map, git-ignored `ref/` scratch area, and this
+  changelog. The pre-ExecPlan session workflow (TASKS.md, `.codex/`,
+  developer-workflow/dev-session/implementation-status/PROJECT_STATE docs)
+  was removed.
 
 ### Fixed
 

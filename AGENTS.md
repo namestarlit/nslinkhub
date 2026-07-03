@@ -6,16 +6,18 @@ short: it is a map for contributors and coding agents, not a complete manual.
 
 ## Start Here
 
-1. Read `ARCHITECTURE.md` for the current system map.
-2. Read `docs/hub-architecture-upgrade-plan.md` — the authoritative target
+1. Read `ARCHITECTURE.md` for the stable system map and dependency rules.
+2. Read `PRODUCT.md` for the product definition and acceptance criteria.
+3. Read `docs/design-docs/hub-architecture.md` — the authoritative target
    design (hubs → collections → resources, sharing, discovery, workspace) and
    the locked implementation order (W1 → A → B → C → D → W2 → W3 → W4).
-3. Read the focused document for the area being changed.
-4. For substantial work, read `PLANS.md`, then create or update an ExecPlan in
+4. Read the focused document for the area being changed
+   (`docs/design-docs/index.md`).
+5. For substantial work, read `PLANS.md`, then create or update an ExecPlan in
    `docs/exec-plans/active/`.
-5. Verify with `bun run build`, `bun run lint`, `bun test src`, and
-   `bun test test` (e2e needs `docker compose up -d`).
-6. For completed work, update `CHANGELOG.md` before preparing commits.
+6. Run the verification workflow: `bun run verify`
+   (see `docs/runbooks/verification.md`; e2e needs `docker compose up -d`).
+7. For completed work, update `CHANGELOG.md` before preparing commits.
 
 For web design work (Track W3), use the Impeccable skill after the design
 documents it produces exist; repository docs and acceptance criteria remain
@@ -23,14 +25,24 @@ authoritative.
 
 ## Focused References
 
-- `docs/hub-architecture-upgrade-plan.md`: authoritative target design and
+- `PRODUCT.md`: canonical product definition and acceptance criteria.
+- `docs/CORE_BELIEFS.md`: engineering principles.
+- `docs/SECURITY.md`: tenant isolation, authorization, tokens, and auth
+  boundary rules.
+- `docs/RELIABILITY.md`: idempotency, concurrency, jobs, and data rules.
+- `docs/design-docs/index.md`: deeper design documents.
+- `docs/design-docs/hub-architecture.md`: authoritative target design and
   phased implementation plan.
-- `docs/identity-sso-direction.md`: ns-series identity ("Continue with
+- `docs/design-docs/identity-sso.md`: ns-series identity ("Continue with
   namestarlit", nsauth) and the constraints current work must respect.
-- `docs/infra-deployment-direction.md`: ns-series deployment (namestarlit VPS,
+- `docs/design-docs/infra-deployment.md`: ns-series deployment (namestarlit VPS,
   Dokploy Stack mode, GHCR images, topology-file conventions).
+- `docs/runbooks/local-development.md`: setup and everyday commands.
+- `docs/runbooks/verification.md`: the canonical verification gate.
+- `docs/runbooks/migrations.md`: Prisma migration discipline.
+- `docs/runbooks/reference-context.md`: disposable `ref/` usage and cleanup.
 - `docs/nestjs-v2-feature-spec.md`: original product spec (historical
-  background; the hub plan supersedes it where they conflict).
+  background; `PRODUCT.md` and the hub design supersede it).
 - `PLANS.md`: required format for substantial execution plans.
 - `docs/exec-plans/tech-debt-tracker.md`: accepted compromises and follow-ups.
 - `CHANGELOG.md`: durable summary of completed project changes.

@@ -13,9 +13,9 @@ in `CHANGELOG.md`).
 
 ## Current Documentation
 
-- Hub architecture plan (authoritative target design): `docs/hub-architecture-upgrade-plan.md`
-- ns-series identity direction: `docs/identity-sso-direction.md`
-- ns-series deployment direction: `docs/infra-deployment-direction.md`
+- Hub architecture plan (authoritative target design): `docs/design-docs/hub-architecture.md`
+- ns-series identity direction: `docs/design-docs/identity-sso.md`
+- ns-series deployment direction: `docs/design-docs/infra-deployment.md`
 - Product spec (historical background): `docs/nestjs-v2-feature-spec.md`
 - Stack migration log (Bun + Prisma + better-auth): `docs/exec-plans/completed/stack-migration-bun-prisma-better-auth.md`
 

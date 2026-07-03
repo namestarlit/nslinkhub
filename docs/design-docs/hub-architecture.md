@@ -8,9 +8,9 @@ document states the target design in its final form.
 
 Related documents:
 
-- `docs/identity-sso-direction.md` — ns-series identity ("Continue with
+- `docs/design-docs/identity-sso.md` — ns-series identity ("Continue with
   namestarlit"); imposes constraints noted in Phase B/C.
-- `docs/infra-deployment-direction.md` — ns-series deployment platform
+- `docs/design-docs/infra-deployment.md` — ns-series deployment platform
   (namestarlit VPS + Dokploy, GHCR images via GitHub Actions); Track W's
   app split is the image boundary it consumes.
 - `ref/hub-upgrade-next-session.md` — implementation session starter
@@ -358,7 +358,7 @@ user-ownership column being replaced, and `visibility`
 ### Phase E — Tracked, not blocking
 
 - ns-series SSO ("Continue with namestarlit") once nsauth exists — see
-  `docs/identity-sso-direction.md` for the integration shape and the
+  `docs/design-docs/identity-sso.md` for the integration shape and the
   constraints Phases B/C already respect.
 - Audit records (principle 12).
 - Transactional outbox + worker split for exports/email.

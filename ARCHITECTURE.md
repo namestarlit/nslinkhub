@@ -1,104 +1,110 @@
-# ARCHITECTURE
+# Architecture
 
-## 1. System Purpose
+## Purpose
 
-NSLinkHub is a backend API for organizing and sharing curated link repositories. It supports user accounts, nested repositories, link entries, tagging, import pipelines, and asynchronous export jobs.
+NSLinkHub organizes links into curated, shareable collections. Hubs are the
+tenant root; users belong to hubs through memberships; collections contain
+resources and are shared per-collection (Drive model) or published to the
+product-wide explore surface. See `PRODUCT.md` for the product definition and
+`docs/design-docs/hub-architecture.md` for the authoritative target design.
 
-## 2. Technology Stack
+The codebase is mid-transition: the current code still uses the
+repository/entry vocabulary and user-ownership; the hub design lands in the
+locked order W1 → A → B → C → D → W2 → W3 → W4.
 
-- Language: TypeScript
-- Framework: NestJS
-- API transport: HTTP (Nest controllers)
-- Runtime/package manager: Bun
-- ORM/data access: Prisma (`@prisma/adapter-pg` driver adapter)
-- Database: PostgreSQL
-- Queue/async processing: BullMQ
-- Queue backend: Redis
-- Auth: better-auth (self-hosted; DB sessions, bearer + username plugins)
-- Password hashing: argon2id via `Bun.password`
-- Validation: class-validator + class-transformer
-- API docs: Swagger (`/api/docs`)
+## System Shape
 
-## 3. High-Level Architecture
+A Bun-managed TypeScript codebase. The backend is a NestJS modular monolith
+backed by PostgreSQL 18 (Prisma 7 with the pg driver adapter) and BullMQ on
+Redis for queued exports. Auth is self-hosted better-auth (DB sessions,
+bearer + username plugins, argon2id via `Bun.password`) mounted as raw
+middleware ahead of body parsing. A Next.js web app and an MV3 browser
+extension are planned client surfaces; the workspace splits into
+`apps/api`, `apps/web`, `apps/extension`, and `packages/*` at Track W1.
+Production deployment targets the shared namestarlit VPS via Dokploy Stack
+mode with prebuilt GHCR images.
 
-- API Layer:
-  - Nest controllers under `src/modules/*/*.controller.ts`
-  - DTO validation on request input
-- Service Layer:
-  - Business logic in `*.service.ts`
-  - Access checks and workflow orchestration
-- Persistence Layer:
-  - Prisma schema in `prisma/schema.prisma` (generated client in `src/generated/prisma`)
-  - Prisma migrations in `prisma/migrations`
-- Infrastructure Layer:
-  - App/bootstrap config in `src/main.ts` and `src/app.module.ts`
-  - better-auth instance in `src/auth/auth.ts` (handler mounted in `src/main.ts`); guards in `src/common/guards`
-  - Queue processor for export jobs in `src/modules/exports/exports.processor.ts`
+```txt
+src/
+  modules/     domain modules (controllers, services, DTOs)
+  common/      guards, decorators, enums, utils, interfaces
+  auth/        better-auth instance/config
+  database/    PrismaModule / PrismaService
+  generated/   Prisma client (gitignored; regenerated on install)
+  app.setup.ts shared HTTP stack (auth mount, parsers, validation)
+prisma/        schema, prisma.config.ts, migrations
+test/          e2e specs (run the production HTTP stack)
+docs/          product/design docs, exec plans, runbooks
+ref/           disposable, git-ignored implementation context
+```
 
-## 4. Key Modules
+## Codemap
 
-- `auth` (better-auth, mounted at `/api/v2/auth/*`):
-  - sign-up/sign-in (email + username), sign-out, get-session; bearer tokens for API clients
-  - JWT token issuing and strategy validation
-- `users`:
-  - user retrieval, updates, deletion with ownership/admin checks
-- `repositories`:
-  - repository CRUD, visibility enforcement, share-token handling, child repository creation
-- `entries`:
-  - external-link and repository-link entries
-  - entry list/update/delete/reorder
-  - reorder uses per-entry optimistic version checks
-- `tags`:
-  - attach/remove tags for repositories and entries
-- `imports`:
-  - CSV, bookmarks HTML, and WhatsApp TXT ingestion into repository entries
-  - shared URL canonicalization utility used for dedupe parity with entries
-- `exports`:
-  - markdown export generation
-  - PDF export job enqueueing + status tracking (`export_jobs` + BullMQ)
-- `health`:
-  - basic health/status endpoints
+| Area | Owns |
+| --- | --- |
+| `auth` (`src/auth`) | better-auth instance; handler mounted in `app.setup.ts` |
+| `common/guards` | `AuthGuard`/`OptionalAuthGuard` via `resolveSessionUser` |
+| `users` | profile read/update/delete |
+| `repositories`* | collection CRUD, visibility/share-link, nesting, lookup |
+| `entries`* | resource CRUD, reorder with version checks |
+| `tags` | normalized tags on collections* and resources* |
+| `imports` | CSV / bookmarks-HTML / WhatsApp-TXT ingestion |
+| `exports` | markdown export; queued PDF jobs (BullMQ + `export_jobs`) |
+| `health` | liveness endpoints |
 
-## 5. Directory Map
+\* renamed to collections/resources during Phase B of the hub work.
 
-- `src/modules/` — domain modules (controllers/services/dto)
-- `src/common/` — shared guards, decorators, enums, utilities, interfaces
-- `src/auth/` — better-auth instance/config
-- `src/database/` — `PrismaModule`/`PrismaService`
-- `prisma/` — Prisma schema, config, and migrations
-- `src/generated/prisma/` — generated Prisma client (gitignored; `bun install` regenerates)
-- `docs/` — design directions, product spec, and execution plans
-  (`docs/exec-plans/` per `PLANS.md`)
-- `ref/` — disposable, git-ignored implementation context
-- `AGENTS.md` — repository map and working conventions (start here)
+## Dependency Rules
 
-## 6. Data Flow Overview
+- Controllers depend on services; services depend on `PrismaService` and
+  policy helpers. Modules do not reach into another module's persistence.
+- better-auth types stay behind `resolveSessionUser`; everything downstream
+  consumes `AuthUser`.
+- Prisma schema, migrations, generated client, and `PrismaService` are
+  backend-private. Future clients consume API contracts only.
+- The better-auth handler mounts before body parsers (`app.setup.ts`);
+  global middleware must respect that ordering.
 
-Typical request flow:
-1. Request hits controller endpoint (`/api/v1/*`).
-2. DTO validation/transformation runs via global `ValidationPipe`.
-3. Guard/auth strategy may authenticate and attach current user context.
-4. Service executes business logic and access checks.
-5. Service reads/writes rows via the Prisma client (`PrismaService`).
-6. Response is returned in a consistent envelope (`{ data, meta? }`).
+## Data Flow
 
-Async export flow:
-1. Client requests PDF export.
-2. Service creates `export_jobs` row and enqueues BullMQ job.
-3. Processor consumes queue job, updates status (`queued -> running -> completed|failed`).
-4. Client polls export job status endpoint.
+1. Request hits a controller under `/api/v1`.
+2. Global `ValidationPipe` validates/transforms DTOs
+   (whitelist + forbidNonWhitelisted).
+3. Guards resolve the session (`resolveSessionUser`) and attach `AuthUser`.
+4. Services enforce access and business rules, reading/writing through
+   Prisma.
+5. Responses use the `{ data, meta? }` envelope; errors will use the stable
+   error envelope (hub work, Phase A).
 
-## 7. External Integrations
+Async export flow: service writes an `export_jobs` row, enqueues a BullMQ
+job; the processor updates status (`queued → running → completed|failed`);
+clients poll the job endpoint.
 
-- PostgreSQL (primary persistence)
-- Redis (BullMQ queue backend)
+## Cross-Cutting Concerns
 
-No third-party HTTP APIs are currently integrated.
+Authentication, authorization policy, validation, request identity, and (in
+target state) auditing and the transactional outbox cross module boundaries;
+their shared infrastructure belongs under `src/common` or another explicit
+shared boundary.
 
-## 8. Architectural Constraints
+## Invariants
 
-- SQL migrations are source-of-truth for schema changes; `synchronize` is disabled.
-- UUID strategy and DB functions are defined in migrations (including app UUID helper).
-- Visibility rules (`public`/`unlisted`/`private`) and ownership checks are enforced in services.
-- Queue-backed export jobs must persist status in DB (`export_jobs`), not in-memory state.
-- Keep module boundaries explicit (controller -> service -> repository/entity).
+The non-negotiable invariants live in `AGENTS.md` and are not duplicated
+here. Security and reliability rules are detailed in `docs/SECURITY.md` and
+`docs/RELIABILITY.md`.
+
+## Further Reading
+
+- `PRODUCT.md`
+- `docs/CORE_BELIEFS.md`
+- `docs/SECURITY.md`
+- `docs/RELIABILITY.md`
+- `docs/design-docs/index.md`
+- `docs/design-docs/hub-architecture.md`
+- `docs/design-docs/identity-sso.md`
+- `docs/design-docs/infra-deployment.md`
+- `docs/runbooks/local-development.md`
+- `docs/runbooks/verification.md`
+- `docs/runbooks/migrations.md`
+- `docs/runbooks/reference-context.md`
+- `docs/exec-plans/tech-debt-tracker.md`

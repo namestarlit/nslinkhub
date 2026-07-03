@@ -1,7 +1,7 @@
 # Infrastructure & Deployment Direction (ns series)
 
 Direction document, recorded 2026-07-03. Not scheduled work — like the
-identity direction (`docs/identity-sso-direction.md`), this records the shared
+identity direction (`docs/design-docs/identity-sso.md`), this records the shared
 platform the ns series deploys onto so each product builds toward it instead
 of inventing its own operations story.
 

@@ -64,7 +64,7 @@ ns products (nslinkhub, nsworklog, future ns*)
 ```
 
 Rules, consistent with the decisions already adopted from pigfarm
-(`docs/hub-architecture-upgrade-plan.md`, `pigfarm/docs/design-docs/auth-sessions.md`):
+(`docs/design-docs/hub-architecture.md`, `pigfarm/docs/design-docs/auth-sessions.md`):
 
 1. **Products keep their own immutable userId.** The nsauth subject (`sub`)
    is stored as a one-to-one linked identity on the product user — never as
