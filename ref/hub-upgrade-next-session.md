@@ -24,17 +24,27 @@ Surfaces" + Track W in the plan doc.
 
 ## Where to start
 
-1. Resolve the "Open Decisions" list at the end of the plan doc with the user
-   (personal-hub UX, member write access, pagination, error envelope,
-   workspace-move timing, extension capture UX).
-2. Phase A (error envelope + request IDs + config validation) is independent
-   and safe to do first. Track W1 (mechanical move to `apps/api` workspaces)
-   is also independent — decide ordering with the user (open decision 6).
+All open decisions are RESOLVED with the user (see "Resolved Decisions" in the
+plan doc): personal hub auto-created as a normal hub; members get full content
+write; minimal public hub page in Phase C; cursor pagination in Phase A;
+pigfarm error envelope for failures alongside `{ data, meta }` successes;
+extension ships popup + context menu + shortcut.
+
+Implementation order is locked: **W1 → A → B → C → D → W2 → W3 → W4** (E
+tracked alongside).
+
+1. Start with W1: mechanical move of the backend to `apps/api` under Bun
+   workspaces (source, `prisma/`, `prisma.config.ts`, tsconfig, tests move
+   together; compose + root scripts delegate). No behavior change; everything
+   green from the root before and after.
+2. Phase A: error envelope + request IDs + config validation + cursor
+   pagination for entries/repositories.
 3. Phase B reshapes `prisma/migrations/0_init` (nothing is deployed — squash,
-   don't stack; see `ref/migration-plan.md` for the established pattern) and
-   swaps `repositories.owner_id` → `hub_id`.
-4. `apps/web` only starts after Phases B–C (build against hub routes), and
-   after the impeccable design/product pass produces the NSLinkHub
+   don't stack; see `ref/migration-plan.md` for the established pattern),
+   swaps `repositories.owner_id` → `hub_id`, and auto-creates the personal
+   hub at sign-up.
+4. `apps/web` (W3) only starts after Phases B–C (build against hub routes),
+   and after the impeccable design/product pass produces the NSLinkHub
    equivalents of pigfarm's web-product-experience / web-interface-system /
    web-design-tokens docs.
 

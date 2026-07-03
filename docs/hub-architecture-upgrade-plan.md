@@ -236,9 +236,9 @@ data-shuffling migrations.
 
 ### Track W — Workspace and client surfaces
 
-Orthogonal to the tenancy phases. W1 is mechanical and can land any time; the
-web app should start only after Phases B–C so it is built against hub routes,
-never against the user-owned routes being removed.
+Resolved ordering (decision 6): **W1 → A → B → C → D → W2 → W3 → W4**. The
+web app starts only after Phases B–C so it is built against hub routes, never
+against the user-owned routes being removed.
 
 - **W1 — Workspace restructure.** Root becomes a Bun workspace; the backend
   moves to `apps/api` (source, `prisma/`, `prisma.config.ts`, tsconfig, tests
@@ -270,22 +270,27 @@ never against the user-owned routes being removed.
 - Per-repository roles (pigfarm's FarmUserRole analog) only if a workflow
   demands finer grain than hub-wide roles.
 
-## Open Decisions For The Next Session
+## Resolved Decisions (with the user, 2026-07-03)
 
-1. Personal-hub UX: auto-created at signup (recommended, Phase B) — name it
-   after displayName? Can a personal hub be deleted if it's the user's last?
-2. Does `member` create repositories, or only `admin`+? (Pigfarm gives members
-   no access until assigned; for a link-sharing product, `member` with write
-   access is probably right. Decide before Phase C guards.)
-3. Public hub pages: is an unauthenticated `GET /hubs/:hubId` (public repos
-   only) wanted in Phase C, or defer?
-4. Keep `page/limit` pagination or adopt cursors in Phase A (decision affects
-   client contracts once, so decide early).
-5. Error envelope shape: adopt pigfarm's exactly (`{ "error": { code, message,
-   requestId, details } }`) or fold into the existing `{ data, meta }`
-   convention.
-6. Workspace timing: land W1 (mechanical move to `apps/api`) before or after
-   the tenancy phases? Doing it first means every later diff lives at its
-   final path; doing it later avoids mixing a move with behavior changes.
-7. Extension capture UX: popup-only, or also a keyboard shortcut and
-   context-menu item in the first cut?
+1. **Personal hub: auto-create as a normal hub.** Sign-up atomically creates
+   a hub named after the display name with the creator as owner. It is a
+   completely normal hub — renameable, deletable, invitable; no "personal"
+   special-casing anywhere. Users may legitimately have zero hubs.
+2. **`member` has full content write.** Members create/edit/delete
+   repositories, entries, tags, imports, exports within the hub. `admin`
+   adds member management; `owner` adds hub administration.
+3. **Public hub page ships in Phase C.** Minimal unauthenticated
+   `GET /hubs/:hubId` returning hub display info + its public repositories
+   (the existing public listing scoped to one hub). Locks the public URL
+   shape before the web app builds on it.
+4. **Cursor pagination, adopted in Phase A** for entries and repository
+   listings — the contract locks once, before any client exists.
+5. **Pigfarm error envelope for errors**: failures return
+   `{ "error": { code, message, requestId, details } }` with stable codes;
+   successes keep the existing `{ data, meta }` shape.
+6. **W1 lands first, before the tenancy phases.** The move is mechanical and
+   the codebase is at its smallest; every later diff lives at its final path
+   (`apps/api`). Implementation order: **W1 → A → B → C → D → W2 → W3 → W4**,
+   with E tracked alongside.
+7. **Extension first cut: popup + context menu + keyboard shortcut.** All
+   three capture paths from the start.
