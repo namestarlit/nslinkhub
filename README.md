@@ -9,6 +9,7 @@ This repository is a greenfield NestJS v2 rewrite. The old Flask v1 is retained 
 - Product + architecture spec: `docs/nestjs-v2-feature-spec.md`
 - Implementation status + next steps: `docs/implementation-status.md`
 - Stack migration plan/log (Bun + Prisma + better-auth): `ref/migration-plan.md`
+- Hub architecture upgrade plan (next major change): `docs/hub-architecture-upgrade-plan.md`
 
 ## Implemented So Far
 
