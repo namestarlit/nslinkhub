@@ -38,10 +38,8 @@ Surfaces" + Track W in the plan doc.
 
 ## Where to start
 
-All open decisions are RESOLVED with the user (see "Resolved Decisions" 1–13
-in the plan doc) — including the rename (collection/resource), the explore +
-saves direction, member full content write, cursor pagination, the pigfarm
-error envelope, and the workspace-move-first ordering.
+The plan doc is authoritative and every decision in it is settled — no open
+questions remain. Implement it as written.
 
 Implementation order is locked: **W1 → A → B → C → D → W2 → W3 → W4** (E
 tracked alongside).
