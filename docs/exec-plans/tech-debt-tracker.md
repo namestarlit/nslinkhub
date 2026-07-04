@@ -15,6 +15,5 @@ decision.
 | Deployment artifacts | Direction is documented (`docs/design-docs/infra-deployment.md`) but Dockerfiles, `docker.stack.*.yml`, CI workflows, and health/readiness endpoints beyond `/health` do not exist | Nothing is deployable yet | Deployment nears (after Track W) |
 | Rate limiting | No rate limiting or abuse protection on any endpoint | Auth and capture endpoints are unprotected against abuse | Before first public exposure |
 | Export retention | Completed/failed export jobs and their artifacts are never cleaned up | `export_jobs` grows unbounded | Exports get real usage or storage pressure appears |
-| Tag cleanup | Unused tags are never removed | `tags` accumulates orphans as attach/remove churns | Tags get real usage |
 | Generated client in build | `apps/api/src/generated/prisma` compiles inside the app build (`nest build` walks it) | Slower builds | Only if build times hurt |
 | Type-aware lint coverage | Biome replaced `typescript-eslint`; type-aware rules (`no-floating-promises`, `no-unsafe-*`) have no Biome equivalent | Async-safety lint classes (e.g. unhandled promises) are no longer caught at lint time; type *errors* are still caught by `tsc --noEmit` in `verify` | Revisit if a floating-promise/async bug ships, or if Biome gains type-aware rules |

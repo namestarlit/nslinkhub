@@ -166,6 +166,9 @@ defined in a dedicated design pass before web implementation (Track W3).
   silently overwriting concurrent edits.
 - Imported files that are malformed produce per-row errors, not partial
   silent corruption.
+- Tags are global and shared; a tag is deleted once nothing references it (no
+  collection and no resource, via detach or a cascading delete) — no dangling
+  tags accumulate.
 - All identifiers exposed in routes are immutable UUIDv7 values; changing a
   username, hub name, or collection title never breaks a stored reference.
 

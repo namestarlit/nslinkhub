@@ -3,6 +3,7 @@ import { AuthUser } from "src/common/interfaces/auth-user.interface";
 import { PrismaService } from "src/database/prisma.service";
 import { CollectionPolicyService } from "../hubs/collection-policy.service";
 import { AttachTagDto } from "./dto/attach-tag.dto";
+import { pruneOrphanTags } from "./tag-cleanup";
 
 @Injectable()
 export class TagsService {
@@ -44,6 +45,7 @@ export class TagsService {
     await this.prisma.collectionTag.deleteMany({
       where: { collectionId: collection.id, tagId: tag.id },
     });
+    await pruneOrphanTags(this.prisma, [tag.id]);
 
     return { collectionId: collection.id, tag: tag.name, removed: true };
   }
@@ -94,17 +96,20 @@ export class TagsService {
     await this.prisma.resourceTag.deleteMany({
       where: { resourceId: resource.id, tagId: tag.id },
     });
+    await pruneOrphanTags(this.prisma, [tag.id]);
 
     return { resourceId: resource.id, tag: tag.name, removed: true };
   }
 
   private async getOrCreateTag(rawName: string) {
     const normalized = rawName.trim().replace(/\s+/g, " ").toLowerCase();
-    let tag = await this.prisma.tag.findUnique({ where: { name: normalized } });
-    if (!tag) {
-      tag = await this.prisma.tag.create({ data: { name: normalized } });
-    }
-    return tag;
+    // Upsert so a concurrent attach (or a concurrent orphan prune of the same
+    // global tag) cannot race two callers into a unique-constraint failure.
+    return this.prisma.tag.upsert({
+      where: { name: normalized },
+      create: { name: normalized },
+      update: {},
+    });
   }
 
   private async requireWritableCollection(collectionId: string, actor: AuthUser) {

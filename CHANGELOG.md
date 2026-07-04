@@ -11,6 +11,14 @@ summary of what changed after completed work has been promoted out of `ref/`.
 
 ### Changed
 
+- Tags: orphaned tags are now pruned automatically. Because tags are global
+  (unique by name, shared across hubs), a tag is deleted only when nothing
+  references it anywhere — after detaching it from a collection/resource, or
+  after a resource/collection delete cascades its last reference away. Adds a
+  `pruneOrphanTags` helper (tags module) wired into the detach and delete
+  paths, hardens tag creation to an upsert against races, and an e2e test.
+  Removes the "unused tags never removed" tech-debt item.
+
 - Tooling: replaced ESLint + Prettier with Biome (`biome.json`) for
   workspace-wide formatting and linting, run from the repository root and
   wired into `bun run verify` (`format:check` + `lint`). `useImportType` is

@@ -13,6 +13,7 @@ import { canonicalizeUrl } from "src/common/utils/url.util";
 import { PrismaService } from "src/database/prisma.service";
 import { Collection, Resource } from "src/generated/prisma/client";
 import { CollectionPolicyService } from "../hubs/collection-policy.service";
+import { pruneOrphanTags } from "../tags/tag-cleanup";
 import { CreateCollectionLinkResourceDto } from "./dto/create-collection-link-resource.dto";
 import { CreateExternalResourceDto } from "./dto/create-external-resource.dto";
 import { ReorderResourcesDto } from "./dto/reorder-resources.dto";
@@ -171,7 +172,17 @@ export class ResourcesService {
       throw new NotFoundException("Resource not found");
     }
 
+    const tagRows = await this.prisma.resourceTag.findMany({
+      where: { resourceId: resource.id },
+      select: { tagId: true },
+    });
     await this.prisma.resource.delete({ where: { id: resource.id } });
+    // Deleting the resource cascades its resource_tags; prune any tag those
+    // rows left with no remaining references.
+    await pruneOrphanTags(
+      this.prisma,
+      tagRows.map((row) => row.tagId),
+    );
     return { id: resource.id, deleted: true };
   }
 

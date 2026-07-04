@@ -16,6 +16,7 @@ import { PrismaService } from "src/database/prisma.service";
 import { Collection } from "src/generated/prisma/client";
 import { CollectionPolicyService } from "../hubs/collection-policy.service";
 import { HubsService } from "../hubs/hubs.service";
+import { pruneOrphanTags } from "../tags/tag-cleanup";
 import { CreateChildCollectionDto } from "./dto/create-child-collection.dto";
 import { CreateCollectionDto } from "./dto/create-collection.dto";
 import { CreateShareDto } from "./dto/create-share.dto";
@@ -129,6 +130,10 @@ export class CollectionsService {
     const collection = await this.requireCollection(id);
     await this.policy.requireManage(collection, user);
     await this.prisma.collection.delete({ where: { id: collection.id } });
+    // The delete cascades through nested collections, their resources, and all
+    // tag-join rows to an unknowable depth, so prune every orphaned tag rather
+    // than trying to enumerate the affected ones.
+    await pruneOrphanTags(this.prisma);
     return { id, deleted: true };
   }
 
