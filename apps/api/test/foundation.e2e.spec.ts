@@ -141,9 +141,9 @@ describe('Foundation conventions (e2e)', () => {
     );
   });
 
-  it('paginates the public listing by cursor', async () => {
+  it('paginates the explore listing by cursor', async () => {
     const res = await request(app.getHttpServer())
-      .get('/api/v1/collections/public?limit=1')
+      .get('/api/v1/explore?limit=1')
       .expect(200);
     const body = res.body as {
       data: unknown[];

@@ -8,6 +8,7 @@ import { PrismaService } from 'src/database/prisma.service';
 import { ResourceKind } from 'src/common/enums/resource-kind.enum';
 import { AuthUser } from 'src/common/interfaces/auth-user.interface';
 import { canonicalizeUrl } from 'src/common/utils/url.util';
+import { CollectionPolicyService } from '../hubs/collection-policy.service';
 import { HubsService } from '../hubs/hubs.service';
 import { ImportTargetDto } from './dto/import-target.dto';
 
@@ -18,6 +19,7 @@ export class ImportsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly hubs: HubsService,
+    private readonly policy: CollectionPolicyService,
   ) {}
 
   async importCsv(user: AuthUser, file: unknown, dto: ImportTargetDto) {
@@ -207,7 +209,8 @@ export class ImportsService {
       if (!collection) {
         throw new NotFoundException('Target collection not found');
       }
-      await this.hubs.assertMember(collection.hubId, user);
+      // Importing is content write: hub members and direct-share editors.
+      await this.policy.requireWriteContent(collection, user);
       return collection;
     }
 

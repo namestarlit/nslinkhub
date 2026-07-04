@@ -13,6 +13,7 @@ describe('Collection routes (e2e)', () => {
   let app: INestApplication<App>;
   let bearer: string;
   let collectionId: string;
+  let hubId: string;
 
   const sfx = Date.now().toString(36);
   const username = `e2e_${sfx}`;
@@ -48,7 +49,10 @@ describe('Collection routes (e2e)', () => {
       .set('Authorization', `Bearer ${bearer}`)
       .send({ slug, title: 'E2E Collection', published: true })
       .expect(201);
-    collectionId = (collection.body as { data: { id: string } }).data.id;
+    const created = (collection.body as { data: { id: string; hubId: string } })
+      .data;
+    collectionId = created.id;
+    hubId = created.hubId;
 
     await request(server)
       .post(`/api/v1/collections/${collectionId}/resources/external`)
@@ -89,12 +93,18 @@ describe('Collection routes (e2e)', () => {
     expect(Array.isArray(body.data)).toBe(true);
   });
 
-  it('looks up a collection by owner and slug', async () => {
+  it('looks up a collection by hub and slug', async () => {
     const res = await request(app.getHttpServer())
-      .get(`/api/v1/users/${username}/collections/${slug}`)
+      .get(`/api/v1/hubs/${hubId}/collections/${slug}`)
       .expect(200);
 
     const body = res.body as { data: { slug: string } };
     expect(body.data.slug).toBe(slug);
+  });
+
+  it('no longer exposes the username lookup route', async () => {
+    await request(app.getHttpServer())
+      .get(`/api/v1/users/${username}/collections/${slug}`)
+      .expect(404);
   });
 });

@@ -1,20 +1,18 @@
 import {
   BadRequestException,
   ConflictException,
-  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { createHash } from 'crypto';
 import { PrismaService } from 'src/database/prisma.service';
 import { ResourceKind } from 'src/common/enums/resource-kind.enum';
-import { UserRole } from 'src/common/enums/user-role.enum';
 import { AuthUser } from 'src/common/interfaces/auth-user.interface';
 import { canonicalizeUrl } from 'src/common/utils/url.util';
 import { CursorQueryDto } from 'src/common/dto/cursor-query.dto';
 import { decodeCursor, encodeCursor } from 'src/common/utils/cursor.util';
 import { Collection, Resource } from 'src/generated/prisma/client';
-import { HubsService } from '../hubs/hubs.service';
+import { CollectionPolicyService } from '../hubs/collection-policy.service';
 import { CreateCollectionLinkResourceDto } from './dto/create-collection-link-resource.dto';
 import { CreateExternalResourceDto } from './dto/create-external-resource.dto';
 import { ReorderResourcesDto } from './dto/reorder-resources.dto';
@@ -24,7 +22,7 @@ import { UpdateResourceDto } from './dto/update-resource.dto';
 export class ResourcesService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly hubs: HubsService,
+    private readonly policy: CollectionPolicyService,
   ) {}
 
   async createExternal(
@@ -278,7 +276,8 @@ export class ResourcesService {
     if (!collection) {
       throw new NotFoundException('Collection not found');
     }
-    await this.hubs.assertMember(collection.hubId, user);
+    // Content write: hub members and direct-share editors.
+    await this.policy.requireWriteContent(collection, user);
     return collection;
   }
 
@@ -293,29 +292,15 @@ export class ResourcesService {
     if (!collection) {
       throw new NotFoundException('Collection not found');
     }
-
-    if (collection.published) {
-      return collection;
+    const access = await this.policy.requireRead(
+      collection,
+      viewer,
+      shareToken,
+    );
+    if (access.viaLinkToken && viewer) {
+      await this.policy.recordLinkAccess(collection.id, viewer.userId);
     }
-    if (viewer) {
-      if (viewer.role === UserRole.ADMIN) {
-        return collection;
-      }
-      if (await this.hubs.isMember(collection.hubId, viewer.userId)) {
-        return collection;
-      }
-    }
-    if (
-      collection.linkSharingEnabled &&
-      collection.shareTokenHash &&
-      shareToken
-    ) {
-      const hash = createHash('sha256').update(shareToken).digest('hex');
-      if (hash === collection.shareTokenHash) {
-        return collection;
-      }
-    }
-    throw new ForbiddenException('Forbidden');
+    return collection;
   }
 
   private async ensurePositionAvailable(

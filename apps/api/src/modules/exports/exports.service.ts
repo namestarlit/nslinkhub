@@ -1,14 +1,11 @@
 import { InjectQueue } from '@nestjs/bullmq';
-import {
-  ForbiddenException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { Queue } from 'bullmq';
 import { PrismaService } from 'src/database/prisma.service';
 import { UserRole } from 'src/common/enums/user-role.enum';
 import { AuthUser } from 'src/common/interfaces/auth-user.interface';
 import { Collection, ExportJob } from 'src/generated/prisma/client';
+import { CollectionPolicyService } from '../hubs/collection-policy.service';
 import { HubsService } from '../hubs/hubs.service';
 import { buildMarkdown } from './export-markdown.util';
 
@@ -30,6 +27,7 @@ export class ExportsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly hubs: HubsService,
+    private readonly policy: CollectionPolicyService,
     @InjectQueue('exports')
     private readonly exportsQueue: Queue,
   ) {}
@@ -100,14 +98,8 @@ export class ExportsService {
     if (!collection) {
       throw new NotFoundException('Collection not found');
     }
-
-    if (collection.published || user.role === UserRole.ADMIN) {
-      return collection;
-    }
-    if (await this.hubs.isMember(collection.hubId, user.userId)) {
-      return collection;
-    }
-    throw new ForbiddenException('Forbidden');
+    await this.policy.requireRead(collection, user);
+    return collection;
   }
 
   private toView(job: ExportJob): ExportJobView {

@@ -67,16 +67,17 @@ describe('Hub tenancy (e2e)', () => {
       .send({ url: `https://example.com/secret-${sfx}`, position: 0 })
       .expect(201);
 
-    // Stranger (unauthenticated) cannot read an unpublished collection.
+    // Stranger cannot read an unpublished collection (404: cannot know it exists).
     await request(server)
       .get(`/api/v1/collections/${collectionId}/resources`)
-      .expect(403);
+      .expect(404);
 
-    // Owner rotates a share link (enables link sharing) and shares the token.
+    // Owner enables link sharing and shares the minted token.
     const share = await request(server)
-      .post(`/api/v1/collections/${collectionId}/share-link`)
+      .put(`/api/v1/collections/${collectionId}/link-sharing`)
       .set('Authorization', `Bearer ${ownerBearer}`)
-      .expect(201);
+      .send({ enabled: true })
+      .expect(200);
     const token = (share.body as { data: { token: string } }).data.token;
 
     // Anyone with the token can now read it.
@@ -88,7 +89,7 @@ describe('Hub tenancy (e2e)', () => {
     // A wrong token is rejected.
     await request(server)
       .get(`/api/v1/collections/${collectionId}/resources?s=wrong`)
-      .expect(403);
+      .expect(404);
   });
 
   it('lists a published collection on the public explore listing', async () => {
@@ -102,7 +103,7 @@ describe('Hub tenancy (e2e)', () => {
       .expect(201);
 
     const res = await request(server)
-      .get('/api/v1/collections/public?limit=50')
+      .get('/api/v1/explore?limit=50')
       .expect(200);
     const body = res.body as { data: Array<{ slug: string }> };
     expect(body.data.some((c) => c.slug === slug)).toBe(true);

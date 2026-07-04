@@ -3,6 +3,8 @@ import {
   Get,
   Headers,
   Param,
+  ParseUUIDPipe,
+  Query,
   Req,
   Res,
   UseGuards,
@@ -12,23 +14,47 @@ import type { Request, Response } from 'express';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 import { OptionalAuthGuard } from 'src/common/guards/optional-auth.guard';
 import type { AuthUser } from 'src/common/interfaces/auth-user.interface';
+import { CursorQueryDto } from 'src/common/dto/cursor-query.dto';
 import { ifNoneMatchHit } from 'src/common/utils/etag.util';
 import { apiOk } from 'src/common/utils/response.util';
 import { CollectionsService } from './collections.service';
 
-// Interim owner+slug lookup under /users/:username/collections/:slug. It
-// resolves the owner's personal hub, so it cannot collide with the
-// /collections/:id/* routes. Phase C replaces it with the hub-scoped route
-// GET /hubs/:hubId/collections/:slug.
-@ApiTags('collections')
-@Controller('api/v1/users/:username/collections')
-export class CollectionLookupController {
+@ApiTags('hubs')
+@Controller('api/v1/hubs')
+export class HubsController {
   constructor(private readonly collectionsService: CollectionsService) {}
 
+  // Public hub page: display info + published collections.
+  @Get(':hubId')
+  async getHubPage(
+    @Param('hubId', new ParseUUIDPipe()) hubId: string,
+    @Query() query: CursorQueryDto,
+  ) {
+    const data = await this.collectionsService.getHubPage(hubId, query);
+    return apiOk({ hub: data.hub, collections: data.collections }, data.meta);
+  }
+
+  // Hub collection list: members see all; others see the published subset.
   @UseGuards(OptionalAuthGuard)
-  @Get(':slug')
-  async getByOwnerAndSlug(
-    @Param('username') username: string,
+  @Get(':hubId/collections')
+  async listHubCollections(
+    @Param('hubId', new ParseUUIDPipe()) hubId: string,
+    @CurrentUser() user: AuthUser | null,
+    @Query() query: CursorQueryDto,
+  ) {
+    const data = await this.collectionsService.listHubCollections(
+      hubId,
+      user,
+      query,
+    );
+    return apiOk(data.items, data.meta);
+  }
+
+  // Canonical collection lookup by hub + slug (replaces the username route).
+  @UseGuards(OptionalAuthGuard)
+  @Get(':hubId/collections/:slug')
+  async getCollectionBySlug(
+    @Param('hubId', new ParseUUIDPipe()) hubId: string,
     @Param('slug') slug: string,
     @CurrentUser() user: AuthUser | null,
     @Headers('x-share-token') headerToken?: string,
@@ -36,8 +62,8 @@ export class CollectionLookupController {
     @Res({ passthrough: true }) res?: Response,
   ) {
     const shareToken = headerToken ?? (req?.query.s as string | undefined);
-    const data = await this.collectionsService.getByOwnerAndSlug(
-      username,
+    const data = await this.collectionsService.getHubCollectionBySlug(
+      hubId,
       slug,
       user,
       shareToken,
@@ -52,7 +78,6 @@ export class CollectionLookupController {
     const ifNoneMatchValue = Array.isArray(ifNoneMatchHeader)
       ? ifNoneMatchHeader.join(',')
       : ifNoneMatchHeader;
-
     if (ifNoneMatchHit(ifNoneMatchValue, data.etag) && res) {
       res.status(304);
       return;

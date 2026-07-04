@@ -1,14 +1,14 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'src/database/prisma.service';
 import { AuthUser } from 'src/common/interfaces/auth-user.interface';
-import { HubsService } from '../hubs/hubs.service';
+import { CollectionPolicyService } from '../hubs/collection-policy.service';
 import { AttachTagDto } from './dto/attach-tag.dto';
 
 @Injectable()
 export class TagsService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly hubs: HubsService,
+    private readonly policy: CollectionPolicyService,
   ) {}
 
   async attachToCollection(
@@ -133,7 +133,8 @@ export class TagsService {
     if (!collection) {
       throw new NotFoundException('Collection not found');
     }
-    await this.hubs.assertMember(collection.hubId, actor);
+    // Content write: hub members and direct-share editors.
+    await this.policy.requireWriteContent(collection, actor);
     return collection;
   }
 }

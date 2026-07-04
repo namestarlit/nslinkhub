@@ -11,6 +11,24 @@ summary of what changed after completed work has been promoted out of `ref/`.
 
 ### Changed
 
+- Authorization + public surfaces (Phase C): a single
+  `CollectionPolicyService` now resolves all collection access (first match:
+  published → read, hub membership → full, direct share → reader/editor,
+  active link/token → read) and replaces the interim membership checks across
+  collections, resources, tags, imports, and exports. Capability tiers land:
+  hub members manage (publish, share, delete), direct-share editors write
+  content only, readers/link/published read only. New surfaces: `GET /explore`
+  (replaces `/collections/public`), public hub pages `GET /hubs/:hubId` and
+  `GET /hubs/:hubId/collections`, hub-scoped lookup
+  `GET /hubs/:hubId/collections/:slug` (which replaces and deletes the
+  mutable-username lookup route), publish/unpublish, `PUT /link-sharing`
+  (enable/disable/rotate; disabling clears the token), direct shares CRUD,
+  save/unsave, and `GET /me/shared` + `GET /me/saved` (with dormant handling).
+  Opening a valid share link records a link-sourced share on the viewer's
+  shared/ surface, valid only while link sharing stays enabled. Reads that
+  fail access now return 404 (not 403) for resources the caller cannot know
+  exist.
+
 - Documented the API/persistence casing convention
   (`docs/design-docs/conventions.md`): camelCase JSON keys, snake-token enum
   values, snake_case DB columns via Prisma `@map`. Fixed the one endpoint

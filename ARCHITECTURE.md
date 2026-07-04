@@ -9,10 +9,11 @@ product-wide explore surface. See `PRODUCT.md` for the product definition and
 `docs/design-docs/hub-architecture.md` for the authoritative target design.
 
 The codebase is mid-transition on the locked order
-W1 → A → B → C → D → W2 → W3 → W4. Through Phase B the domain model is
-Hub → Collections → Resources with hub-membership access; Phase C adds the
-hub policy service, publish/share/save endpoints, explore, and the
-hub-scoped lookup route.
+W1 → A → B → C → D → W2 → W3 → W4. Through Phase C the model is
+Hub → Collections → Resources with a single `CollectionPolicyService`
+resolving access (published / membership / direct share / link), the
+publish/share/save endpoints, `/explore`, public hub pages, and hub-scoped
+lookup. Phase D adds invitations and membership management.
 
 ## System Shape
 
@@ -52,9 +53,9 @@ ref/               disposable, git-ignored implementation context
 | --- | --- |
 | `auth` (`apps/api/src/auth`) | better-auth instance + personal-hub onboarding hook; handler mounted in `app.setup.ts` |
 | `common/guards` | `AuthGuard`/`OptionalAuthGuard` via `resolveSessionUser` |
-| `hubs` | hub creation, membership checks (interim authority; grows into the Phase C policy service) |
+| `hubs` | hub creation, membership checks (`HubsService`) + the collection access policy (`CollectionPolicyService`) |
 | `users` | profile read/update/delete |
-| `collections` | collection CRUD, publish/share-link, nesting, owner/slug lookup |
+| `collections` | collection CRUD, publish/unpublish, link + direct sharing, saves, `/explore`, public hub pages, `/me/{shared,saved}`, hub-scoped lookup |
 | `resources` | resource CRUD, reorder with version checks |
 | `tags` | normalized tags on collections and resources |
 | `imports` | CSV / bookmarks-HTML / WhatsApp-TXT ingestion |
