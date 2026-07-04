@@ -9,11 +9,12 @@ product-wide explore surface. See `PRODUCT.md` for the product definition and
 `docs/design-docs/hub-architecture.md` for the authoritative target design.
 
 The codebase is mid-transition on the locked order
-W1 → A → B → C → D → W2 → W3 → W4. Through Phase C the model is
-Hub → Collections → Resources with a single `CollectionPolicyService`
-resolving access (published / membership / direct share / link), the
-publish/share/save endpoints, `/explore`, public hub pages, and hub-scoped
-lookup. Phase D adds invitations and membership management.
+W1 → A → B → C → D → W2 → W3 → W4. Through Phase D the backend model is complete: Hub → Collections →
+Resources with a single `CollectionPolicyService` for collection access,
+role-enforced hub authority (owner > admin > member), invitations with
+authenticated acceptance, membership management under the last-owner rule,
+and explicit ownership transfer. Remaining tracks are the clients
+(W2 shared types, W3 web, W4 extension) and Phase E hardening.
 
 ## System Shape
 
@@ -53,7 +54,7 @@ ref/               disposable, git-ignored implementation context
 | --- | --- |
 | `auth` (`apps/api/src/auth`) | better-auth instance + personal-hub onboarding hook; handler mounted in `app.setup.ts` |
 | `common/guards` | `AuthGuard`/`OptionalAuthGuard` via `resolveSessionUser` |
-| `hubs` | hub creation, membership checks (`HubsService`) + the collection access policy (`CollectionPolicyService`) |
+| `hubs` | hub creation + role-gated membership authority (`HubsService`), collection access policy (`CollectionPolicyService`), invitations and member/ownership management (`HubInvitationsService`, `HubMembersService`) |
 | `users` | profile read/update/delete |
 | `collections` | collection CRUD, publish/unpublish, link + direct sharing, saves, `/explore`, public hub pages, `/me/{shared,saved}`, hub-scoped lookup |
 | `resources` | resource CRUD, reorder with version checks |

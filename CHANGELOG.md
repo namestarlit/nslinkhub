@@ -11,6 +11,21 @@ summary of what changed after completed work has been promoted out of `ref/`.
 
 ### Changed
 
+- Invitations + membership management (Phase D): hub roles are now enforced
+  (owner > admin > member) via `HubsService.requireHubRole`. Hubs gained the
+  ways people join and are managed: `POST /hubs/:hubId/invitations`
+  (`{email, role}` — inviting a member needs admin+, inviting an admin needs
+  owner; random expiring one-time hashed token, email delivery a logged
+  no-op), list/revoke invitations, and `POST /invitations/accept` (`{token}`
+  in the body; the authenticated acceptor's email must match; creates the
+  membership). Membership endpoints: `GET /hubs/:hubId/members`,
+  `PATCH /members/:userId` (role change, owner-only), `DELETE /members/:userId`
+  (admin removes members, owner removes anyone, self-leave allowed) — all
+  under the last-owner rule — and `POST /hubs/:hubId/transfer-ownership`
+  (target member → owner, actor → admin, one transaction). This completes the
+  backend of the hub architecture; remaining work is the client tracks and
+  Phase E hardening.
+
 - Authorization + public surfaces (Phase C): a single
   `CollectionPolicyService` now resolves all collection access (first match:
   published → read, hub membership → full, direct share → reader/editor,

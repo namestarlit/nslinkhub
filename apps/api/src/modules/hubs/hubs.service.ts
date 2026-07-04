@@ -4,10 +4,17 @@ import { UserRole } from 'src/common/enums/user-role.enum';
 import { AuthUser } from 'src/common/interfaces/auth-user.interface';
 import { createPersonalHub } from './hub-onboarding';
 
-// Interim hub authority for Phase B: hub creation and membership checks.
-// Phase C grows this into the full policy service (role-aware
-// requireHubRole, collection access resolution). For now every membership
-// grants full content write, matching the resolved role model.
+export type HubRole = 'owner' | 'admin' | 'member';
+
+const ROLE_RANK: Record<string, number> = { member: 1, admin: 2, owner: 3 };
+
+export function roleRank(role: string | null | undefined): number {
+  return role ? (ROLE_RANK[role] ?? 0) : 0;
+}
+
+// Hub authority: creation, membership, and role checks. Collection-level
+// access resolution lives in CollectionPolicyService; this service answers
+// hub-scoped questions (who is a member, at what role).
 @Injectable()
 export class HubsService {
   constructor(private readonly prisma: PrismaService) {}
@@ -17,8 +24,8 @@ export class HubsService {
   }
 
   // The user's oldest owned hub — the personal hub created at sign-up. Used
-  // as the default target for collection creation until Phase C introduces
-  // hub-scoped routes.
+  // as the default target for collection creation until hub-scoped creation
+  // routes exist.
   async getPrimaryHubId(userId: string): Promise<string | null> {
     const membership = await this.prisma.hubMembership.findFirst({
       where: { userId, role: 'owner' },
@@ -28,12 +35,25 @@ export class HubsService {
     return membership?.hubId ?? null;
   }
 
-  async isMember(hubId: string, userId: string): Promise<boolean> {
+  async getMembershipRole(
+    hubId: string,
+    userId: string,
+  ): Promise<string | null> {
     const membership = await this.prisma.hubMembership.findUnique({
       where: { hubId_userId: { hubId, userId } },
-      select: { hubId: true },
+      select: { role: true },
     });
-    return membership !== null;
+    return membership?.role ?? null;
+  }
+
+  async isMember(hubId: string, userId: string): Promise<boolean> {
+    return (await this.getMembershipRole(hubId, userId)) !== null;
+  }
+
+  async countOwners(hubId: string): Promise<number> {
+    return this.prisma.hubMembership.count({
+      where: { hubId, role: 'owner' },
+    });
   }
 
   // Write authority over a hub's content: platform admins bypass; otherwise
@@ -43,6 +63,22 @@ export class HubsService {
       return;
     }
     if (!(await this.isMember(hubId, user.userId))) {
+      throw new ForbiddenException('Forbidden');
+    }
+  }
+
+  // Role-gated hub authority: platform admins bypass; otherwise the caller's
+  // membership role must meet or exceed minRole.
+  async requireHubRole(
+    hubId: string,
+    user: AuthUser,
+    minRole: HubRole,
+  ): Promise<void> {
+    if (user.role === UserRole.ADMIN) {
+      return;
+    }
+    const role = await this.getMembershipRole(hubId, user.userId);
+    if (roleRank(role) < roleRank(minRole)) {
       throw new ForbiddenException('Forbidden');
     }
   }
