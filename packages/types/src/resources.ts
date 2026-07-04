@@ -1,5 +1,5 @@
-import type { IsoTimestamp } from './envelope';
-import type { ResourceKind } from './common';
+import type { ResourceKind } from "./common";
+import type { IsoTimestamp } from "./envelope";
 
 export interface Resource {
   id: string;

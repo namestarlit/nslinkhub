@@ -1,22 +1,22 @@
+import { createHash } from "node:crypto";
 import {
   BadRequestException,
   ConflictException,
   Injectable,
   NotFoundException,
-} from '@nestjs/common';
-import { createHash } from 'crypto';
-import { PrismaService } from 'src/database/prisma.service';
-import { ResourceKind } from 'src/common/enums/resource-kind.enum';
-import { AuthUser } from 'src/common/interfaces/auth-user.interface';
-import { canonicalizeUrl } from 'src/common/utils/url.util';
-import { CursorQueryDto } from 'src/common/dto/cursor-query.dto';
-import { decodeCursor, encodeCursor } from 'src/common/utils/cursor.util';
-import { Collection, Resource } from 'src/generated/prisma/client';
-import { CollectionPolicyService } from '../hubs/collection-policy.service';
-import { CreateCollectionLinkResourceDto } from './dto/create-collection-link-resource.dto';
-import { CreateExternalResourceDto } from './dto/create-external-resource.dto';
-import { ReorderResourcesDto } from './dto/reorder-resources.dto';
-import { UpdateResourceDto } from './dto/update-resource.dto';
+} from "@nestjs/common";
+import { CursorQueryDto } from "src/common/dto/cursor-query.dto";
+import { ResourceKind } from "src/common/enums/resource-kind.enum";
+import { AuthUser } from "src/common/interfaces/auth-user.interface";
+import { decodeCursor, encodeCursor } from "src/common/utils/cursor.util";
+import { canonicalizeUrl } from "src/common/utils/url.util";
+import { PrismaService } from "src/database/prisma.service";
+import { Collection, Resource } from "src/generated/prisma/client";
+import { CollectionPolicyService } from "../hubs/collection-policy.service";
+import { CreateCollectionLinkResourceDto } from "./dto/create-collection-link-resource.dto";
+import { CreateExternalResourceDto } from "./dto/create-external-resource.dto";
+import { ReorderResourcesDto } from "./dto/reorder-resources.dto";
+import { UpdateResourceDto } from "./dto/update-resource.dto";
 
 @Injectable()
 export class ResourcesService {
@@ -25,16 +25,12 @@ export class ResourcesService {
     private readonly policy: CollectionPolicyService,
   ) {}
 
-  async createExternal(
-    collectionId: string,
-    user: AuthUser,
-    dto: CreateExternalResourceDto,
-  ) {
+  async createExternal(collectionId: string, user: AuthUser, dto: CreateExternalResourceDto) {
     const collection = await this.requireWritableCollection(collectionId, user);
     await this.ensurePositionAvailable(collection.id, dto.position);
 
     const canonicalUrl = canonicalizeUrl(dto.url);
-    const urlHash = createHash('sha256').update(canonicalUrl).digest('hex');
+    const urlHash = createHash("sha256").update(canonicalUrl).digest("hex");
 
     let link = await this.prisma.link.findUnique({ where: { canonicalUrl } });
     if (!link) {
@@ -46,7 +42,7 @@ export class ResourcesService {
       select: { id: true },
     });
     if (duplicate) {
-      throw new ConflictException('Link already exists in this collection');
+      throw new ConflictException("Link already exists in this collection");
     }
 
     const saved = await this.prisma.resource.create({
@@ -76,10 +72,10 @@ export class ResourcesService {
       where: { id: dto.linkedCollectionId },
     });
     if (!linkedCollection) {
-      throw new NotFoundException('Linked collection not found');
+      throw new NotFoundException("Linked collection not found");
     }
     if (linkedCollection.id === collection.id) {
-      throw new BadRequestException('Collection cannot link to itself');
+      throw new BadRequestException("Collection cannot link to itself");
     }
 
     const saved = await this.prisma.resource.create({
@@ -106,11 +102,9 @@ export class ResourcesService {
     await this.requireReadableCollection(collectionId, viewer, shareToken);
 
     const limit = query.limit ?? 20;
-    const cursor = query.cursor
-      ? decodeCursor<{ p: number }>(query.cursor)
-      : null;
-    if (query.cursor && (cursor === null || typeof cursor.p !== 'number')) {
-      throw new BadRequestException('Invalid cursor');
+    const cursor = query.cursor ? decodeCursor<{ p: number }>(query.cursor) : null;
+    if (query.cursor && (cursor === null || typeof cursor.p !== "number")) {
+      throw new BadRequestException("Invalid cursor");
     }
 
     const rows = await this.prisma.resource.findMany({
@@ -119,50 +113,37 @@ export class ResourcesService {
         ...(cursor ? { position: { gt: cursor.p } } : {}),
       },
       include: { link: true, linkedCollection: true },
-      orderBy: { position: 'asc' },
+      orderBy: { position: "asc" },
       take: limit + 1,
     });
 
     const items = rows.slice(0, limit);
     const nextCursor =
-      rows.length > limit
-        ? encodeCursor({ p: items[items.length - 1].position })
-        : null;
+      rows.length > limit ? encodeCursor({ p: items[items.length - 1].position }) : null;
 
     return {
-      items: items.map((item) =>
-        this.toPublicResource(item, item.link?.canonicalUrl),
-      ),
+      items: items.map((item) => this.toPublicResource(item, item.link?.canonicalUrl)),
       meta: { limit, nextCursor },
     };
   }
 
-  async update(
-    collectionId: string,
-    resourceId: string,
-    user: AuthUser,
-    dto: UpdateResourceDto,
-  ) {
+  async update(collectionId: string, resourceId: string, user: AuthUser, dto: UpdateResourceDto) {
     await this.requireWritableCollection(collectionId, user);
 
     const resource = await this.prisma.resource.findFirst({
       where: { id: resourceId, collectionId },
     });
     if (!resource) {
-      throw new NotFoundException('Resource not found');
+      throw new NotFoundException("Resource not found");
     }
 
     if (Number(resource.version) !== dto.version) {
-      throw new ConflictException('Version mismatch');
+      throw new ConflictException("Version mismatch");
     }
 
     let position = resource.position;
     if (dto.position !== undefined && dto.position !== resource.position) {
-      await this.ensurePositionAvailable(
-        collectionId,
-        dto.position,
-        resource.id,
-      );
+      await this.ensurePositionAvailable(collectionId, dto.position, resource.id);
       position = dto.position;
     }
 
@@ -187,60 +168,51 @@ export class ResourcesService {
       where: { id: resourceId, collectionId },
     });
     if (!resource) {
-      throw new NotFoundException('Resource not found');
+      throw new NotFoundException("Resource not found");
     }
 
     await this.prisma.resource.delete({ where: { id: resource.id } });
     return { id: resource.id, deleted: true };
   }
 
-  async reorder(
-    collectionId: string,
-    user: AuthUser,
-    dto: ReorderResourcesDto,
-  ) {
+  async reorder(collectionId: string, user: AuthUser, dto: ReorderResourcesDto) {
     await this.requireWritableCollection(collectionId, user);
 
     const resources = await this.prisma.resource.findMany({
       where: { collectionId },
     });
     if (resources.length !== dto.items.length) {
-      throw new BadRequestException(
-        'Reorder payload must include all resources',
-      );
+      throw new BadRequestException("Reorder payload must include all resources");
     }
 
     const resourceIdSet = new Set(resources.map((r) => r.id));
     const payloadIdSet = new Set(dto.items.map((item) => item.resourceId));
 
     if (resourceIdSet.size !== payloadIdSet.size) {
-      throw new BadRequestException(
-        'Duplicate resource IDs in reorder payload',
-      );
+      throw new BadRequestException("Duplicate resource IDs in reorder payload");
     }
 
     for (const payloadId of payloadIdSet) {
       if (!resourceIdSet.has(payloadId)) {
-        throw new BadRequestException('Unknown resource ID in reorder payload');
+        throw new BadRequestException("Unknown resource ID in reorder payload");
       }
     }
 
-    const positions = dto.items
-      .map((item) => item.position)
-      .sort((a, b) => a - b);
+    const positions = dto.items.map((item) => item.position).sort((a, b) => a - b);
     for (let i = 0; i < positions.length; i += 1) {
       if (positions[i] !== i) {
-        throw new BadRequestException(
-          'Positions must be contiguous from 0..n-1',
-        );
+        throw new BadRequestException("Positions must be contiguous from 0..n-1");
       }
     }
 
     const byId = new Map(resources.map((r) => [r.id, r]));
     for (const item of dto.items) {
-      const resource = byId.get(item.resourceId)!;
+      const resource = byId.get(item.resourceId);
+      if (!resource) {
+        throw new BadRequestException("Unknown resource ID in reorder payload");
+      }
       if (Number(resource.version) !== item.version) {
-        throw new ConflictException('Version mismatch');
+        throw new ConflictException("Version mismatch");
       }
     }
 
@@ -274,7 +246,7 @@ export class ResourcesService {
       where: { id: collectionId },
     });
     if (!collection) {
-      throw new NotFoundException('Collection not found');
+      throw new NotFoundException("Collection not found");
     }
     // Content write: hub members and direct-share editors.
     await this.policy.requireWriteContent(collection, user);
@@ -290,13 +262,9 @@ export class ResourcesService {
       where: { id: collectionId },
     });
     if (!collection) {
-      throw new NotFoundException('Collection not found');
+      throw new NotFoundException("Collection not found");
     }
-    const access = await this.policy.requireRead(
-      collection,
-      viewer,
-      shareToken,
-    );
+    const access = await this.policy.requireRead(collection, viewer, shareToken);
     if (access.viaLinkToken && viewer) {
       await this.policy.recordLinkAccess(collection.id, viewer.userId);
     }
@@ -313,9 +281,7 @@ export class ResourcesService {
       select: { id: true },
     });
     if (existing && existing.id !== ignoreResourceId) {
-      throw new ConflictException(
-        'Position is already used in this collection',
-      );
+      throw new ConflictException("Position is already used in this collection");
     }
   }
 

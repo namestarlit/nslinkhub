@@ -1,14 +1,14 @@
-import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
-import { INestApplication } from '@nestjs/common';
-import { Test } from '@nestjs/testing';
-import request from 'supertest';
-import { App } from 'supertest/types';
-import { AppModule } from '../src/app.module';
-import { configureApp } from '../src/app.setup';
+import { afterAll, beforeAll, describe, expect, it } from "bun:test";
+import { INestApplication } from "@nestjs/common";
+import { Test } from "@nestjs/testing";
+import request from "supertest";
+import { App } from "supertest/types";
+import { AppModule } from "../src/app.module";
+import { configureApp } from "../src/app.setup";
 
 // Phase A foundation conventions: error envelope, request IDs, cursor
 // pagination (docs/exec-plans — foundation-conventions-phase-a).
-describe('Foundation conventions (e2e)', () => {
+describe("Foundation conventions (e2e)", () => {
   let app: INestApplication<App>;
   let bearer: string;
   let collectionId: string;
@@ -30,22 +30,22 @@ describe('Foundation conventions (e2e)', () => {
     const server = app.getHttpServer();
 
     const signUp = await request(server)
-      .post('/api/v1/auth/sign-up/email')
+      .post("/api/v1/auth/sign-up/email")
       .send({
         email: `${username}@example.com`,
-        password: 'Password123!',
+        password: "Password123!",
         name: username,
         username,
       })
       .expect(200);
-    bearer = signUp.headers['set-auth-token'];
+    bearer = signUp.headers["set-auth-token"];
 
     const collection = await request(server)
-      .post('/api/v1/collections')
-      .set('Authorization', `Bearer ${bearer}`)
+      .post("/api/v1/collections")
+      .set("Authorization", `Bearer ${bearer}`)
       .send({
         slug: `fnd-col-${sfx}`,
-        title: 'Fnd Collection',
+        title: "Fnd Collection",
         published: true,
       })
       .expect(201);
@@ -54,7 +54,7 @@ describe('Foundation conventions (e2e)', () => {
     for (let position = 0; position < 3; position += 1) {
       await request(server)
         .post(`/api/v1/collections/${collectionId}/resources/external`)
-        .set('Authorization', `Bearer ${bearer}`)
+        .set("Authorization", `Bearer ${bearer}`)
         .send({ url: `https://example.com/fnd-${sfx}-${position}`, position })
         .expect(201);
     }
@@ -64,16 +64,14 @@ describe('Foundation conventions (e2e)', () => {
     await app.close();
   });
 
-  it('attaches a server-generated request id to every response', async () => {
-    const res = await request(app.getHttpServer())
-      .get('/api/v1/health')
-      .expect(200);
-    expect(res.headers['x-request-id']).toMatch(/^req_/);
+  it("attaches a server-generated request id to every response", async () => {
+    const res = await request(app.getHttpServer()).get("/api/v1/health").expect(200);
+    expect(res.headers["x-request-id"]).toMatch(/^req_/);
   });
 
-  it('returns the error envelope with matching request id on 404', async () => {
+  it("returns the error envelope with matching request id on 404", async () => {
     const res = await request(app.getHttpServer())
-      .get('/api/v1/users/definitely-not-a-user')
+      .get("/api/v1/users/definitely-not-a-user")
       .expect(404);
 
     const body = res.body as {
@@ -84,27 +82,27 @@ describe('Foundation conventions (e2e)', () => {
         details: object;
       };
     };
-    expect(body.error.code).toBe('not_found');
-    expect(body.error.message).toBe('User not found');
-    expect(body.error.requestId).toBe(res.headers['x-request-id']);
+    expect(body.error.code).toBe("not_found");
+    expect(body.error.message).toBe("User not found");
+    expect(body.error.requestId).toBe(res.headers["x-request-id"]);
     expect(body.error.details).toEqual({});
   });
 
-  it('maps DTO validation failures to validation_failed with messages', async () => {
+  it("maps DTO validation failures to validation_failed with messages", async () => {
     const res = await request(app.getHttpServer())
-      .post('/api/v1/collections')
-      .set('Authorization', `Bearer ${bearer}`)
-      .send({ slug: 'x y z!!', title: '' })
+      .post("/api/v1/collections")
+      .set("Authorization", `Bearer ${bearer}`)
+      .send({ slug: "x y z!!", title: "" })
       .expect(400);
 
     const body = res.body as {
       error: { code: string; details: { messages?: string[] } };
     };
-    expect(body.error.code).toBe('validation_failed');
+    expect(body.error.code).toBe("validation_failed");
     expect(Array.isArray(body.error.details.messages)).toBe(true);
   });
 
-  it('walks resources with cursor pagination, each item exactly once', async () => {
+  it("walks resources with cursor pagination, each item exactly once", async () => {
     const server = app.getHttpServer();
 
     const first = await request(server)
@@ -132,19 +130,15 @@ describe('Foundation conventions (e2e)', () => {
     expect(secondBody.meta.nextCursor).toBeNull();
   });
 
-  it('rejects a malformed cursor with the envelope', async () => {
+  it("rejects a malformed cursor with the envelope", async () => {
     const res = await request(app.getHttpServer())
       .get(`/api/v1/collections/${collectionId}/resources?cursor=%%%garbage`)
       .expect(400);
-    expect((res.body as { error: { code: string } }).error.code).toBe(
-      'bad_request',
-    );
+    expect((res.body as { error: { code: string } }).error.code).toBe("bad_request");
   });
 
-  it('paginates the explore listing by cursor', async () => {
-    const res = await request(app.getHttpServer())
-      .get('/api/v1/explore?limit=1')
-      .expect(200);
+  it("paginates the explore listing by cursor", async () => {
+    const res = await request(app.getHttpServer()).get("/api/v1/explore?limit=1").expect(200);
     const body = res.body as {
       data: unknown[];
       meta: { limit: number; nextCursor: string | null };

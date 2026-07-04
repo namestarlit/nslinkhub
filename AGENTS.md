@@ -61,6 +61,11 @@ authoritative.
 
 - Use Bun for package installation, script execution, and tests. Commit
   `bun.lock`; do not add npm, Yarn, or pnpm lockfiles.
+- Use Biome for formatting and linting (`biome.json`); `bun run check`
+  autofixes. `useImportType` is disabled for `apps/api` only — NestJS DI and
+  `emitDecoratorMetadata` need runtime imports for decorated
+  classes/parameters — and stays on elsewhere. Do not re-enable it there or
+  re-add ESLint/Prettier.
 - Run Prisma through `bunx prisma` from `apps/api` (configuration in
   `apps/api/prisma.config.ts`; the datasource URL lives there, not in the
   schema).

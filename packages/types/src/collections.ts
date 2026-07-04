@@ -1,5 +1,5 @@
-import type { IsoTimestamp } from './envelope';
-import type { ShareRole, ShareSource } from './common';
+import type { ShareRole, ShareSource } from "./common";
+import type { IsoTimestamp } from "./envelope";
 
 export interface Collection {
   id: string;
@@ -49,10 +49,7 @@ export interface UpdateCollectionRequest {
   parentCollectionId?: string | null;
 }
 
-export type CreateChildCollectionRequest = Omit<
-  CreateCollectionRequest,
-  'parentCollectionId'
->;
+export type CreateChildCollectionRequest = Omit<CreateCollectionRequest, "parentCollectionId">;
 
 export interface SetLinkSharingRequest {
   enabled: boolean;

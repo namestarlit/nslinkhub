@@ -1,12 +1,4 @@
-import {
-  IsInt,
-  IsOptional,
-  IsString,
-  IsUUID,
-  MaxLength,
-  Min,
-  MinLength,
-} from 'class-validator';
+import { IsInt, IsOptional, IsString, IsUUID, MaxLength, Min, MinLength } from "class-validator";
 
 export class CreateCollectionLinkResourceDto {
   @IsUUID()

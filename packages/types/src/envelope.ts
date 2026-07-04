@@ -35,8 +35,6 @@ export interface ApiError {
 
 export type ApiResponse<T, M = undefined> = ApiSuccess<T, M> | ApiError;
 
-export function isApiError<T, M>(
-  response: ApiResponse<T, M>,
-): response is ApiError {
+export function isApiError<T, M>(response: ApiResponse<T, M>): response is ApiError {
   return (response as ApiError).error !== undefined;
 }

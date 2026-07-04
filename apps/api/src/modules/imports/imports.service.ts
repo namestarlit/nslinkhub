@@ -1,16 +1,12 @@
-import {
-  BadRequestException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
-import { createHash } from 'crypto';
-import { PrismaService } from 'src/database/prisma.service';
-import { ResourceKind } from 'src/common/enums/resource-kind.enum';
-import { AuthUser } from 'src/common/interfaces/auth-user.interface';
-import { canonicalizeUrl } from 'src/common/utils/url.util';
-import { CollectionPolicyService } from '../hubs/collection-policy.service';
-import { HubsService } from '../hubs/hubs.service';
-import { ImportTargetDto } from './dto/import-target.dto';
+import { createHash } from "node:crypto";
+import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import { ResourceKind } from "src/common/enums/resource-kind.enum";
+import { AuthUser } from "src/common/interfaces/auth-user.interface";
+import { canonicalizeUrl } from "src/common/utils/url.util";
+import { PrismaService } from "src/database/prisma.service";
+import { CollectionPolicyService } from "../hubs/collection-policy.service";
+import { HubsService } from "../hubs/hubs.service";
+import { ImportTargetDto } from "./dto/import-target.dto";
 
 const MAX_IMPORT_SIZE_BYTES = 10 * 1024 * 1024;
 
@@ -26,58 +22,52 @@ export class ImportsService {
     const collection = await this.resolveTargetCollection(user, dto);
     this.ensureValidFile(file);
 
-    const text = file.buffer.toString('utf8');
+    const text = file.buffer.toString("utf8");
     const lines = text.split(/\r?\n/).filter((line) => line.trim().length > 0);
     if (lines.length === 0) {
-      throw new BadRequestException('CSV file is empty');
+      throw new BadRequestException("CSV file is empty");
     }
 
-    const headers = lines[0]
-      .split(',')
-      .map((header) => header.trim().toLowerCase());
-    const urlIdx = headers.indexOf('url');
-    const titleIdx = headers.indexOf('title');
-    const descriptionIdx = headers.indexOf('description');
-    const noteIdx = headers.indexOf('note');
+    const headers = lines[0].split(",").map((header) => header.trim().toLowerCase());
+    const urlIdx = headers.indexOf("url");
+    const titleIdx = headers.indexOf("title");
+    const descriptionIdx = headers.indexOf("description");
+    const noteIdx = headers.indexOf("note");
 
     if (urlIdx < 0) {
-      throw new BadRequestException('CSV must contain url column');
+      throw new BadRequestException("CSV must contain url column");
     }
 
     const rows = lines.slice(1);
     return this.ingestRows(
       collection.id,
       rows.map((row, index) => {
-        const columns = row.split(',').map((column) => column.trim());
+        const columns = row.split(",").map((column) => column.trim());
         return {
           index: index + 2,
-          url: columns[urlIdx] ?? '',
+          url: columns[urlIdx] ?? "",
           title: titleIdx >= 0 ? columns[titleIdx] : undefined,
-          description:
-            descriptionIdx >= 0 ? columns[descriptionIdx] : undefined,
+          description: descriptionIdx >= 0 ? columns[descriptionIdx] : undefined,
           note: noteIdx >= 0 ? columns[noteIdx] : undefined,
         };
       }),
     );
   }
 
-  async importBookmarksHtml(
-    user: AuthUser,
-    file: unknown,
-    dto: ImportTargetDto,
-  ) {
+  async importBookmarksHtml(user: AuthUser, file: unknown, dto: ImportTargetDto) {
     const collection = await this.resolveTargetCollection(user, dto);
     this.ensureValidFile(file);
 
-    const text = file.buffer.toString('utf8');
+    const text = file.buffer.toString("utf8");
     const linkRegex = /<A\s+[^>]*HREF="([^"]+)"[^>]*>(.*?)<\/A>/gi;
     const rows: Array<{ index: number; url: string; title?: string }> = [];
 
-    let match: RegExpExecArray | null;
     let i = 1;
-    while ((match = linkRegex.exec(text)) !== null) {
+    let match = linkRegex.exec(text);
+    while (match !== null) {
       rows.push({ index: i, url: match[1], title: stripHtml(match[2]) });
       i += 1;
+      match = linkRegex.exec(text);
     }
 
     return this.ingestRows(collection.id, rows);
@@ -87,8 +77,8 @@ export class ImportsService {
     const collection = await this.resolveTargetCollection(user, dto);
     this.ensureValidFile(file);
 
-    const utf8 = file.buffer.toString('utf8');
-    const text = utf8.includes('�') ? file.buffer.toString('latin1') : utf8;
+    const utf8 = file.buffer.toString("utf8");
+    const text = utf8.includes("�") ? file.buffer.toString("latin1") : utf8;
     const urlRegex = /https?:\/\/[^\s<>()]+/gi;
     const rows: Array<{ index: number; url: string }> = [];
 
@@ -126,9 +116,7 @@ export class ImportsService {
     );
     let nextPosition = maxPosition + 1;
     const existingHashes = new Set(
-      existingResources
-        .map((resource) => resource.link?.urlHash)
-        .filter(Boolean) as string[],
+      existingResources.map((resource) => resource.link?.urlHash).filter(Boolean) as string[],
     );
 
     let importedCount = 0;
@@ -138,7 +126,7 @@ export class ImportsService {
     for (const row of rows) {
       try {
         const canonicalUrl = canonicalizeUrl(row.url);
-        const urlHash = createHash('sha256').update(canonicalUrl).digest('hex');
+        const urlHash = createHash("sha256").update(canonicalUrl).digest("hex");
 
         if (existingHashes.has(urlHash)) {
           skippedCount += 1;
@@ -170,7 +158,7 @@ export class ImportsService {
       } catch {
         errors.push({
           row: row.index,
-          reason: 'invalid_or_unsupported_url',
+          reason: "invalid_or_unsupported_url",
           value: row.url.slice(0, 128),
         });
       }
@@ -186,18 +174,16 @@ export class ImportsService {
     };
   }
 
-  private ensureValidFile(
-    file: unknown,
-  ): asserts file is { buffer: Buffer; size: number } {
+  private ensureValidFile(file: unknown): asserts file is { buffer: Buffer; size: number } {
     if (!file) {
-      throw new BadRequestException('File is required');
+      throw new BadRequestException("File is required");
     }
     const candidate = file as { buffer?: Buffer; size?: number };
-    if (!candidate.buffer || typeof candidate.size !== 'number') {
-      throw new BadRequestException('Invalid upload payload');
+    if (!candidate.buffer || typeof candidate.size !== "number") {
+      throw new BadRequestException("Invalid upload payload");
     }
     if (candidate.size > MAX_IMPORT_SIZE_BYTES) {
-      throw new BadRequestException('File exceeds 10MB limit');
+      throw new BadRequestException("File exceeds 10MB limit");
     }
   }
 
@@ -207,7 +193,7 @@ export class ImportsService {
         where: { id: dto.targetCollectionId },
       });
       if (!collection) {
-        throw new NotFoundException('Target collection not found');
+        throw new NotFoundException("Target collection not found");
       }
       // Importing is content write: hub members and direct-share editors.
       await this.policy.requireWriteContent(collection, user);
@@ -215,19 +201,17 @@ export class ImportsService {
     }
 
     if (!dto.createCollection) {
-      throw new BadRequestException(
-        'Provide targetCollectionId or set createCollection=true',
-      );
+      throw new BadRequestException("Provide targetCollectionId or set createCollection=true");
     }
     if (!dto.collectionTitle || !dto.collectionSlug) {
       throw new BadRequestException(
-        'collectionTitle and collectionSlug are required when createCollection=true',
+        "collectionTitle and collectionSlug are required when createCollection=true",
       );
     }
 
     const hubId = await this.hubs.getPrimaryHubId(user.userId);
     if (!hubId) {
-      throw new BadRequestException('No hub available for this user');
+      throw new BadRequestException("No hub available for this user");
     }
 
     return this.prisma.collection.create({
@@ -241,5 +225,5 @@ export class ImportsService {
 }
 
 function stripHtml(value: string) {
-  return value.replace(/<[^>]*>/g, '').trim();
+  return value.replace(/<[^>]*>/g, "").trim();
 }

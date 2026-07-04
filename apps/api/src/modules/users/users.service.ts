@@ -3,12 +3,12 @@ import {
   ForbiddenException,
   Injectable,
   NotFoundException,
-} from '@nestjs/common';
-import { PrismaService } from 'src/database/prisma.service';
-import { UserRole } from 'src/common/enums/user-role.enum';
-import { AuthUser } from 'src/common/interfaces/auth-user.interface';
-import { User } from 'src/generated/prisma/client';
-import { UpdateUserDto } from './dto/update-user.dto';
+} from "@nestjs/common";
+import { UserRole } from "src/common/enums/user-role.enum";
+import { AuthUser } from "src/common/interfaces/auth-user.interface";
+import { PrismaService } from "src/database/prisma.service";
+import { User } from "src/generated/prisma/client";
+import { UpdateUserDto } from "./dto/update-user.dto";
 
 @Injectable()
 export class UsersService {
@@ -18,21 +18,17 @@ export class UsersService {
     const user = await this.prisma.user.findUnique({ where: { username } });
 
     if (!user) {
-      throw new NotFoundException('User not found');
+      throw new NotFoundException("User not found");
     }
 
     return this.toPublicUser(user);
   }
 
-  async updateByUsername(
-    username: string,
-    actor: AuthUser,
-    dto: UpdateUserDto,
-  ) {
+  async updateByUsername(username: string, actor: AuthUser, dto: UpdateUserDto) {
     const user = await this.prisma.user.findUnique({ where: { username } });
 
     if (!user) {
-      throw new NotFoundException('User not found');
+      throw new NotFoundException("User not found");
     }
 
     this.ensureWriteAccess(actor, user.id);
@@ -50,7 +46,7 @@ export class UsersService {
         select: { id: true },
       });
       if (exists) {
-        throw new ConflictException('Username already exists');
+        throw new ConflictException("Username already exists");
       }
       data.username = dto.username;
       data.displayUsername = dto.username;
@@ -63,16 +59,16 @@ export class UsersService {
         select: { id: true },
       });
       if (exists) {
-        throw new ConflictException('Email already exists');
+        throw new ConflictException("Email already exists");
       }
       data.email = normalized;
     }
 
     if (dto.password) {
       // Password now lives on the better-auth credential account row.
-      const passwordHash = await Bun.password.hash(dto.password, 'argon2id');
+      const passwordHash = await Bun.password.hash(dto.password, "argon2id");
       await this.prisma.account.updateMany({
-        where: { userId: user.id, providerId: 'credential' },
+        where: { userId: user.id, providerId: "credential" },
         data: { password: passwordHash },
       });
     }
@@ -92,7 +88,7 @@ export class UsersService {
     const user = await this.prisma.user.findUnique({ where: { username } });
 
     if (!user) {
-      throw new NotFoundException('User not found');
+      throw new NotFoundException("User not found");
     }
 
     this.ensureWriteAccess(actor, user.id);
@@ -107,7 +103,7 @@ export class UsersService {
     }
 
     if (actor.userId !== targetUserId) {
-      throw new ForbiddenException('Forbidden');
+      throw new ForbiddenException("Forbidden");
     }
   }
 

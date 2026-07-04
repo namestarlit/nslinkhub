@@ -3,20 +3,28 @@
   "version": "0.0.1",
   "private": true,
   "license": "UNLICENSED",
-  "workspaces": ["apps/*", "packages/*"],
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
     "build": "bun run --cwd apps/api build",
     "check:boundaries": "bun tooling/check-client-boundaries.ts",
     "typecheck:types": "bun run --cwd packages/types typecheck",
-    "verify": "bun run check:boundaries && bun run typecheck:types && bun run --cwd apps/api verify",
-    "format": "bun run --cwd apps/api format",
+    "verify": "bun run check:boundaries && bun run typecheck:types && bun run format:check && bun run lint && bun run --cwd apps/api verify",
+    "check": "biome check --write package.json biome.json apps packages tooling",
+    "format": "biome format --write package.json biome.json apps packages tooling",
+    "format:check": "biome format package.json biome.json apps packages tooling",
+    "lint": "biome lint package.json biome.json apps packages tooling",
     "start": "bun run --cwd apps/api start",
     "start:dev": "bun run --cwd apps/api start:dev",
     "start:debug": "bun run --cwd apps/api start:debug",
     "start:prod": "bun run --cwd apps/api start:prod",
-    "lint": "bun run --cwd apps/api lint",
     "test": "bun run --cwd apps/api test",
     "test:e2e": "bun run --cwd apps/api test:e2e"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.4.16"
   },
   "trustedDependencies": [
     "@prisma/engines",

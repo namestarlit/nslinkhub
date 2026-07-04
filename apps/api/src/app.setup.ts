@@ -1,10 +1,10 @@
-import { INestApplication, ValidationPipe } from '@nestjs/common';
-import { toNodeHandler } from 'better-auth/node';
-import type { Express } from 'express';
-import { json, urlencoded } from 'express';
-import { auth } from './auth/auth';
-import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
-import { requestIdMiddleware } from './common/middleware/request-id';
+import { INestApplication, ValidationPipe } from "@nestjs/common";
+import { toNodeHandler } from "better-auth/node";
+import type { Express } from "express";
+import { json, urlencoded } from "express";
+import { auth } from "./auth/auth";
+import { AllExceptionsFilter } from "./common/filters/all-exceptions.filter";
+import { requestIdMiddleware } from "./common/middleware/request-id";
 
 // Shared between main.ts and the e2e tests so both run the same HTTP stack.
 // Requires the app to be created with `bodyParser: false`: the better-auth
@@ -14,9 +14,9 @@ import { requestIdMiddleware } from './common/middleware/request-id';
 export function configureApp(app: INestApplication): void {
   const expressApp = app.getHttpAdapter().getInstance() as Express;
   expressApp.use(requestIdMiddleware);
-  expressApp.all('/api/v1/auth/{*any}', toNodeHandler(auth));
+  expressApp.all("/api/v1/auth/{*any}", toNodeHandler(auth));
 
-  app.use(json({ limit: '1mb' }));
+  app.use(json({ limit: "1mb" }));
   app.use(urlencoded({ extended: true }));
 
   app.useGlobalPipes(

@@ -1,11 +1,11 @@
-import { beforeEach, describe, it } from 'bun:test';
-import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication } from '@nestjs/common';
-import request from 'supertest';
-import { App } from 'supertest/types';
-import { AppModule } from './../src/app.module';
+import { beforeEach, describe, it } from "bun:test";
+import { INestApplication } from "@nestjs/common";
+import { Test, TestingModule } from "@nestjs/testing";
+import request from "supertest";
+import { App } from "supertest/types";
+import { AppModule } from "./../src/app.module";
 
-describe('AppController (e2e)', () => {
+describe("AppController (e2e)", () => {
   let app: INestApplication<App>;
 
   beforeEach(async () => {
@@ -17,10 +17,10 @@ describe('AppController (e2e)', () => {
     await app.init();
   });
 
-  it('/api/v1/health (GET)', () => {
+  it("/api/v1/health (GET)", () => {
     return request(app.getHttpServer())
-      .get('/api/v1/health')
+      .get("/api/v1/health")
       .expect(200)
-      .expect({ data: { status: 'ok' } });
+      .expect({ data: { status: "ok" } });
   });
 });

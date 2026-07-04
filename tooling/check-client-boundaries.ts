@@ -2,18 +2,18 @@
 // the API over HTTP and the `@nslinkhub/types` contract only — never
 // `apps/api` source or the persistence layer (ARCHITECTURE dependency rules).
 // A no-op pass until apps/web / apps/extension exist.
-import { existsSync, readdirSync, readFileSync, statSync } from 'fs';
-import { join } from 'path';
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
+import { join } from "node:path";
 
-const CLIENT_DIRS = ['apps/web', 'apps/extension'];
+const CLIENT_DIRS = ["apps/web", "apps/extension"];
 const CODE_EXT = /\.(ts|tsx|js|jsx|mjs|cjs)$/;
-const SKIP_DIRS = new Set(['node_modules', '.next', 'dist', 'build', '.turbo']);
+const SKIP_DIRS = new Set(["node_modules", ".next", "dist", "build", ".turbo"]);
 
 const FORBIDDEN: Array<{ pattern: RegExp; why: string }> = [
-  { pattern: /(^|[^\w])@prisma\//, why: 'Prisma client (@prisma/*)' },
-  { pattern: /(^|\/)apps\/api(\/|$)/, why: 'apps/api backend internals' },
-  { pattern: /generated\/prisma/, why: 'generated Prisma client' },
-  { pattern: /prisma\.(service|module)/, why: 'PrismaService / PrismaModule' },
+  { pattern: /(^|[^\w])@prisma\//, why: "Prisma client (@prisma/*)" },
+  { pattern: /(^|\/)apps\/api(\/|$)/, why: "apps/api backend internals" },
+  { pattern: /generated\/prisma/, why: "generated Prisma client" },
+  { pattern: /prisma\.(service|module)/, why: "PrismaService / PrismaModule" },
 ];
 
 const IMPORT_RE =
@@ -35,11 +35,12 @@ function walk(dir: string): string[] {
 
 function specifiers(source: string): string[] {
   const specs: string[] = [];
-  let match: RegExpExecArray | null;
   IMPORT_RE.lastIndex = 0;
-  while ((match = IMPORT_RE.exec(source)) !== null) {
+  let match = IMPORT_RE.exec(source);
+  while (match !== null) {
     const spec = match[1] ?? match[2];
     if (spec) specs.push(spec);
+    match = IMPORT_RE.exec(source);
   }
   return specs;
 }
@@ -48,15 +49,15 @@ const violations: Array<{ file: string; spec: string; why: string }> = [];
 let scanned = 0;
 
 for (const clientDir of CLIENT_DIRS) {
-  const base = existsSync(join(clientDir, 'src'))
-    ? join(clientDir, 'src')
+  const base = existsSync(join(clientDir, "src"))
+    ? join(clientDir, "src")
     : existsSync(clientDir)
       ? clientDir
       : null;
   if (!base) continue;
   for (const file of walk(base)) {
     scanned += 1;
-    const source = readFileSync(file, 'utf8');
+    const source = readFileSync(file, "utf8");
     for (const spec of specifiers(source)) {
       for (const rule of FORBIDDEN) {
         if (rule.pattern.test(spec)) {
@@ -68,16 +69,12 @@ for (const clientDir of CLIENT_DIRS) {
 }
 
 if (violations.length > 0) {
-  console.error('Client boundary check FAILED:\n');
+  console.error("Client boundary check FAILED:\n");
   for (const v of violations) {
     console.error(`  ${v.file}\n    imports "${v.spec}" -> ${v.why}`);
   }
-  console.error(
-    '\nClients must consume the API over HTTP and @nslinkhub/types only.',
-  );
+  console.error("\nClients must consume the API over HTTP and @nslinkhub/types only.");
   process.exit(1);
 }
 
-console.log(
-  `Client boundary check passed (${scanned} client file(s) scanned).`,
-);
+console.log(`Client boundary check passed (${scanned} client file(s) scanned).`);

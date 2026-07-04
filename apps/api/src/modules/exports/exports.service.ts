@@ -1,21 +1,21 @@
-import { InjectQueue } from '@nestjs/bullmq';
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { Queue } from 'bullmq';
-import { PrismaService } from 'src/database/prisma.service';
-import { UserRole } from 'src/common/enums/user-role.enum';
-import { AuthUser } from 'src/common/interfaces/auth-user.interface';
-import { Collection, ExportJob } from 'src/generated/prisma/client';
-import { CollectionPolicyService } from '../hubs/collection-policy.service';
-import { HubsService } from '../hubs/hubs.service';
-import { buildMarkdown } from './export-markdown.util';
+import { InjectQueue } from "@nestjs/bullmq";
+import { Injectable, NotFoundException } from "@nestjs/common";
+import { Queue } from "bullmq";
+import { UserRole } from "src/common/enums/user-role.enum";
+import { AuthUser } from "src/common/interfaces/auth-user.interface";
+import { PrismaService } from "src/database/prisma.service";
+import { Collection, ExportJob } from "src/generated/prisma/client";
+import { CollectionPolicyService } from "../hubs/collection-policy.service";
+import { HubsService } from "../hubs/hubs.service";
+import { buildMarkdown } from "./export-markdown.util";
 
 export interface ExportJobView {
   id: string;
   hubId: string;
   collectionId: string;
   requestedByUserId: string | null;
-  format: 'pdf';
-  status: 'queued' | 'running' | 'completed' | 'failed';
+  format: "pdf";
+  status: "queued" | "running" | "completed" | "failed";
   outputRef: string | null;
   errorMessage: string | null;
   createdAt: Date;
@@ -28,7 +28,7 @@ export class ExportsService {
     private readonly prisma: PrismaService,
     private readonly hubs: HubsService,
     private readonly policy: CollectionPolicyService,
-    @InjectQueue('exports')
+    @InjectQueue("exports")
     private readonly exportsQueue: Queue,
   ) {}
 
@@ -42,11 +42,11 @@ export class ExportsService {
         linkedCollection: true,
         resourceTags: { include: { tag: true } },
       },
-      orderBy: { position: 'asc' },
+      orderBy: { position: "asc" },
     });
 
     const markdown = buildMarkdown(collection, resources);
-    return { collectionId, format: 'markdown', content: markdown };
+    return { collectionId, format: "markdown", content: markdown };
   }
 
   async exportPdf(collectionId: string, user: AuthUser) {
@@ -57,15 +57,15 @@ export class ExportsService {
         hubId: collection.hubId,
         collectionId,
         requestedByUserId: user.userId,
-        format: 'pdf',
-        status: 'queued',
+        format: "pdf",
+        status: "queued",
         outputRef: null,
         errorMessage: null,
       },
     });
 
     await this.exportsQueue.add(
-      'generate-pdf',
+      "generate-pdf",
       { exportJobId: saved.id, collectionId },
       { jobId: saved.id, removeOnComplete: 100, removeOnFail: 500 },
     );
@@ -78,7 +78,7 @@ export class ExportsService {
       where: { id: jobId },
     });
     if (!job) {
-      throw new NotFoundException('Export job not found');
+      throw new NotFoundException("Export job not found");
     }
 
     if (user.role !== UserRole.ADMIN) {
@@ -96,7 +96,7 @@ export class ExportsService {
       where: { id: collectionId },
     });
     if (!collection) {
-      throw new NotFoundException('Collection not found');
+      throw new NotFoundException("Collection not found");
     }
     await this.policy.requireRead(collection, user);
     return collection;
@@ -108,8 +108,8 @@ export class ExportsService {
       hubId: job.hubId,
       collectionId: job.collectionId,
       requestedByUserId: job.requestedByUserId,
-      format: job.format as ExportJobView['format'],
-      status: job.status as ExportJobView['status'],
+      format: job.format as ExportJobView["format"],
+      status: job.status as ExportJobView["status"],
       outputRef: job.outputRef,
       errorMessage: job.errorMessage,
       createdAt: job.createdAt,

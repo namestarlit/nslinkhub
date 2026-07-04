@@ -5,14 +5,13 @@
   "license": "UNLICENSED",
   "scripts": {
     "build": "nest build",
-    "verify": "bun run build && bun run lint && bun test src && bun test test",
+    "verify": "bun run build && bun run typecheck && bun test src && bun test test",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
     "postinstall": "prisma generate",
-    "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "bun src/main.ts",
     "start:dev": "bun --watch src/main.ts",
     "start:debug": "bun --inspect --watch src/main.ts",
     "start:prod": "bun dist/main.js",
-    "lint": "eslint \"{src,test}/**/*.ts\" --fix",
     "test": "bun test src",
     "test:watch": "bun test --watch src",
     "test:cov": "bun test --coverage src",
@@ -40,8 +39,6 @@
     "rxjs": "^7.8.1"
   },
   "devDependencies": {
-    "@eslint/eslintrc": "^3.2.0",
-    "@eslint/js": "^9.18.0",
     "@nestjs/cli": "^11.0.0",
     "@nestjs/schematics": "^11.0.0",
     "@nestjs/testing": "^11.0.1",
@@ -50,14 +47,8 @@
     "@types/express": "^5.0.0",
     "@types/node": "^22.10.7",
     "@types/supertest": "^6.0.2",
-    "eslint": "^9.18.0",
-    "eslint-config-prettier": "^10.0.1",
-    "eslint-plugin-prettier": "^5.2.2",
-    "globals": "^16.0.0",
-    "prettier": "^3.4.2",
     "prisma": "^7.8.0",
     "supertest": "^7.0.0",
-    "typescript": "^5.7.3",
-    "typescript-eslint": "^8.20.0"
+    "typescript": "^5.7.3"
   }
 }

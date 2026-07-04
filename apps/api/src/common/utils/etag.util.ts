@@ -7,12 +7,12 @@ export function ifNoneMatchHit(headerValue: string | undefined, etag: string) {
     return false;
   }
 
-  if (headerValue.trim() === '*') {
+  if (headerValue.trim() === "*") {
     return true;
   }
 
   return headerValue
-    .split(',')
+    .split(",")
     .map((value) => value.trim())
     .includes(etag);
 }

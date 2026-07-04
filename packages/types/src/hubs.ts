@@ -1,6 +1,6 @@
-import type { IsoTimestamp } from './envelope';
-import type { HubRole, InvitationStatus, MembershipStatus } from './common';
-import type { Collection } from './collections';
+import type { Collection } from "./collections";
+import type { HubRole, InvitationStatus, MembershipStatus } from "./common";
+import type { IsoTimestamp } from "./envelope";
 
 export interface HubSummary {
   id: string;
@@ -25,7 +25,7 @@ export interface HubMember {
 export interface HubInvitation {
   id: string;
   email: string;
-  role: Exclude<HubRole, 'owner'>;
+  role: Exclude<HubRole, "owner">;
   status: InvitationStatus;
   expiresAt: IsoTimestamp;
   createdAt: IsoTimestamp;
@@ -33,7 +33,7 @@ export interface HubInvitation {
 
 export interface CreateInvitationRequest {
   email: string;
-  role: Exclude<HubRole, 'owner'>;
+  role: Exclude<HubRole, "owner">;
 }
 
 export interface AcceptInvitationRequest {
@@ -41,7 +41,7 @@ export interface AcceptInvitationRequest {
 }
 
 export interface ChangeRoleRequest {
-  role: Exclude<HubRole, 'owner'>;
+  role: Exclude<HubRole, "owner">;
 }
 
 export interface TransferOwnershipRequest {

@@ -1,16 +1,13 @@
-import 'dotenv/config';
-import { PrismaPg } from '@prisma/adapter-pg';
-import { betterAuth } from 'better-auth';
-import { prismaAdapter } from 'better-auth/adapters/prisma';
-import { bearer, username } from 'better-auth/plugins';
-import { PrismaClient } from '../generated/prisma/client';
-import { createPersonalHub } from '../modules/hubs/hub-onboarding';
+import "dotenv/config";
+import { PrismaPg } from "@prisma/adapter-pg";
+import { betterAuth } from "better-auth";
+import { prismaAdapter } from "better-auth/adapters/prisma";
+import { bearer, username } from "better-auth/plugins";
+import { PrismaClient } from "../generated/prisma/client";
+import { createPersonalHub } from "../modules/hubs/hub-onboarding";
 
 function databaseUrl(): string {
-  return (
-    process.env.DATABASE_URL ??
-    'postgresql://postgres:postgres@127.0.0.1:5432/nslinkhub'
-  );
+  return process.env.DATABASE_URL ?? "postgresql://postgres:postgres@127.0.0.1:5432/nslinkhub";
 }
 
 // Dedicated client for better-auth (separate from Nest's PrismaService so the
@@ -21,22 +18,22 @@ const prisma = new PrismaClient({
 });
 
 export const auth = betterAuth({
-  basePath: '/api/v1/auth',
-  secret: process.env.BETTER_AUTH_SECRET ?? 'dev-better-auth-secret',
-  baseURL: process.env.BETTER_AUTH_URL ?? 'http://localhost:3000',
-  database: prismaAdapter(prisma, { provider: 'postgresql' }),
+  basePath: "/api/v1/auth",
+  secret: process.env.BETTER_AUTH_SECRET ?? "dev-better-auth-secret",
+  baseURL: process.env.BETTER_AUTH_URL ?? "http://localhost:3000",
+  database: prismaAdapter(prisma, { provider: "postgresql" }),
   emailAndPassword: {
     enabled: true,
     password: {
       // argon2id via Bun's native hasher instead of better-auth's default scrypt.
-      hash: (password) => Bun.password.hash(password, 'argon2id'),
+      hash: (password) => Bun.password.hash(password, "argon2id"),
       verify: ({ hash, password }) => Bun.password.verify(password, hash),
     },
   },
   user: {
     additionalFields: {
-      role: { type: 'string', defaultValue: 'user', input: false },
-      bio: { type: 'string', required: false, input: false },
+      role: { type: "string", defaultValue: "user", input: false },
+      bio: { type: "string", required: false, input: false },
     },
   },
   advanced: {

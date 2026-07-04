@@ -1,4 +1,4 @@
-import { IsEmail, IsIn, IsOptional, IsString } from 'class-validator';
+import { IsEmail, IsIn, IsOptional, IsString } from "class-validator";
 
 export class CreateShareDto {
   @IsEmail()
@@ -6,6 +6,6 @@ export class CreateShareDto {
 
   @IsOptional()
   @IsString()
-  @IsIn(['reader', 'editor'])
-  role?: 'reader' | 'editor';
+  @IsIn(["reader", "editor"])
+  role?: "reader" | "editor";
 }

@@ -1,8 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from 'src/database/prisma.service';
-import { AuthUser } from 'src/common/interfaces/auth-user.interface';
-import { CollectionPolicyService } from '../hubs/collection-policy.service';
-import { AttachTagDto } from './dto/attach-tag.dto';
+import { Injectable, NotFoundException } from "@nestjs/common";
+import { AuthUser } from "src/common/interfaces/auth-user.interface";
+import { PrismaService } from "src/database/prisma.service";
+import { CollectionPolicyService } from "../hubs/collection-policy.service";
+import { AttachTagDto } from "./dto/attach-tag.dto";
 
 @Injectable()
 export class TagsService {
@@ -11,11 +11,7 @@ export class TagsService {
     private readonly policy: CollectionPolicyService,
   ) {}
 
-  async attachToCollection(
-    collectionId: string,
-    user: AuthUser,
-    dto: AttachTagDto,
-  ) {
+  async attachToCollection(collectionId: string, user: AuthUser, dto: AttachTagDto) {
     const collection = await this.requireWritableCollection(collectionId, user);
     const tag = await this.getOrCreateTag(dto.name);
 
@@ -36,17 +32,13 @@ export class TagsService {
     };
   }
 
-  async removeFromCollection(
-    collectionId: string,
-    user: AuthUser,
-    tagName: string,
-  ) {
+  async removeFromCollection(collectionId: string, user: AuthUser, tagName: string) {
     const collection = await this.requireWritableCollection(collectionId, user);
     const tag = await this.prisma.tag.findUnique({
       where: { name: tagName.toLowerCase() },
     });
     if (!tag) {
-      throw new NotFoundException('Tag not found');
+      throw new NotFoundException("Tag not found");
     }
 
     await this.prisma.collectionTag.deleteMany({
@@ -56,16 +48,12 @@ export class TagsService {
     return { collectionId: collection.id, tag: tag.name, removed: true };
   }
 
-  async attachToResource(
-    resourceId: string,
-    user: AuthUser,
-    dto: AttachTagDto,
-  ) {
+  async attachToResource(resourceId: string, user: AuthUser, dto: AttachTagDto) {
     const resource = await this.prisma.resource.findUnique({
       where: { id: resourceId },
     });
     if (!resource) {
-      throw new NotFoundException('Resource not found');
+      throw new NotFoundException("Resource not found");
     }
 
     await this.requireWritableCollection(resource.collectionId, user);
@@ -86,16 +74,12 @@ export class TagsService {
     };
   }
 
-  async removeFromResource(
-    resourceId: string,
-    user: AuthUser,
-    tagName: string,
-  ) {
+  async removeFromResource(resourceId: string, user: AuthUser, tagName: string) {
     const resource = await this.prisma.resource.findUnique({
       where: { id: resourceId },
     });
     if (!resource) {
-      throw new NotFoundException('Resource not found');
+      throw new NotFoundException("Resource not found");
     }
 
     await this.requireWritableCollection(resource.collectionId, user);
@@ -104,7 +88,7 @@ export class TagsService {
       where: { name: tagName.toLowerCase() },
     });
     if (!tag) {
-      throw new NotFoundException('Tag not found');
+      throw new NotFoundException("Tag not found");
     }
 
     await this.prisma.resourceTag.deleteMany({
@@ -115,7 +99,7 @@ export class TagsService {
   }
 
   private async getOrCreateTag(rawName: string) {
-    const normalized = rawName.trim().replace(/\s+/g, ' ').toLowerCase();
+    const normalized = rawName.trim().replace(/\s+/g, " ").toLowerCase();
     let tag = await this.prisma.tag.findUnique({ where: { name: normalized } });
     if (!tag) {
       tag = await this.prisma.tag.create({ data: { name: normalized } });
@@ -123,15 +107,12 @@ export class TagsService {
     return tag;
   }
 
-  private async requireWritableCollection(
-    collectionId: string,
-    actor: AuthUser,
-  ) {
+  private async requireWritableCollection(collectionId: string, actor: AuthUser) {
     const collection = await this.prisma.collection.findUnique({
       where: { id: collectionId },
     });
     if (!collection) {
-      throw new NotFoundException('Collection not found');
+      throw new NotFoundException("Collection not found");
     }
     // Content write: hub members and direct-share editors.
     await this.policy.requireWriteContent(collection, actor);

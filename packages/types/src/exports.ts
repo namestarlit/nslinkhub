@@ -1,5 +1,5 @@
-import type { IsoTimestamp } from './envelope';
-import type { ExportFormat, ExportStatus } from './common';
+import type { ExportFormat, ExportStatus } from "./common";
+import type { IsoTimestamp } from "./envelope";
 
 export interface ExportJob {
   id: string;
@@ -16,6 +16,6 @@ export interface ExportJob {
 
 export interface MarkdownExport {
   collectionId: string;
-  format: 'markdown';
+  format: "markdown";
   content: string;
 }

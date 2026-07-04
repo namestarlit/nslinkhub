@@ -1,26 +1,26 @@
+import { createHash, randomBytes } from "node:crypto";
 import {
   BadRequestException,
   ConflictException,
   Injectable,
   NotFoundException,
-} from '@nestjs/common';
-import { createHash, randomBytes } from 'crypto';
-import { PrismaService } from 'src/database/prisma.service';
-import { ResourceKind } from 'src/common/enums/resource-kind.enum';
-import { UserRole } from 'src/common/enums/user-role.enum';
-import { AuthUser } from 'src/common/interfaces/auth-user.interface';
-import { CursorQueryDto } from 'src/common/dto/cursor-query.dto';
-import { PaginationQueryDto } from 'src/common/dto/pagination-query.dto';
-import { decodeCursor, encodeCursor } from 'src/common/utils/cursor.util';
-import { parseIfMatchVersion, toVersionEtag } from 'src/common/utils/etag.util';
-import { Collection } from 'src/generated/prisma/client';
-import { CollectionPolicyService } from '../hubs/collection-policy.service';
-import { HubsService } from '../hubs/hubs.service';
-import { CreateChildCollectionDto } from './dto/create-child-collection.dto';
-import { CreateCollectionDto } from './dto/create-collection.dto';
-import { CreateShareDto } from './dto/create-share.dto';
-import { SetLinkSharingDto } from './dto/set-link-sharing.dto';
-import { UpdateCollectionDto } from './dto/update-collection.dto';
+} from "@nestjs/common";
+import { CursorQueryDto } from "src/common/dto/cursor-query.dto";
+import { PaginationQueryDto } from "src/common/dto/pagination-query.dto";
+import { ResourceKind } from "src/common/enums/resource-kind.enum";
+import { UserRole } from "src/common/enums/user-role.enum";
+import { AuthUser } from "src/common/interfaces/auth-user.interface";
+import { decodeCursor, encodeCursor } from "src/common/utils/cursor.util";
+import { parseIfMatchVersion, toVersionEtag } from "src/common/utils/etag.util";
+import { PrismaService } from "src/database/prisma.service";
+import { Collection } from "src/generated/prisma/client";
+import { CollectionPolicyService } from "../hubs/collection-policy.service";
+import { HubsService } from "../hubs/hubs.service";
+import { CreateChildCollectionDto } from "./dto/create-child-collection.dto";
+import { CreateCollectionDto } from "./dto/create-collection.dto";
+import { CreateShareDto } from "./dto/create-share.dto";
+import { SetLinkSharingDto } from "./dto/set-link-sharing.dto";
+import { UpdateCollectionDto } from "./dto/update-collection.dto";
 
 @Injectable()
 export class CollectionsService {
@@ -37,15 +37,8 @@ export class CollectionsService {
     return this.createInHub(user, hubId, dto);
   }
 
-  async createChild(
-    parentId: string,
-    user: AuthUser,
-    dto: CreateChildCollectionDto,
-  ) {
-    const parent = await this.requireCollection(
-      parentId,
-      'Parent collection not found',
-    );
+  async createChild(parentId: string, user: AuthUser, dto: CreateChildCollectionDto) {
+    const parent = await this.requireCollection(parentId, "Parent collection not found");
     await this.policy.requireManage(parent, user);
 
     const child = await this.createInHub(user, parent.hubId, {
@@ -74,24 +67,16 @@ export class CollectionsService {
 
   // --- settings / lifecycle ----------------------------------------------
 
-  async update(
-    id: string,
-    user: AuthUser,
-    dto: UpdateCollectionDto,
-    ifMatch?: string,
-  ) {
+  async update(id: string, user: AuthUser, dto: UpdateCollectionDto, ifMatch?: string) {
     const collection = await this.requireCollection(id);
     await this.policy.requireManage(collection, user);
 
     const versionFromHeader = parseIfMatchVersion(ifMatch);
-    if (
-      versionFromHeader !== null &&
-      versionFromHeader !== Number(collection.version)
-    ) {
-      throw new ConflictException('Version mismatch');
+    if (versionFromHeader !== null && versionFromHeader !== Number(collection.version)) {
+      throw new ConflictException("Version mismatch");
     }
     if (Number(dto.version) !== Number(collection.version)) {
-      throw new ConflictException('Version mismatch');
+      throw new ConflictException("Version mismatch");
     }
 
     if (dto.slug && dto.slug !== collection.slug) {
@@ -100,7 +85,7 @@ export class CollectionsService {
         select: { id: true },
       });
       if (exists) {
-        throw new ConflictException('Collection slug already exists');
+        throw new ConflictException("Collection slug already exists");
       }
     }
 
@@ -113,18 +98,14 @@ export class CollectionsService {
         parentCollectionId = null;
       } else {
         if (dto.parentCollectionId === collection.id) {
-          throw new BadRequestException(
-            'Collection cannot be parent of itself',
-          );
+          throw new BadRequestException("Collection cannot be parent of itself");
         }
         const parent = await this.requireCollection(
           dto.parentCollectionId,
-          'Parent collection not found',
+          "Parent collection not found",
         );
         if (parent.hubId !== collection.hubId) {
-          throw new BadRequestException(
-            'Parent collection must be in the same hub',
-          );
+          throw new BadRequestException("Parent collection must be in the same hub");
         }
         parentCollectionId = dto.parentCollectionId;
       }
@@ -182,8 +163,8 @@ export class CollectionsService {
     let token: string | undefined;
     let shareTokenHash = collection.shareTokenHash ?? undefined;
     if (needsToken) {
-      token = randomBytes(24).toString('base64url');
-      shareTokenHash = createHash('sha256').update(token).digest('hex');
+      token = randomBytes(24).toString("base64url");
+      shareTokenHash = createHash("sha256").update(token).digest("hex");
     }
 
     await this.prisma.collection.update({
@@ -214,20 +195,20 @@ export class CollectionsService {
       select: { id: true, username: true },
     });
     if (!target) {
-      throw new NotFoundException('No account found for that email');
+      throw new NotFoundException("No account found for that email");
     }
 
-    const role = dto.role ?? 'reader';
+    const role = dto.role ?? "reader";
     await this.prisma.collectionShare.upsert({
       where: {
         collectionId_userId: { collectionId: collection.id, userId: target.id },
       },
-      update: { role, source: 'direct' },
+      update: { role, source: "direct" },
       create: {
         collectionId: collection.id,
         userId: target.id,
         role,
-        source: 'direct',
+        source: "direct",
       },
     });
 
@@ -249,7 +230,7 @@ export class CollectionsService {
     const shares = await this.prisma.collectionShare.findMany({
       where: { collectionId: collection.id },
       include: { user: { select: { id: true, username: true } } },
-      orderBy: { createdAt: 'asc' },
+      orderBy: { createdAt: "asc" },
     });
     return shares.map((share) => ({
       userId: share.userId,
@@ -264,7 +245,7 @@ export class CollectionsService {
   async save(id: string, user: AuthUser) {
     const collection = await this.requireCollection(id);
     if (!collection.published) {
-      throw new BadRequestException('Only published collections can be saved');
+      throw new BadRequestException("Only published collections can be saved");
     }
     await this.prisma.collectionSave.upsert({
       where: {
@@ -292,11 +273,11 @@ export class CollectionsService {
     const shares = await this.prisma.collectionShare.findMany({
       where: { userId: user.userId },
       include: { collection: true },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
     });
     // Link-sourced access is valid only while link sharing stays enabled.
     return shares
-      .filter((s) => s.source === 'direct' || s.collection.linkSharingEnabled)
+      .filter((s) => s.source === "direct" || s.collection.linkSharingEnabled)
       .map((s) => ({
         ...this.toPublicCollection(s.collection),
         shareRole: s.role,
@@ -308,7 +289,7 @@ export class CollectionsService {
     const saves = await this.prisma.collectionSave.findMany({
       where: { userId: user.userId },
       include: { collection: true },
-      orderBy: { savedAt: 'desc' },
+      orderBy: { savedAt: "desc" },
     });
     // Dormant handling: an unpublished save stays listed but marked
     // unavailable, and revives when the collection is republished.
@@ -328,7 +309,7 @@ export class CollectionsService {
   async getHubPage(hubId: string, query: CursorQueryDto) {
     const hub = await this.prisma.hub.findUnique({ where: { id: hubId } });
     if (!hub) {
-      throw new NotFoundException('Hub not found');
+      throw new NotFoundException("Hub not found");
     }
     const collections = await this.listPublishedCollections(query, { hubId });
     return {
@@ -338,23 +319,18 @@ export class CollectionsService {
     };
   }
 
-  async listHubCollections(
-    hubId: string,
-    viewer: AuthUser | null,
-    query: CursorQueryDto,
-  ) {
+  async listHubCollections(hubId: string, viewer: AuthUser | null, query: CursorQueryDto) {
     const hub = await this.prisma.hub.findUnique({
       where: { id: hubId },
       select: { id: true },
     });
     if (!hub) {
-      throw new NotFoundException('Hub not found');
+      throw new NotFoundException("Hub not found");
     }
 
     const isMember =
       viewer !== null &&
-      (viewer.role === UserRole.ADMIN ||
-        (await this.hubs.isMember(hubId, viewer.userId)));
+      (viewer.role === UserRole.ADMIN || (await this.hubs.isMember(hubId, viewer.userId)));
 
     // Members see every collection; everyone else sees the published subset.
     return this.listCollectionsKeyset(query, {
@@ -373,14 +349,10 @@ export class CollectionsService {
       where: { hubId_slug: { hubId, slug } },
     });
     if (!collection) {
-      throw new NotFoundException('Collection not found');
+      throw new NotFoundException("Collection not found");
     }
 
-    const access = await this.policy.requireRead(
-      collection,
-      viewer,
-      shareToken,
-    );
+    const access = await this.policy.requireRead(collection, viewer, shareToken);
     if (access.viaLinkToken && viewer) {
       await this.policy.recordLinkAccess(collection.id, viewer.userId);
     }
@@ -405,7 +377,7 @@ export class CollectionsService {
 
     const children = await this.prisma.collection.findMany({
       where: { parentCollectionId: id },
-      orderBy: { updatedAt: 'desc' },
+      orderBy: { updatedAt: "desc" },
     });
 
     const visibleChildren: Collection[] = [];
@@ -426,20 +398,14 @@ export class CollectionsService {
 
   // --- internals ----------------------------------------------------------
 
-  private async createInHub(
-    user: AuthUser,
-    hubId: string,
-    dto: CreateCollectionDto,
-  ) {
+  private async createInHub(_user: AuthUser, hubId: string, dto: CreateCollectionDto) {
     if (dto.parentCollectionId) {
       const parent = await this.requireCollection(
         dto.parentCollectionId,
-        'Parent collection not found',
+        "Parent collection not found",
       );
       if (parent.hubId !== hubId) {
-        throw new BadRequestException(
-          'Parent collection must be in the same hub',
-        );
+        throw new BadRequestException("Parent collection must be in the same hub");
       }
     }
 
@@ -448,7 +414,7 @@ export class CollectionsService {
       select: { id: true },
     });
     if (exists) {
-      throw new ConflictException('Collection slug already exists');
+      throw new ConflictException("Collection slug already exists");
     }
 
     const saved = await this.prisma.collection.create({
@@ -464,10 +430,7 @@ export class CollectionsService {
     return this.toPublicCollection(saved);
   }
 
-  private async listPublishedCollections(
-    query: CursorQueryDto,
-    extraWhere: { hubId?: string },
-  ) {
+  private async listPublishedCollections(query: CursorQueryDto, extraWhere: { hubId?: string }) {
     return this.listCollectionsKeyset(query, {
       published: true,
       ...extraWhere,
@@ -479,17 +442,15 @@ export class CollectionsService {
     where: { hubId?: string; published?: boolean },
   ) {
     const limit = query.limit ?? 20;
-    const cursor = query.cursor
-      ? decodeCursor<{ u: string; id: string }>(query.cursor)
-      : null;
+    const cursor = query.cursor ? decodeCursor<{ u: string; id: string }>(query.cursor) : null;
     if (
       query.cursor &&
       (cursor === null ||
-        typeof cursor.u !== 'string' ||
-        typeof cursor.id !== 'string' ||
+        typeof cursor.u !== "string" ||
+        typeof cursor.id !== "string" ||
         Number.isNaN(Date.parse(cursor.u)))
     ) {
-      throw new BadRequestException('Invalid cursor');
+      throw new BadRequestException("Invalid cursor");
     }
 
     const rows = await this.prisma.collection.findMany({
@@ -504,7 +465,7 @@ export class CollectionsService {
             }
           : {}),
       },
-      orderBy: [{ updatedAt: 'desc' }, { id: 'desc' }],
+      orderBy: [{ updatedAt: "desc" }, { id: "desc" }],
       take: limit + 1,
     });
 
@@ -524,14 +485,14 @@ export class CollectionsService {
   private async requirePrimaryHub(user: AuthUser): Promise<string> {
     const hubId = await this.hubs.getPrimaryHubId(user.userId);
     if (!hubId) {
-      throw new BadRequestException('No hub available for this user');
+      throw new BadRequestException("No hub available for this user");
     }
     return hubId;
   }
 
   private async requireCollection(
     id: string,
-    message = 'Collection not found',
+    message = "Collection not found",
   ): Promise<Collection> {
     const collection = await this.prisma.collection.findUnique({
       where: { id },

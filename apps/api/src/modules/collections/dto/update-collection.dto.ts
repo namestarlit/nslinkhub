@@ -8,7 +8,7 @@ import {
   MaxLength,
   Min,
   MinLength,
-} from 'class-validator';
+} from "class-validator";
 
 export class UpdateCollectionDto {
   @IsOptional()

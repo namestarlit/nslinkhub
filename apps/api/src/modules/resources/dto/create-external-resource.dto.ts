@@ -1,12 +1,4 @@
-import {
-  IsInt,
-  IsOptional,
-  IsString,
-  IsUrl,
-  MaxLength,
-  Min,
-  MinLength,
-} from 'class-validator';
+import { IsInt, IsOptional, IsString, IsUrl, MaxLength, Min, MinLength } from "class-validator";
 
 export class CreateExternalResourceDto {
   @IsUrl({ require_protocol: true })

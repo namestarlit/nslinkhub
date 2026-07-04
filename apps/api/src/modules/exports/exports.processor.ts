@@ -1,11 +1,11 @@
-import { Processor, WorkerHost } from '@nestjs/bullmq';
-import { Job } from 'bullmq';
-import { Injectable, Logger } from '@nestjs/common';
-import { PrismaService } from 'src/database/prisma.service';
-import { buildMarkdown } from './export-markdown.util';
+import { Processor, WorkerHost } from "@nestjs/bullmq";
+import { Injectable, Logger } from "@nestjs/common";
+import { Job } from "bullmq";
+import { PrismaService } from "src/database/prisma.service";
+import { buildMarkdown } from "./export-markdown.util";
 
 @Injectable()
-@Processor('exports')
+@Processor("exports")
 export class ExportsProcessor extends WorkerHost {
   private readonly logger = new Logger(ExportsProcessor.name);
 
@@ -24,7 +24,7 @@ export class ExportsProcessor extends WorkerHost {
 
     await this.prisma.exportJob.update({
       where: { id: exportJob.id },
-      data: { status: 'running', errorMessage: null },
+      data: { status: "running", errorMessage: null },
     });
 
     try {
@@ -32,7 +32,7 @@ export class ExportsProcessor extends WorkerHost {
         where: { id: job.data.collectionId },
       });
       if (!collection) {
-        throw new Error('Collection not found for export processing');
+        throw new Error("Collection not found for export processing");
       }
 
       const resources = await this.prisma.resource.findMany({
@@ -42,14 +42,14 @@ export class ExportsProcessor extends WorkerHost {
           linkedCollection: true,
           resourceTags: { include: { tag: true } },
         },
-        orderBy: { position: 'asc' },
+        orderBy: { position: "asc" },
       });
 
       const markdown = buildMarkdown(collection, resources);
       await this.prisma.exportJob.update({
         where: { id: exportJob.id },
         data: {
-          status: 'completed',
+          status: "completed",
           outputRef: `pdf://generated/${exportJob.id}?sourceLength=${markdown.length}`,
           errorMessage: null,
         },
@@ -58,11 +58,8 @@ export class ExportsProcessor extends WorkerHost {
       await this.prisma.exportJob.update({
         where: { id: exportJob.id },
         data: {
-          status: 'failed',
-          errorMessage:
-            error instanceof Error
-              ? error.message.slice(0, 1000)
-              : 'Unknown error',
+          status: "failed",
+          errorMessage: error instanceof Error ? error.message.slice(0, 1000) : "Unknown error",
         },
       });
       throw error;

@@ -1,14 +1,14 @@
-import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
-import { INestApplication } from '@nestjs/common';
-import { Test } from '@nestjs/testing';
-import request from 'supertest';
-import { App } from 'supertest/types';
-import { AppModule } from '../src/app.module';
-import { configureApp } from '../src/app.setup';
+import { afterAll, beforeAll, describe, expect, it } from "bun:test";
+import { INestApplication } from "@nestjs/common";
+import { Test } from "@nestjs/testing";
+import request from "supertest";
+import { App } from "supertest/types";
+import { AppModule } from "../src/app.module";
+import { configureApp } from "../src/app.setup";
 
 // Phase B: hubs own collections; sign-up creates a personal hub; publication
 // (published boolean) + link sharing replace the visibility triad.
-describe('Hub tenancy (e2e)', () => {
+describe("Hub tenancy (e2e)", () => {
   let app: INestApplication<App>;
   let ownerBearer: string;
   const sfx = Date.now().toString(36);
@@ -25,57 +25,55 @@ describe('Hub tenancy (e2e)', () => {
     await app.init();
 
     const signUp = await request(app.getHttpServer())
-      .post('/api/v1/auth/sign-up/email')
+      .post("/api/v1/auth/sign-up/email")
       .send({
         email: `${owner}@example.com`,
-        password: 'Password123!',
+        password: "Password123!",
         name: owner,
         username: owner,
       })
       .expect(200);
-    ownerBearer = signUp.headers['set-auth-token'];
+    ownerBearer = signUp.headers["set-auth-token"];
   });
 
   afterAll(async () => {
     await app.close();
   });
 
-  it('creates a collection in the personal hub auto-created at sign-up', async () => {
+  it("creates a collection in the personal hub auto-created at sign-up", async () => {
     const res = await request(app.getHttpServer())
-      .post('/api/v1/collections')
-      .set('Authorization', `Bearer ${ownerBearer}`)
-      .send({ slug: `unpub-${sfx}`, title: 'Unpublished' })
+      .post("/api/v1/collections")
+      .set("Authorization", `Bearer ${ownerBearer}`)
+      .send({ slug: `unpub-${sfx}`, title: "Unpublished" })
       .expect(201);
     const body = res.body as { data: { hubId: string; published: boolean } };
     expect(body.data.hubId).toBeTruthy();
     expect(body.data.published).toBe(false);
   });
 
-  it('hides an unpublished collection from strangers but serves it via share token', async () => {
+  it("hides an unpublished collection from strangers but serves it via share token", async () => {
     const server = app.getHttpServer();
 
     const created = await request(server)
-      .post('/api/v1/collections')
-      .set('Authorization', `Bearer ${ownerBearer}`)
-      .send({ slug: `secret-${sfx}`, title: 'Secret' })
+      .post("/api/v1/collections")
+      .set("Authorization", `Bearer ${ownerBearer}`)
+      .send({ slug: `secret-${sfx}`, title: "Secret" })
       .expect(201);
     const collectionId = (created.body as { data: { id: string } }).data.id;
 
     await request(server)
       .post(`/api/v1/collections/${collectionId}/resources/external`)
-      .set('Authorization', `Bearer ${ownerBearer}`)
+      .set("Authorization", `Bearer ${ownerBearer}`)
       .send({ url: `https://example.com/secret-${sfx}`, position: 0 })
       .expect(201);
 
     // Stranger cannot read an unpublished collection (404: cannot know it exists).
-    await request(server)
-      .get(`/api/v1/collections/${collectionId}/resources`)
-      .expect(404);
+    await request(server).get(`/api/v1/collections/${collectionId}/resources`).expect(404);
 
     // Owner enables link sharing and shares the minted token.
     const share = await request(server)
       .put(`/api/v1/collections/${collectionId}/link-sharing`)
-      .set('Authorization', `Bearer ${ownerBearer}`)
+      .set("Authorization", `Bearer ${ownerBearer}`)
       .send({ enabled: true })
       .expect(200);
     const token = (share.body as { data: { token: string } }).data.token;
@@ -87,24 +85,20 @@ describe('Hub tenancy (e2e)', () => {
     expect((viaToken.body as { data: unknown[] }).data.length).toBe(1);
 
     // A wrong token is rejected.
-    await request(server)
-      .get(`/api/v1/collections/${collectionId}/resources?s=wrong`)
-      .expect(404);
+    await request(server).get(`/api/v1/collections/${collectionId}/resources?s=wrong`).expect(404);
   });
 
-  it('lists a published collection on the public explore listing', async () => {
+  it("lists a published collection on the public explore listing", async () => {
     const server = app.getHttpServer();
     const slug = `pub-${sfx}`;
 
     await request(server)
-      .post('/api/v1/collections')
-      .set('Authorization', `Bearer ${ownerBearer}`)
-      .send({ slug, title: 'Published', published: true })
+      .post("/api/v1/collections")
+      .set("Authorization", `Bearer ${ownerBearer}`)
+      .send({ slug, title: "Published", published: true })
       .expect(201);
 
-    const res = await request(server)
-      .get('/api/v1/explore?limit=50')
-      .expect(200);
+    const res = await request(server).get("/api/v1/explore?limit=50").expect(200);
     const body = res.body as { data: Array<{ slug: string }> };
     expect(body.data.some((c) => c.slug === slug)).toBe(true);
   });

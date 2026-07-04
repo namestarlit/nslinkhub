@@ -12,84 +12,72 @@ import {
   Query,
   Req,
   UseGuards,
-} from '@nestjs/common';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
-import type { Request } from 'express';
-import { CurrentUser } from 'src/common/decorators/current-user.decorator';
-import { AuthGuard } from 'src/common/guards/auth.guard';
-import { OptionalAuthGuard } from 'src/common/guards/optional-auth.guard';
-import type { AuthUser } from 'src/common/interfaces/auth-user.interface';
-import { PaginationQueryDto } from 'src/common/dto/pagination-query.dto';
-import { apiOk } from 'src/common/utils/response.util';
-import { CreateChildCollectionDto } from './dto/create-child-collection.dto';
-import { CreateCollectionDto } from './dto/create-collection.dto';
-import { CreateShareDto } from './dto/create-share.dto';
-import { SetLinkSharingDto } from './dto/set-link-sharing.dto';
-import { UpdateCollectionDto } from './dto/update-collection.dto';
-import { CollectionsService } from './collections.service';
+} from "@nestjs/common";
+import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
+import type { Request } from "express";
+import { CurrentUser } from "src/common/decorators/current-user.decorator";
+import { PaginationQueryDto } from "src/common/dto/pagination-query.dto";
+import { AuthGuard } from "src/common/guards/auth.guard";
+import { OptionalAuthGuard } from "src/common/guards/optional-auth.guard";
+import type { AuthUser } from "src/common/interfaces/auth-user.interface";
+import { apiOk } from "src/common/utils/response.util";
+import { CollectionsService } from "./collections.service";
+import { CreateChildCollectionDto } from "./dto/create-child-collection.dto";
+import { CreateCollectionDto } from "./dto/create-collection.dto";
+import { CreateShareDto } from "./dto/create-share.dto";
+import { SetLinkSharingDto } from "./dto/set-link-sharing.dto";
+import { UpdateCollectionDto } from "./dto/update-collection.dto";
 
-@ApiTags('collections')
-@Controller('api/v1/collections')
+@ApiTags("collections")
+@Controller("api/v1/collections")
 export class CollectionsController {
   constructor(private readonly collectionsService: CollectionsService) {}
 
   @ApiBearerAuth()
   @UseGuards(AuthGuard)
   @Post()
-  async create(
-    @CurrentUser() user: AuthUser,
-    @Body() dto: CreateCollectionDto,
-  ) {
+  async create(@CurrentUser() user: AuthUser, @Body() dto: CreateCollectionDto) {
     return apiOk(await this.collectionsService.create(user, dto));
   }
 
   @ApiBearerAuth()
   @UseGuards(AuthGuard)
-  @Patch(':id')
+  @Patch(":id")
   async update(
-    @Param('id', new ParseUUIDPipe()) id: string,
+    @Param("id", new ParseUUIDPipe()) id: string,
     @CurrentUser() user: AuthUser,
     @Body() dto: UpdateCollectionDto,
-    @Headers('if-match') ifMatch?: string,
+    @Headers("if-match") ifMatch?: string,
   ) {
     return apiOk(await this.collectionsService.update(id, user, dto, ifMatch));
   }
 
   @ApiBearerAuth()
   @UseGuards(AuthGuard)
-  @Delete(':id')
-  async remove(
-    @Param('id', new ParseUUIDPipe()) id: string,
-    @CurrentUser() user: AuthUser,
-  ) {
+  @Delete(":id")
+  async remove(@Param("id", new ParseUUIDPipe()) id: string, @CurrentUser() user: AuthUser) {
     return apiOk(await this.collectionsService.remove(id, user));
   }
 
   @ApiBearerAuth()
   @UseGuards(AuthGuard)
-  @Post(':id/publish')
-  async publish(
-    @Param('id', new ParseUUIDPipe()) id: string,
-    @CurrentUser() user: AuthUser,
-  ) {
+  @Post(":id/publish")
+  async publish(@Param("id", new ParseUUIDPipe()) id: string, @CurrentUser() user: AuthUser) {
     return apiOk(await this.collectionsService.setPublished(id, user, true));
   }
 
   @ApiBearerAuth()
   @UseGuards(AuthGuard)
-  @Post(':id/unpublish')
-  async unpublish(
-    @Param('id', new ParseUUIDPipe()) id: string,
-    @CurrentUser() user: AuthUser,
-  ) {
+  @Post(":id/unpublish")
+  async unpublish(@Param("id", new ParseUUIDPipe()) id: string, @CurrentUser() user: AuthUser) {
     return apiOk(await this.collectionsService.setPublished(id, user, false));
   }
 
   @ApiBearerAuth()
   @UseGuards(AuthGuard)
-  @Put(':id/link-sharing')
+  @Put(":id/link-sharing")
   async setLinkSharing(
-    @Param('id', new ParseUUIDPipe()) id: string,
+    @Param("id", new ParseUUIDPipe()) id: string,
     @CurrentUser() user: AuthUser,
     @Body() dto: SetLinkSharingDto,
   ) {
@@ -98,19 +86,16 @@ export class CollectionsController {
 
   @ApiBearerAuth()
   @UseGuards(AuthGuard)
-  @Get(':id/shares')
-  async listShares(
-    @Param('id', new ParseUUIDPipe()) id: string,
-    @CurrentUser() user: AuthUser,
-  ) {
+  @Get(":id/shares")
+  async listShares(@Param("id", new ParseUUIDPipe()) id: string, @CurrentUser() user: AuthUser) {
     return apiOk(await this.collectionsService.listShares(id, user));
   }
 
   @ApiBearerAuth()
   @UseGuards(AuthGuard)
-  @Post(':id/shares')
+  @Post(":id/shares")
   async createShare(
-    @Param('id', new ParseUUIDPipe()) id: string,
+    @Param("id", new ParseUUIDPipe()) id: string,
     @CurrentUser() user: AuthUser,
     @Body() dto: CreateShareDto,
   ) {
@@ -119,10 +104,10 @@ export class CollectionsController {
 
   @ApiBearerAuth()
   @UseGuards(AuthGuard)
-  @Delete(':id/shares/:userId')
+  @Delete(":id/shares/:userId")
   async removeShare(
-    @Param('id', new ParseUUIDPipe()) id: string,
-    @Param('userId', new ParseUUIDPipe()) userId: string,
+    @Param("id", new ParseUUIDPipe()) id: string,
+    @Param("userId", new ParseUUIDPipe()) userId: string,
     @CurrentUser() user: AuthUser,
   ) {
     return apiOk(await this.collectionsService.removeShare(id, user, userId));
@@ -130,29 +115,23 @@ export class CollectionsController {
 
   @ApiBearerAuth()
   @UseGuards(AuthGuard)
-  @Post(':id/save')
-  async save(
-    @Param('id', new ParseUUIDPipe()) id: string,
-    @CurrentUser() user: AuthUser,
-  ) {
+  @Post(":id/save")
+  async save(@Param("id", new ParseUUIDPipe()) id: string, @CurrentUser() user: AuthUser) {
     return apiOk(await this.collectionsService.save(id, user));
   }
 
   @ApiBearerAuth()
   @UseGuards(AuthGuard)
-  @Delete(':id/save')
-  async unsave(
-    @Param('id', new ParseUUIDPipe()) id: string,
-    @CurrentUser() user: AuthUser,
-  ) {
+  @Delete(":id/save")
+  async unsave(@Param("id", new ParseUUIDPipe()) id: string, @CurrentUser() user: AuthUser) {
     return apiOk(await this.collectionsService.unsave(id, user));
   }
 
   @ApiBearerAuth()
   @UseGuards(AuthGuard)
-  @Post(':id/children')
+  @Post(":id/children")
   async createChild(
-    @Param('id', new ParseUUIDPipe()) id: string,
+    @Param("id", new ParseUUIDPipe()) id: string,
     @CurrentUser() user: AuthUser,
     @Body() dto: CreateChildCollectionDto,
   ) {
@@ -160,21 +139,16 @@ export class CollectionsController {
   }
 
   @UseGuards(OptionalAuthGuard)
-  @Get(':id/children')
+  @Get(":id/children")
   async getChildren(
-    @Param('id', new ParseUUIDPipe()) id: string,
+    @Param("id", new ParseUUIDPipe()) id: string,
     @CurrentUser() user: AuthUser | null,
     @Query() query: PaginationQueryDto,
-    @Headers('x-share-token') headerToken?: string,
+    @Headers("x-share-token") headerToken?: string,
     @Req() req?: Request,
   ) {
     const shareToken = headerToken ?? (req?.query.s as string | undefined);
-    const data = await this.collectionsService.getChildren(
-      id,
-      user,
-      shareToken,
-      query,
-    );
+    const data = await this.collectionsService.getChildren(id, user, shareToken, query);
     return apiOk(data.items, data.meta);
   }
 }

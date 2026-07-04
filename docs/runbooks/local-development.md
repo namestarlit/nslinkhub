@@ -30,10 +30,11 @@ a real value for anything beyond local development.
 bun run start:dev        # watch mode
 bun run build            # nest build → dist/
 bun run start:prod       # bun dist/main.js
-bun run lint             # eslint --fix
+bun run check            # biome format + lint, with autofix (workspace-wide)
+bun run lint             # biome lint (no writes)
 bun test src             # unit tests
 bun test test            # e2e (requires docker compose services)
-bun run verify           # build + lint + unit + e2e, the canonical gate
+bun run verify           # boundaries + format + lint + build + typecheck + tests
 ```
 
 Swagger UI: `http://localhost:3000/api/docs`.

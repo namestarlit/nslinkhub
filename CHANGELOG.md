@@ -11,6 +11,27 @@ summary of what changed after completed work has been promoted out of `ref/`.
 
 ### Changed
 
+- Tooling: replaced ESLint + Prettier with Biome (`biome.json`) for
+  workspace-wide formatting and linting, run from the repository root and
+  wired into `bun run verify` (`format:check` + `lint`). `useImportType` is
+  disabled for `apps/api` only, because NestJS dependency injection and
+  `emitDecoratorMetadata` require runtime imports for decorated
+  classes/parameters; it stays enabled for `packages/*`, `tooling/`, and the
+  future `apps/web`. Added an explicit `apps/api` `tsc --noEmit` typecheck to
+  `verify` (also covers test files). Trade-off recorded in the tech-debt
+  tracker: Biome has no type-aware lint rules, so `no-floating-promises` and
+  `no-unsafe-*` coverage is dropped (type errors still caught by `tsc`).
+
+- Operational-foundations direction: documented transactional email
+  (`docs/design-docs/transactional-email.md` — Resend behind an application
+  adapter, backend-owned React Email templates, PostgreSQL outbox + BullMQ
+  worker, signed webhooks; better-auth mints verification/reset tokens, the
+  app only delivers them) and observability
+  (`docs/design-docs/observability.md` — Pino JSON logging, Sentry +
+  OpenTelemetry/OTLP + Grafana Alloy → Grafana Cloud, PII allowlist). Both are
+  direction only; implementation lands at its tracked trigger. Full-text
+  search moved from an open product decision to a tracked Phase E item.
+
 - Shared contracts (Track W2): added `packages/types` (`@nslinkhub/types`) —
   a source-only workspace package of hand-curated API request/response wire
   contracts (envelope, collections, resources, hubs, imports, exports;

@@ -1,12 +1,5 @@
-import {
-  IsBoolean,
-  IsOptional,
-  IsString,
-  IsUUID,
-  Matches,
-  MaxLength,
-} from 'class-validator';
-import { Transform } from 'class-transformer';
+import { Transform } from "class-transformer";
+import { IsBoolean, IsOptional, IsString, IsUUID, Matches, MaxLength } from "class-validator";
 
 export class ImportTargetDto {
   @IsOptional()
@@ -15,15 +8,15 @@ export class ImportTargetDto {
 
   @IsOptional()
   @Transform(({ value }: { value: unknown }) => {
-    if (typeof value === 'boolean') {
+    if (typeof value === "boolean") {
       return value;
     }
-    if (typeof value === 'string') {
+    if (typeof value === "string") {
       const normalized = value.trim().toLowerCase();
-      if (normalized === 'true') {
+      if (normalized === "true") {
         return true;
       }
-      if (normalized === 'false') {
+      if (normalized === "false") {
         return false;
       }
     }

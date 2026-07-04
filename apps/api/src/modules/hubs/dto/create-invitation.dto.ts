@@ -1,4 +1,4 @@
-import { IsEmail, IsIn, IsString } from 'class-validator';
+import { IsEmail, IsIn, IsString } from "class-validator";
 
 export class CreateInvitationDto {
   @IsEmail()
@@ -6,6 +6,6 @@ export class CreateInvitationDto {
 
   // owner is reachable only via transfer-ownership, never invitation.
   @IsString()
-  @IsIn(['member', 'admin'])
-  role: 'member' | 'admin';
+  @IsIn(["member", "admin"])
+  role: "member" | "admin";
 }

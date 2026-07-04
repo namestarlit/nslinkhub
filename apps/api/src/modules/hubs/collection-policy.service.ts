@@ -1,13 +1,9 @@
-import {
-  ForbiddenException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
-import { createHash } from 'crypto';
-import { PrismaService } from 'src/database/prisma.service';
-import { UserRole } from 'src/common/enums/user-role.enum';
-import { AuthUser } from 'src/common/interfaces/auth-user.interface';
-import { Collection } from 'src/generated/prisma/client';
+import { createHash } from "node:crypto";
+import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
+import { UserRole } from "src/common/enums/user-role.enum";
+import { AuthUser } from "src/common/interfaces/auth-user.interface";
+import { PrismaService } from "src/database/prisma.service";
+import { Collection } from "src/generated/prisma/client";
 
 export interface CollectionAccess {
   canRead: boolean;
@@ -43,7 +39,7 @@ export class CollectionPolicyService {
         canWriteContent: true,
         canManage: true,
         viaLinkToken: false,
-        hubRole: 'admin',
+        hubRole: "admin",
       };
     }
 
@@ -82,23 +78,19 @@ export class CollectionPolicyService {
         select: { role: true, source: true },
       });
       if (share) {
-        if (share.source === 'direct') {
+        if (share.source === "direct") {
           canRead = true;
-          if (share.role === 'editor') {
+          if (share.role === "editor") {
             canWriteContent = true;
           }
-        } else if (share.source === 'link' && collection.linkSharingEnabled) {
+        } else if (share.source === "link" && collection.linkSharingEnabled) {
           canRead = true;
         }
       }
     }
 
-    if (
-      collection.linkSharingEnabled &&
-      collection.shareTokenHash &&
-      shareToken
-    ) {
-      const hash = createHash('sha256').update(shareToken).digest('hex');
+    if (collection.linkSharingEnabled && collection.shareTokenHash && shareToken) {
+      const hash = createHash("sha256").update(shareToken).digest("hex");
       if (hash === collection.shareTokenHash) {
         canRead = true;
         viaLinkToken = true;
@@ -130,29 +122,23 @@ export class CollectionPolicyService {
     const access = await this.resolve(collection, viewer, shareToken);
     if (!access.canRead) {
       // Prefer 404 over 403 for resources the caller cannot know exist.
-      throw new NotFoundException('Collection not found');
+      throw new NotFoundException("Collection not found");
     }
     return access;
   }
 
-  async requireWriteContent(
-    collection: Collection,
-    user: AuthUser,
-  ): Promise<CollectionAccess> {
+  async requireWriteContent(collection: Collection, user: AuthUser): Promise<CollectionAccess> {
     const access = await this.resolve(collection, user);
     if (!access.canWriteContent) {
-      throw new ForbiddenException('Forbidden');
+      throw new ForbiddenException("Forbidden");
     }
     return access;
   }
 
-  async requireManage(
-    collection: Collection,
-    user: AuthUser,
-  ): Promise<CollectionAccess> {
+  async requireManage(collection: Collection, user: AuthUser): Promise<CollectionAccess> {
     const access = await this.resolve(collection, user);
     if (!access.canManage) {
-      throw new ForbiddenException('Forbidden');
+      throw new ForbiddenException("Forbidden");
     }
     return access;
   }
@@ -168,7 +154,7 @@ export class CollectionPolicyService {
       return;
     }
     await this.prisma.collectionShare.create({
-      data: { collectionId, userId, role: 'reader', source: 'link' },
+      data: { collectionId, userId, role: "reader", source: "link" },
     });
   }
 }
