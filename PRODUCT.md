@@ -133,17 +133,15 @@ defined in a dedicated design pass before web implementation (Track W3).
 ## 7. Out Of Scope (initial)
 
 - Mobile applications.
-- Full-text search across collections and resources (future product
-  decision).
 - Resource-level saves, explore ranking beyond recency, vanity hub handles,
-  sharing to unregistered emails — tracked in the hub design doc's deferred
-  list.
+  sharing to unregistered emails, and full-text search across collections and
+  resources — tracked in the hub design doc's deferred (Phase E) list.
 - Billing or any commercial machinery.
 
 ## 8. Open Product Decisions
 
-- Explore curation/ranking beyond recency (decide during the web design
-  pass).
-- The exact presentation of dormant saves (web design pass).
-- Whether full-text search enters the roadmap after the hub architecture
-  ships.
+Both resolve during the W3 web design pass, with real surfaces in hand:
+
+- Explore curation/ranking beyond recency (recency-only ships first; richer
+  ranking is a Phase E item).
+- The exact presentation of dormant saves on the saved surface.

@@ -368,3 +368,5 @@ user-ownership column being replaced, and `visibility`
 - Resource-level saves — evaluate after collection saves prove the loop.
 - Explore ranking/curation beyond recency — a product decision for the web
   pass.
+- Full-text search across collections and resources — revisit once the
+  product has real content; explore + title/tag filtering carries v1.
