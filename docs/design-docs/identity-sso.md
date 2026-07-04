@@ -51,6 +51,34 @@ IAM (nsauth)
 assumptions that block it), even though no feature ships yet. It does **not**
 mean building it.
 
+### ns-series scope: users + SSO, deliberately bounded (resolved 2026-07-04)
+
+The IAM lens above earns the boundary discipline and the personal/company
+split — but the ns series' *realized* ambition is intentionally small. **The ns
+products are for individuals** (they solve the author's own problems, with
+individual-level impact), so nsauth only ever needs **users, SSO, profile, and
+MFA** — the Authentication + Identity(users) + SSO/federated-login corners. It
+does **not** model **organizations, tenants, or business entities**; the
+Authorization(orgs), Groups, and Service-Accounts pillars are the **company**
+path (hashikome / Zitadel — see `pigfarm/ref/note-from-nslinkhub-iam-direction.md`),
+not the ns path. This is exactly why the ns IdP is Better-Auth (light) and the
+company IdP is Zitadel (org-first-class): matching the tool to the realized
+scope, not the theoretical ceiling.
+
+Two consequences:
+
+- **Product-level collaboration stays in the product.** NSLinkHub's shared hubs
+  (memberships, invitations, roles) are **individual-to-individual**
+  collaboration owned by the product's authorization — *not* organizations, and
+  *not* something nsauth models. "No orgs" is an IdP-scope statement; it does
+  not remove NSLinkHub's person-to-person hub sharing.
+- **Cross-service identity propagation is webhook-shaped, not broker-shaped.**
+  The rare signals a product needs from nsauth — account disabled/deleted,
+  email changed, identity-wide logout — are a handful of low-frequency HTTP
+  callbacks, not an event stream. So the ns series very likely **never needs a
+  message broker** (NATS is a company/pigfarm concern); intra-product async
+  stays on the existing job queue (BullMQ/Redis).
+
 ## Naming (resolved 2026-07-03)
 
 The ns series consists of **personal projects** belonging to the author's
