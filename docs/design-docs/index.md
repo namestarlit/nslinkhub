@@ -19,6 +19,13 @@ change too frequently for the root `ARCHITECTURE.md`.
   Stack mode (docker swarm), GHCR images via GitHub Actions, topology-file
   conventions (`compose.yml`, `docker.stack.<env>.yml`), and the
   previews-over-staging environment strategy.
+- `transactional-email.md`: Resend provider behind an application adapter,
+  backend-owned React Email templates (`packages/email`), PostgreSQL outbox +
+  BullMQ worker delivery, signed webhooks, and the better-auth boundary
+  (better-auth mints verification/reset tokens; the app only delivers them).
+- `observability.md`: Pino JSON logging, Sentry + OpenTelemetry/OTLP + Grafana
+  Alloy → Grafana Cloud, the PII allowlist and pseudonymous-reference rules,
+  and the request-id foundation already in place.
 
 ## Planned Documents (produced by Track W3's design pass)
 
