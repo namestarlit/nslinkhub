@@ -12,9 +12,10 @@ change too frequently for the root `ARCHITECTURE.md`.
   collection/resource vocabulary, sharing model, publication/discovery,
   workspace and client surfaces, and the locked implementation order
   (W1 → A → B → C → D → W2 → W3 → W4).
-- `identity-sso.md`: ns-series identity — the namestarlit account ("Continue
-  with namestarlit"), the nsauth service shape, and the constraints current
-  auth work must respect.
+- `identity-sso.md`: ns-series IAM direction — nsauth built as an IAM system
+  (the namestarlit account, "Continue with namestarlit") whose first slice is
+  authentication + SSO; the four-pillar scope, the domain-vs-identity
+  authorization boundary, and the constraints current auth work must respect.
 - `infra-deployment.md`: ns-series deployment — namestarlit VPS, Dokploy
   Stack mode (docker swarm), GHCR images via GitHub Actions, topology-file
   conventions (`compose.yml`, `docker.stack.<env>.yml`), and the

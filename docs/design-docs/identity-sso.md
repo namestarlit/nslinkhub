@@ -1,8 +1,55 @@
-# Identity & SSO Direction (ns series)
+# Identity & Access Management Direction (ns series) — nsauth
 
-Direction document, recorded 2026-07-03. Not scheduled work — this shapes how
-NSLinkHub's auth must stay structured so the later centralization is an
-integration, not a rewrite.
+Direction document, recorded 2026-07-03; reframed toward IAM foundations
+2026-07-04. Not scheduled work — this shapes how NSLinkHub's auth must stay
+structured so the later centralization is an integration, not a rewrite.
+
+## Framing: build an IAM, ship an auth slice
+
+**nsauth is an IAM (Identity & Access Management) system, not merely a login
+service.** Its first implementation will ship only the authentication + SSO
+slice — "Continue with namestarlit" across ns products — but the data model,
+service boundaries, and contracts are designed for the full IAM scope from the
+start, so richer authorization, organization support, and identity federation
+are later *upgrades*, never a redesign.
+
+Why commit to IAM framing now, before needing most of it:
+
+- A login service that stores users, authenticates them, supports SSO, issues
+  tokens, manages roles/permissions, and federates external identity providers
+  *is* an IAM — teams just call it an "auth service" because they start with
+  the authentication corner (Keycloak, Auth0, Okta are IAM platforms used
+  mostly for AuthN + SSO). Designing as IAM from the outset avoids the rewrite
+  when the other corners are needed.
+- The experience transfers. The ns series is the author's personal proving
+  ground for distributed-systems patterns that later carry into company
+  products; an IAM foundation is worth getting right once and reusing.
+
+The four IAM pillars, and what ships when:
+
+```txt
+IAM (nsauth)
+├── Authentication            ── FIRST SLICE
+│   ├── Login (email+password today; namestarlit account)
+│   ├── MFA                   ── foundation now, enable later
+│   └── SSO / OIDC            ── FIRST SLICE (the button)
+├── Authorization             ── foundation now, mostly later
+│   ├── Global roles          (e.g. platform-admin) — identity-scoped only
+│   ├── Permissions           — coarse, cross-product
+│   └── Policies              — optional policy-query surface
+├── Identity Management       ── FIRST SLICE (basics) + foundation
+│   ├── Users                 (global identity, immutable subject)
+│   ├── Groups                ── foundation now, later
+│   └── Service accounts      ── foundation now, later
+└── Federation                ── foundation now, later
+    ├── Google
+    ├── Microsoft
+    └── GitHub
+```
+
+"Foundation now" means: the schema and boundaries leave room for it (no
+assumptions that block it), even though no feature ships yet. It does **not**
+mean building it.
 
 ## Naming (resolved 2026-07-03)
 
@@ -28,13 +75,12 @@ schemas, contracts, or operational identifiers.
 ## The Goal
 
 The ns series (namestarlit products — solutions to the author's own problems,
-published for others) will multiply, and every product needs auth. The known
-consumers so far: **nslinkhub** (this repo) and **nsworklog**
-(github.com/namestarlit/nsworklog — a work-logging tool for documenting daily
-work for future reference; Flask-era today, same modernization candidate).
-Instead of each product owning credentials:
+published for others) will multiply, and every product needs identity. The
+known consumers so far: **nslinkhub** (this repo) and **nsworklog**
+(github.com/namestarlit/nsworklog — a work-logging tool; Flask-era today, same
+modernization candidate). Instead of each product owning credentials:
 
-- One self-hosted identity service — **nsauth** — owns credentials, and every
+- One self-hosted IAM — **nsauth** — owns identity and credentials, and every
   ns product offers **"Continue with namestarlit"**.
 - **SSO authenticates identity; it does not enroll.** Unlike Google (where a
   Google account implicitly belongs to every Google service), a namestarlit
@@ -44,24 +90,50 @@ Instead of each product owning credentials:
 - Account management follows **Meta's Accounts Center philosophy, not
   Google's full account console**: one lightweight central place for shared
   concerns — credentials, password, MFA, active sessions, basic profile
-  (name, avatar, email), and a "connected services" list with revocation.
-  Everything product-specific (hubs, collections, worklogs, settings, data)
-  stays in the product. The center manages the account, never the products.
+  (name, avatar, email), federated logins, and a "connected services" list
+  with revocation. Everything product-specific (hubs, collections, worklogs,
+  settings, data) stays in the product. The center manages the account, never
+  the products.
 
 ## The Shape
 
 ```txt
-nsauth (its own repo/product, later)
-  self-hosted better-auth acting as an OpenID Connect Provider
-  owns: credentials, MFA, recovery, identity sessions, consent,
-        the Accounts-Center surface
+nsauth (its own repo/product, later) — the IAM / Identity Provider
+  self-hosted better-auth acting as an OpenID Connect Provider (the AuthN+SSO
+  slice of a larger IAM)
+  owns: identity (users, subject), credentials, MFA, recovery, identity
+        sessions, consent, the Accounts-Center surface
+  foundation for: groups, service accounts, global roles, federation, an
+        optional policy-query surface
 
 ns products (nslinkhub, nsworklog, future ns*)
   OIDC relying parties: the "Continue with namestarlit" button
-  own: product user record, product sessions, authorization
-       (hubs/memberships/shares), onboarding (e.g. personal hub),
-       all product data
+  own: product user record, product sessions, DOMAIN authorization
+       (hubs/memberships/shares/collection policy), onboarding (e.g. personal
+       hub), all product data
 ```
+
+Token-trust architecture (standard IAM/microservices pattern, to grow into):
+
+```txt
+        +-----------------------------+
+        |  nsauth (IAM / IdP)         |
+        |  AuthN · SSO · MFA          |
+        |  identity · groups · roles  |
+        |  OIDC / OAuth2              |
+        +--------------+--------------+
+                       | signed token (identity + coarse claims)
+        +--------------+--------------+
+        |              |              |
+   nslinkhub       nsworklog      future ns*
+   (trusts token; makes DOMAIN authorization decisions from claims,
+    or consults a policy surface if it ever chooses to delegate)
+```
+
+Each product trusts nsauth to authenticate and to issue signed tokens, then
+uses the claims (or its own domain data) to authorize. Fine-grained decisions
+stay in the product; nsauth provides identity and coarse, identity-scoped
+claims.
 
 Rules, consistent with the decisions already adopted from pigfarm
 (`docs/design-docs/hub-architecture.md`, `pigfarm/docs/design-docs/auth-sessions.md`):
@@ -79,23 +151,41 @@ Rules, consistent with the decisions already adopted from pigfarm
    issues its own session/bearer afterwards (better-auth on the product side
    already does this). Product logout ≠ identity logout; the Accounts Center
    is where identity-wide session revocation lives.
-4. **Authorization never centralizes.** Roles, memberships, shares, and
-   policy are product-owned. The IdP knows who you are, not what you may do
-   in a product.
+4. **Domain authorization never centralizes; identity-scoped authorization
+   may.** Roles, memberships, shares, and collection policy that are *about a
+   product's domain* (nslinkhub's hubs) stay product-owned — the IdP never
+   decides who may edit a collection. What nsauth *may* own, as it grows, is
+   **identity-scoped** authorization: global roles (platform-admin), group
+   membership, service accounts, and MFA policy, delivered as signed-token
+   claims (or an optional policy-query endpoint a product can choose to
+   consult). The grain is the boundary: coarse and cross-product → IAM;
+   fine-grained and domain-specific → product.
 5. **Account linking is explicit.** If a product user already exists with the
    same verified email (e.g. NSLinkHub's current local accounts), SSO sign-in
    links to it only through verified-email match or an explicit authenticated
    linking step — no duplicate identities, no silent takeover.
+6. **Identity Management is first-class, not an afterthought.** Users, and
+   later groups and service accounts, are modeled as durable identity objects
+   with lifecycle (create, disable, delete, recover) — not implied by the
+   existence of credentials. This is what lets "has this account been
+   disabled?" and "which service accounts can this microservice use?" be
+   answerable later without a schema rewrite.
 
 ## Implementation Candidates (verify in a spike, pigfarm-style adoption gate)
 
-better-auth is already the auth dependency on both sides, and has plugins for
-both roles:
+better-auth is already the auth dependency on both sides, and covers the
+**authentication + SSO slice** of the IAM:
 
 - IdP side: better-auth **OIDC Provider plugin** (nsauth issues authorization
   codes / ID tokens; consent screen = the per-product opt-in).
 - Product side: better-auth **generic OAuth / SSO plugins** register nsauth
   as a provider next to the existing email+password.
+
+better-auth is likely sufficient for AuthN, SSO, MFA, and basic identity. The
+richer IAM pillars — groups, service accounts, cross-product roles, a policy
+surface, broad federation — may exceed what better-auth offers and could want
+dedicated modeling or a complementary component in nsauth. Decide that at
+nsauth build time; do not pre-build it.
 
 Before committing, run a focused spike proving: the provider plugin's
 maturity, PKCE + refresh behavior, account-linking flow with existing local
@@ -106,8 +196,8 @@ implementation time rather than trusting this document.
 
 ## What This Means For NSLinkHub Now
 
-Nothing blocks the hub upgrade, and nothing should be built for SSO yet — but
-three cheap constraints keep the door open:
+Nothing blocks the hub upgrade or Track W, and nothing should be built for SSO
+or IAM yet — but a few cheap constraints keep the door open:
 
 1. Keep session resolution behind the existing single point
    (`resolveSessionUser` in `src/common/guards/auth.guard.ts`); services and
@@ -120,7 +210,12 @@ three cheap constraints keep the door open:
    local credentials are the only path (e.g. keep sign-up onboarding —
    personal hub creation — in an app-owned service callable from any auth
    path, not hard-wired to one better-auth hook).
+4. Keep NSLinkHub's authorization firmly domain-scoped (hub roles,
+   `CollectionPolicyService`) so that if nsauth later supplies identity-scoped
+   claims (a global platform-admin, say), they augment product decisions
+   rather than needing product authorization to be untangled from identity.
 
 When nsauth exists, NSLinkHub's integration is: add the provider button, map
 `sub` → existing user by verified email or linking step, run the same
-onboarding for new users. The hub/collection model is untouched.
+onboarding for new users, and (optionally, later) read identity-scoped claims.
+The hub/collection model is untouched.

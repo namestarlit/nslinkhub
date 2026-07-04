@@ -45,8 +45,9 @@ authoritative.
 - `docs/design-docs/conventions.md`: API/persistence casing and envelope rules.
 - `docs/design-docs/hub-architecture.md`: authoritative target design and
   phased implementation plan.
-- `docs/design-docs/identity-sso.md`: ns-series identity ("Continue with
-  namestarlit", nsauth) and the constraints current work must respect.
+- `docs/design-docs/identity-sso.md`: ns-series IAM direction (nsauth,
+  "Continue with namestarlit") — built as an IAM, first slice ships AuthN+SSO;
+  domain authorization stays product-owned; constraints current work respects.
 - `docs/design-docs/infra-deployment.md`: ns-series deployment (namestarlit VPS,
   Dokploy Stack mode, GHCR images, topology-file conventions).
 - `docs/runbooks/local-development.md`: setup and everyday commands.
