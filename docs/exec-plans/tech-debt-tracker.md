@@ -5,7 +5,7 @@ decision.
 
 | Area | Debt | Impact | Revisit When |
 | --- | --- | --- | --- |
-| PDF export | The exports worker stores an output-reference placeholder instead of generating a PDF | PDF export is queue-plumbed but produces no document | Export feature gets prioritized |
+| Document export | Markdown export works, but PDF is a queue-plumbed placeholder (no document produced); Word export and nested-section expansion (a table-of-contents collection → one expanded guide, external links kept as references) are product-defined but not built | The headline "export a collection as a printed guide" experience is not yet functional | Export feature gets prioritized |
 | Import parsers | CSV parsing is naive (comma split, no quoting/escaping); bookmarks/WhatsApp parsers are regex MVPs; bookmarks import flattens folder structure | Malformed or complex files import incorrectly; bookmark structure is lost | Imports get real-world usage |
 | Async reliability | Export jobs enqueue directly to BullMQ; no transactional outbox, no separate worker process | A crash between DB write and enqueue can strand a job; workers share the API process | Outbox/worker item in the hub plan Phase E; direction in `docs/design-docs/transactional-email.md` (email is the first mandatory outbox consumer) |
 | Audit | No audit records exist for sensitive actions | Membership, publication, and share changes leave no product-visible trail | Hub plan Phase E |
