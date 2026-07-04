@@ -43,6 +43,8 @@ apps/
     test/          e2e specs (run the production HTTP stack)
 packages/
   config/          shared TypeScript base configuration
+  types/           @nslinkhub/types — shared API wire contracts for clients
+tooling/           repository checks (client boundary check)
 compose.yml        local dev services (root; serves the whole workspace)
 docs/              product/design docs, exec plans, runbooks
 ref/               disposable, git-ignored implementation context
@@ -70,7 +72,10 @@ ref/               disposable, git-ignored implementation context
 - better-auth types stay behind `resolveSessionUser`; everything downstream
   consumes `AuthUser`.
 - Prisma schema, migrations, generated client, and `PrismaService` are
-  backend-private. Future clients consume API contracts only.
+  backend-private. Clients consume the API over HTTP and the
+  `@nslinkhub/types` wire contract only; `tooling/check-client-boundaries.ts`
+  (run by `bun run verify`) fails if a client imports `apps/api` internals or
+  Prisma.
 - The better-auth handler mounts before body parsers (`app.setup.ts`);
   global middleware must respect that ordering.
 

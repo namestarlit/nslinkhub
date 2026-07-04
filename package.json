@@ -6,7 +6,9 @@
   "workspaces": ["apps/*", "packages/*"],
   "scripts": {
     "build": "bun run --cwd apps/api build",
-    "verify": "bun run --cwd apps/api verify",
+    "check:boundaries": "bun tooling/check-client-boundaries.ts",
+    "typecheck:types": "bun run --cwd packages/types typecheck",
+    "verify": "bun run check:boundaries && bun run typecheck:types && bun run --cwd apps/api verify",
     "format": "bun run --cwd apps/api format",
     "start": "bun run --cwd apps/api start",
     "start:dev": "bun run --cwd apps/api start:dev",

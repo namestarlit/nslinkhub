@@ -55,6 +55,14 @@
       "name": "@nslinkhub/config",
       "version": "0.0.1",
     },
+    "packages/types": {
+      "name": "@nslinkhub/types",
+      "version": "0.0.1",
+      "devDependencies": {
+        "@nslinkhub/config": "workspace:*",
+        "typescript": "^5.7.3",
+      },
+    },
   },
   "trustedDependencies": [
     "@prisma/engines",
@@ -220,6 +228,8 @@
     "@nslinkhub/api": ["@nslinkhub/api@workspace:apps/api"],
 
     "@nslinkhub/config": ["@nslinkhub/config@workspace:packages/config"],
+
+    "@nslinkhub/types": ["@nslinkhub/types@workspace:packages/types"],
 
     "@opentelemetry/semantic-conventions": ["@opentelemetry/semantic-conventions@1.41.1", "", {}, "sha512-/UhIkaZgPutTFmQ7RnIJGgDXZmtEJ7Dvi86xNTFWcnRxVRNk/aotsqDJYeEvDP+FSMB2SdW+pQzNMcWP0rwuNA=="],
 

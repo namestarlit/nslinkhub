@@ -11,6 +11,14 @@ summary of what changed after completed work has been promoted out of `ref/`.
 
 ### Changed
 
+- Shared contracts (Track W2): added `packages/types` (`@nslinkhub/types`) —
+  a source-only workspace package of hand-curated API request/response wire
+  contracts (envelope, collections, resources, hubs, imports, exports;
+  timestamps as ISO strings) for the web app and extension to consume, and
+  `tooling/check-client-boundaries.ts`, which fails if a client imports
+  `apps/api` internals or Prisma. The root `bun run verify` now runs the
+  boundary check and the types typecheck alongside the API verify.
+
 - Invitations + membership management (Phase D): hub roles are now enforced
   (owner > admin > member) via `HubsService.requireHubRole`. Hubs gained the
   ways people join and are managed: `POST /hubs/:hubId/invitations`

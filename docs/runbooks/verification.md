@@ -8,11 +8,14 @@ bun run verify
 
 It runs, in order:
 
-1. `bun run build` — `nest build` (TypeScript compilation of the app and the
+1. `bun run check:boundaries` — fails if a client app imports `apps/api`
+   internals or Prisma (a no-op pass until clients exist).
+2. `bun run typecheck:types` — type-checks `packages/types`.
+3. `bun run build` — `nest build` (TypeScript compilation of the app and the
    generated Prisma client).
-2. `bun run lint` — ESLint over `src` and `test` (with `--fix`).
-3. `bun test src` — unit tests.
-4. `bun test test` — e2e tests, which boot the real HTTP stack
+4. `bun run lint` — ESLint over `src` and `test` (with `--fix`).
+5. `bun test src` — unit tests.
+6. `bun test test` — e2e tests, which boot the real HTTP stack
    (`configureApp`: better-auth mount + body-parser ordering) against the
    local docker services.
 
