@@ -61,7 +61,8 @@ Deferred follow-ons (small, separate — not blocking W3):
   `hubId`) so published content can be browsed/searched "by hub"
   (YouTube-handle style). Durable routes stay `hubId`; the handle is a mutable
   discovery/search/attribution dimension only.
-- **Collection ownership transfer** (2026-07-04 decision) — Drive-accurate.
+- **Collection ownership transfer** — SHIPPED 2026-07-04
+  (`POST /api/v1/collections/:id/transfer`). Drive-accurate.
   Distinguishes **owner** (`collection.hubId`, mutable) from **creator** (a new
   immutable `creatorUserId`, set at creation, never changes on transfer — Drive
   keeps "created by" after an ownership change). Transfer is allowed **only to

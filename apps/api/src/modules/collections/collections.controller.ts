@@ -26,6 +26,7 @@ import { CreateChildCollectionDto } from "./dto/create-child-collection.dto";
 import { CreateCollectionDto } from "./dto/create-collection.dto";
 import { CreateShareDto } from "./dto/create-share.dto";
 import { SetLinkSharingDto } from "./dto/set-link-sharing.dto";
+import { TransferCollectionDto } from "./dto/transfer-collection.dto";
 import { UpdateCollectionDto } from "./dto/update-collection.dto";
 
 @ApiTags("collections")
@@ -111,6 +112,17 @@ export class CollectionsController {
     @CurrentUser() user: AuthUser,
   ) {
     return apiOk(await this.collectionsService.removeShare(id, user, userId));
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(AuthGuard)
+  @Post(":id/transfer")
+  async transfer(
+    @Param("id", new ParseUUIDPipe()) id: string,
+    @CurrentUser() user: AuthUser,
+    @Body() dto: TransferCollectionDto,
+  ) {
+    return apiOk(await this.collectionsService.transfer(id, user, dto));
   }
 
   @ApiBearerAuth()

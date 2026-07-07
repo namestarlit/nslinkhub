@@ -20,6 +20,7 @@ import { CreateChildCollectionDto } from "./dto/create-child-collection.dto";
 import { CreateCollectionDto } from "./dto/create-collection.dto";
 import { CreateShareDto } from "./dto/create-share.dto";
 import { SetLinkSharingDto } from "./dto/set-link-sharing.dto";
+import { TransferCollectionDto } from "./dto/transfer-collection.dto";
 import { UpdateCollectionDto } from "./dto/update-collection.dto";
 
 @Injectable()
@@ -242,6 +243,124 @@ export class CollectionsService {
       role: share.role,
       source: share.source,
     }));
+  }
+
+  // --- ownership transfer -------------------------------------------------
+
+  // Google-Drive ownership transfer: only the current owner can transfer, and
+  // only to a user who is already an editor. The collection subtree moves into
+  // the recipient's hub (their "MyDrive"); the previous owner keeps editor
+  // access (lands in their shared/); the immutable creator is untouched.
+  async transfer(id: string, user: AuthUser, dto: TransferCollectionDto) {
+    const collection = await this.requireCollection(id);
+    await this.policy.requireManage(collection, user); // owner-only
+
+    const recipient = await this.prisma.user.findUnique({
+      where: { email: dto.email.trim().toLowerCase() },
+      select: { id: true },
+    });
+    if (!recipient) {
+      throw new NotFoundException("No account found for that email");
+    }
+    if (recipient.id === user.userId) {
+      throw new BadRequestException("You already own this collection");
+    }
+
+    // Drive rule: the recipient must already be an editor on the collection.
+    const share = await this.prisma.collectionShare.findUnique({
+      where: { collectionId_userId: { collectionId: collection.id, userId: recipient.id } },
+      select: { role: true },
+    });
+    if (!share || share.role !== "editor") {
+      throw new BadRequestException("Recipient must already be an editor on this collection");
+    }
+
+    const recipientHub = await this.prisma.hub.findUnique({
+      where: { ownerUserId: recipient.id },
+      select: { id: true },
+    });
+    if (!recipientHub) {
+      throw new BadRequestException("Recipient has no hub");
+    }
+
+    const subtreeIds = await this.collectSubtreeIds(collection.id);
+
+    // The recipient's hub cannot already hold a collection whose slug collides
+    // with one in the moving subtree ((hubId, slug) is unique).
+    const subtree = await this.prisma.collection.findMany({
+      where: { id: { in: subtreeIds } },
+      select: { slug: true },
+    });
+    const conflict = await this.prisma.collection.findFirst({
+      where: {
+        hubId: recipientHub.id,
+        slug: { in: subtree.map((c) => c.slug) },
+        id: { notIn: subtreeIds },
+      },
+      select: { slug: true },
+    });
+    if (conflict) {
+      throw new ConflictException(
+        `The recipient already has a collection with slug '${conflict.slug}'`,
+      );
+    }
+
+    const previousOwnerId = user.userId;
+    await this.prisma.$transaction(async (tx) => {
+      // Move the whole subtree into the recipient's hub.
+      await tx.collection.updateMany({
+        where: { id: { in: subtreeIds } },
+        data: { hubId: recipientHub.id, version: { increment: 1 } },
+      });
+      // Detach the transferred root from its old parent (which stayed behind).
+      await tx.collection.update({
+        where: { id: collection.id },
+        data: { parentCollectionId: null },
+      });
+      // The recipient now owns the subtree, so their shares on it are redundant.
+      await tx.collectionShare.deleteMany({
+        where: { collectionId: { in: subtreeIds }, userId: recipient.id },
+      });
+      // Give the previous owner editor access across the subtree (their shared/).
+      await tx.collectionShare.deleteMany({
+        where: { collectionId: { in: subtreeIds }, userId: previousOwnerId },
+      });
+      await tx.collectionShare.createMany({
+        data: subtreeIds.map((collectionId) => ({
+          collectionId,
+          userId: previousOwnerId,
+          role: "editor",
+          source: "direct",
+        })),
+      });
+    });
+
+    return {
+      collectionId: collection.id,
+      transferredTo: recipient.id,
+      previousOwner: previousOwnerId,
+      movedCollections: subtreeIds.length,
+    };
+  }
+
+  // Collect a collection and all its descendants (bounded by the depth-8
+  // hierarchy trigger, so the iteration terminates quickly).
+  private async collectSubtreeIds(rootId: string): Promise<string[]> {
+    const ids = [rootId];
+    let frontier = [rootId];
+    while (frontier.length > 0) {
+      const children = await this.prisma.collection.findMany({
+        where: { parentCollectionId: { in: frontier } },
+        select: { id: true },
+      });
+      const childIds = children.map((c) => c.id);
+      if (childIds.length === 0) {
+        break;
+      }
+      ids.push(...childIds);
+      frontier = childIds;
+    }
+    return ids;
   }
 
   // --- saves --------------------------------------------------------------

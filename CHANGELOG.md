@@ -9,6 +9,16 @@ summary of what changed after completed work has been promoted out of `ref/`.
 
 ## Unreleased
 
+### Added
+
+- Collection ownership transfer (`POST /api/v1/collections/:id/transfer`,
+  `{ email }`). Drive-style: only the owner may transfer, only to a user who is
+  already an `editor`. The collection subtree moves into the recipient's hub,
+  the recipient's now-redundant shares are removed, the previous owner is given
+  `editor` access across the subtree (landing it in their shared/), and the
+  immutable creator is untouched. Guards: self-transfer and recipient-hub slug
+  collisions are rejected.
+
 ### Changed
 
 - Collections gained an immutable `creatorUserId` (provenance), set at
