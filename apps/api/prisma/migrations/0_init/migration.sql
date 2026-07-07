@@ -84,8 +84,8 @@ RETURNS trigger
 LANGUAGE plpgsql
 AS $$
 DECLARE
-  has_cycle boolean;
-  parent_depth int;
+  parent_has_parent boolean;
+  has_children boolean;
 BEGIN
   IF NEW.parent_collection_id IS NULL THEN
     RETURN NEW;
@@ -95,26 +95,20 @@ BEGIN
     RAISE EXCEPTION 'Collection cannot be parent of itself';
   END IF;
 
-  WITH RECURSIVE ancestors AS (
-    SELECT id, parent_collection_id, 1 AS depth
-    FROM collections
-    WHERE id = NEW.parent_collection_id
-    UNION ALL
-    SELECT c.id, c.parent_collection_id, a.depth + 1
-    FROM collections c
-    JOIN ancestors a ON c.id = a.parent_collection_id
-    WHERE a.depth < 100
-  )
-  SELECT EXISTS(SELECT 1 FROM ancestors WHERE id = NEW.id), COALESCE(MAX(depth), 0)
-  INTO has_cycle, parent_depth
-  FROM ancestors;
-
-  IF has_cycle THEN
-    RAISE EXCEPTION 'Collection hierarchy cycle detected';
+  -- Collections nest at most two levels (a collection and its sections), so the
+  -- parent must be a top-level collection.
+  SELECT parent_collection_id IS NOT NULL INTO parent_has_parent
+  FROM collections
+  WHERE id = NEW.parent_collection_id;
+  IF parent_has_parent THEN
+    RAISE EXCEPTION 'Collections nest at most two levels (a collection and its sections)';
   END IF;
 
-  IF parent_depth >= 8 THEN
-    RAISE EXCEPTION 'Collection hierarchy exceeds maximum depth of 8';
+  -- A collection that already has sections cannot itself become a section.
+  SELECT EXISTS(SELECT 1 FROM collections WHERE parent_collection_id = NEW.id)
+  INTO has_children;
+  IF has_children THEN
+    RAISE EXCEPTION 'A collection with sections cannot be nested under another collection';
   END IF;
 
   RETURN NEW;

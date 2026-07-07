@@ -29,6 +29,12 @@ summary of what changed after completed work has been promoted out of `ref/`.
 
 ### Changed
 
+- Collection structure limits. Collection-links must target a collection in the
+  same hub (rejecting cross-hub embeds that could re-expose another owner's
+  collection). Collections nest at most two levels (a collection and its
+  sections): the hierarchy trigger and the create/reparent paths reject
+  sub-sections and reject nesting a collection that already has sections. The
+  depth-8 hierarchy rule is replaced by this two-level rule.
 - Resources simplified to a link, an editable title, and tags. Removed the
   `description` and `note` fields from the resource model, DTOs, `@nslinkhub/types`
   contract, Markdown export, and CSV import — a resource carries no summary;

@@ -76,6 +76,13 @@ export class ResourcesService {
     if (linkedCollection.id === collection.id) {
       throw new BadRequestException("Collection cannot link to itself");
     }
+    // Collection-links embed a collection (they expand, and are re-shareable via
+    // the parent). Restrict them to the same hub so you cannot embed and
+    // re-publish another owner's collection. Cross-hub references are a future
+    // read-only "shortcut", not an embed.
+    if (linkedCollection.hubId !== collection.hubId) {
+      throw new BadRequestException("A collection-link must target a collection in the same hub");
+    }
 
     const saved = await this.prisma.resource.create({
       data: {

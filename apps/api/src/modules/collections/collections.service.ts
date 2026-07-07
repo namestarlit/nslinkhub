@@ -108,6 +108,19 @@ export class CollectionsService {
         if (parent.hubId !== collection.hubId) {
           throw new BadRequestException("Parent collection must be in the same hub");
         }
+        if (parent.parentCollectionId) {
+          throw new BadRequestException(
+            "Collections nest at most two levels; a section cannot contain sub-sections",
+          );
+        }
+        const sectionCount = await this.prisma.collection.count({
+          where: { parentCollectionId: collection.id },
+        });
+        if (sectionCount > 0) {
+          throw new BadRequestException(
+            "A collection with sections cannot be nested under another collection",
+          );
+        }
         parentCollectionId = dto.parentCollectionId;
       }
     }
@@ -530,6 +543,11 @@ export class CollectionsService {
       );
       if (parent.hubId !== hubId) {
         throw new BadRequestException("Parent collection must be in the same hub");
+      }
+      if (parent.parentCollectionId) {
+        throw new BadRequestException(
+          "Collections nest at most two levels; a section cannot contain sub-sections",
+        );
       }
     }
 

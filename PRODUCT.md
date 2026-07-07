@@ -17,9 +17,10 @@ Core value:
 - Keep the collection current so what you shared always shows the latest
   content.
 - Scale a collection from a simple bookmark list to a structured, ordered
-  guide: collections nest, so a top-level collection can act as a table of
-  contents whose sections are sub-collections (nested as deep as needed), each
-  with its own rich description and ordered resources.
+  guide: a top-level collection acts as a table of contents whose sections are
+  sub-collections (nesting is deliberately capped at two levels — a collection
+  and its sections, "chapters with sections, no sub-chapters"), each with its
+  own rich description and ordered resources.
 - Publish the best collections for anyone to discover, save, and follow.
 - Export a collection — expanding its nested sections in order into a single
   document, with external links kept as references rather than inlined — as
@@ -41,11 +42,17 @@ Hub → Collections → Resources
   immutable hub id. You never join anyone else's hub; there are no memberships,
   invitations, or roles — collaboration is per-collection sharing (below).
 - **Collection** — the container of curated content; what a folder is to
-  Google Drive. Collections nest.
-- **Resource** — an item in a collection: an external link (with an editable
-  title and position) or a link to another collection. A resource has no
-  summary field — clarify a vague link by renaming its title; tags carry the
-  rest. It is the smallest unit of content, like text in a document.
+  Google Drive. Collections nest at most two levels: a collection and its
+  sections (a section cannot contain sub-sections, and a collection with
+  sections cannot itself be nested).
+- **Resource** — an item in a collection, and the smallest unit of content
+  (like text in a document). Two kinds: an **external link** (an editable title
+  + position) or a **collection-link** (`kind = collection_link`) that points
+  to another collection **in the same hub** and expands in place. A resource
+  has no summary — clarify a vague link by renaming its title; tags carry the
+  rest. A collection-link cannot target another hub's collection (no embedding
+  someone else's collection); cross-hub references are a future read-only
+  shortcut.
 - **Tag** — normalized lowercase labels attachable at two levels, on
   collections and on resources — a retrieval axis orthogonal to the collection
   hierarchy (see "Tags: the retrieval axis" below).
@@ -188,6 +195,10 @@ defined in a dedicated design pass before web implementation (Track W3).
   publication on a collection grants the same access to its descendant
   collections (and their resources) — sharing a "folder" shares its contents.
   Ownership already spans the whole subtree (one hub).
+- Collections nest at most two levels: creating a sub-section, or re-parenting
+  in a way that would exceed two levels, is rejected.
+- A collection-link resource targets a collection in the same hub; linking
+  another hub's collection is rejected.
 - All identifiers exposed in routes are immutable UUIDv7 values; changing a
   username, hub name, or collection title never breaks a stored reference.
 
