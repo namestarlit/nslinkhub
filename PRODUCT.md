@@ -150,6 +150,11 @@ chips) and ship the cross-collection filter as the surface that proves them.
   collections appear on the product-wide **explore** surface and the hub's
   public page; unpublished collections are visible to the hub owner and
   explicit shares only.
+- **Publishing a collection makes its sections publicly readable too** (access
+  inherits down): a published guide's sub-sections can be read as part of it,
+  though they are *not* listed separately in explore. This is intended — a
+  guide is useless if its sections 404 — but it is a public exposure, so the
+  web publish flow must confirm it ("this will make N sections readable").
 - Account holders **save** published collections (social-style bookmark) into
   their **saved/** surface; saves go dormant when a collection is unpublished
   and revive on republish.

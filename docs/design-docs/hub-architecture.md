@@ -189,6 +189,12 @@ not perform resolve to 403.
   can view; account holders **save** into their **saved/** surface. Saving
   requires publication; a save goes dormant on unpublish and revives on
   republish.
+- **Publishing exposes sections (by design).** Because access inherits down,
+  publishing a collection makes its sub-sections publicly readable as part of
+  it — they are readable but not separately listed in explore (`published`
+  stays false on the children). This is required for guides to work; it is also
+  a public exposure, so the W3 publish flow must confirm it, naming how many
+  sections become readable. No policy change — a documented, intended behavior.
 - **Discovery is tags + text — not handles.** In explore, the true north is
   searching by **tags and text**; the handle is *not* a global search facet.
   If you already know the hub you want, you go to it directly (`/@handle`) and
