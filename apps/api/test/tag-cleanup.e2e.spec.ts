@@ -39,7 +39,6 @@ describe("Tag cleanup (e2e)", () => {
         email: `tag_${sfx}@example.com`,
         password: "Password123!",
         name: `tag_${sfx}`,
-        username: `tag_${sfx}`,
       })
       .expect(200);
     bearer = signUp.headers["set-auth-token"];

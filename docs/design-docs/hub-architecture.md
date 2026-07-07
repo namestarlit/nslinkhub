@@ -1,5 +1,19 @@
 # Hub Architecture Plan
 
+> **Superseded in part (2026-07-04): tenancy is now the Google-Drive
+> individual model.** A hub is **one personal space per user** (1:1),
+> identified by a mutable **handle** + a free-form **display name** — there are
+> **no hub memberships, invitations, or roles, no username, and no admin
+> role**. Collaboration is per-collection sharing only (owner → direct
+> reader/editor → active link → published). Collection access policy and the
+> data model below that mention `HubMembership`, `HubInvitation`, hub roles
+> (`owner|admin|member`), or `username` are **historical**. The current
+> authority for tenancy and identity is `PRODUCT.md` (§2–§4) and
+> `docs/exec-plans/active/drive-model-tenancy.md`; the durable, collection-level
+> parts of this document (collections/resources, publication, saves, explore,
+> the export/guide model, the monorepo/track plan) remain accurate. A full
+> rewrite of the sections below is tracked follow-on work.
+
 Authoritative design and implementation plan for restructuring NSLinkHub
 around **hubs** as the tenant root, with the collection/resource vocabulary,
 Drive-style sharing, the explore/save discovery loop, and the pigfarm-derived

@@ -11,6 +11,22 @@ summary of what changed after completed work has been promoted out of `ref/`.
 
 ### Changed
 
+- Tenancy reshaped to the Google-Drive individual model (before Track W3).
+  A hub is now **one personal space per user** (1:1), identified by a mutable,
+  unique **handle** (the "hub name") plus a free-form **display name**. Removed
+  hub memberships, invitations, and roles (`HubMembersService`,
+  `HubInvitationsService`, their controllers/DTOs, and the `HubMembership` /
+  `HubInvitation` tables); removed the better-auth `username` plugin and the
+  `username`/`displayUsername` fields; removed the global `User.role` and the
+  admin bypass (no admin persona). Collection access is now owner → direct
+  reader/editor share → active link → published, with no membership branch.
+  Ownership is a transferable FK (`hub.ownerUserId`, `collection.hubId`);
+  durable links use the immutable `hubId`, so a handle rename never breaks a
+  saved reference. The username-based `/users/:username` routes became a
+  self-service profile at `/api/v1/profile` (display name, bio, handle). The
+  `0_init` migration was reshaped (squash) with all hand-written SQL objects
+  preserved. Full write-up: `docs/exec-plans/active/drive-model-tenancy.md`.
+
 - Tags: orphaned tags are now pruned automatically. Because tags are global
   (unique by name, shared across hubs), a tag is deleted only when nothing
   references it anywhere — after detaching it from a collection/resource, or

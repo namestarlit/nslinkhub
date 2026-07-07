@@ -1,55 +1,38 @@
-import {
-  ConflictException,
-  ForbiddenException,
-  Injectable,
-  NotFoundException,
-} from "@nestjs/common";
-import { UserRole } from "src/common/enums/user-role.enum";
+import { ConflictException, Injectable, NotFoundException } from "@nestjs/common";
 import { AuthUser } from "src/common/interfaces/auth-user.interface";
 import { PrismaService } from "src/database/prisma.service";
 import { User } from "src/generated/prisma/client";
+import { HubsService } from "../hubs/hubs.service";
 import { UpdateUserDto } from "./dto/update-user.dto";
 
+// Self-service profile. In the individual model a user has no public username;
+// the public identity is their hub handle (see the hub page), and everything
+// here operates on the authenticated user only.
 @Injectable()
 export class UsersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly hubs: HubsService,
+  ) {}
 
-  async getByUsername(username: string) {
-    const user = await this.prisma.user.findUnique({ where: { username } });
-
+  async getMe(actor: AuthUser) {
+    const user = await this.prisma.user.findUnique({ where: { id: actor.userId } });
     if (!user) {
       throw new NotFoundException("User not found");
     }
-
-    return this.toPublicUser(user);
+    return this.toProfile(user);
   }
 
-  async updateByUsername(username: string, actor: AuthUser, dto: UpdateUserDto) {
-    const user = await this.prisma.user.findUnique({ where: { username } });
-
+  async updateMe(actor: AuthUser, dto: UpdateUserDto) {
+    const user = await this.prisma.user.findUnique({ where: { id: actor.userId } });
     if (!user) {
       throw new NotFoundException("User not found");
     }
 
-    this.ensureWriteAccess(actor, user.id);
+    const data: { name?: string; email?: string; bio?: string | null } = {};
 
-    const data: {
-      username?: string;
-      displayUsername?: string;
-      email?: string;
-      bio?: string | null;
-    } = {};
-
-    if (dto.username && dto.username !== user.username) {
-      const exists = await this.prisma.user.findUnique({
-        where: { username: dto.username },
-        select: { id: true },
-      });
-      if (exists) {
-        throw new ConflictException("Username already exists");
-      }
-      data.username = dto.username;
-      data.displayUsername = dto.username;
+    if (dto.displayName && dto.displayName !== user.name) {
+      data.name = dto.displayName;
     }
 
     if (dto.email && dto.email.toLowerCase() !== user.email) {
@@ -65,7 +48,7 @@ export class UsersService {
     }
 
     if (dto.password) {
-      // Password now lives on the better-auth credential account row.
+      // Password lives on the better-auth credential account row.
       const passwordHash = await Bun.password.hash(dto.password, "argon2id");
       await this.prisma.account.updateMany({
         where: { userId: user.id, providerId: "credential" },
@@ -77,43 +60,33 @@ export class UsersService {
       data.bio = dto.bio;
     }
 
-    const saved = await this.prisma.user.update({
-      where: { id: user.id },
-      data,
+    // The handle lives on the hub; validated + uniqueness-checked there.
+    if (dto.handle) {
+      await this.hubs.updateHandle(user.id, dto.handle);
+    }
+
+    const saved = await this.prisma.user.update({ where: { id: user.id }, data });
+    return this.toProfile(saved);
+  }
+
+  async deleteMe(actor: AuthUser) {
+    await this.prisma.user.delete({ where: { id: actor.userId } });
+    return { id: actor.userId, deleted: true };
+  }
+
+  private async toProfile(user: User) {
+    const hub = await this.prisma.hub.findUnique({
+      where: { ownerUserId: user.id },
+      select: { id: true, handle: true },
     });
-    return this.toPublicUser(saved);
-  }
-
-  async deleteByUsername(username: string, actor: AuthUser) {
-    const user = await this.prisma.user.findUnique({ where: { username } });
-
-    if (!user) {
-      throw new NotFoundException("User not found");
-    }
-
-    this.ensureWriteAccess(actor, user.id);
-    await this.prisma.user.delete({ where: { id: user.id } });
-
-    return { id: user.id, deleted: true };
-  }
-
-  private ensureWriteAccess(actor: AuthUser, targetUserId: string) {
-    if (actor.role === UserRole.ADMIN) {
-      return;
-    }
-
-    if (actor.userId !== targetUserId) {
-      throw new ForbiddenException("Forbidden");
-    }
-  }
-
-  private toPublicUser(user: User) {
     return {
       id: user.id,
-      username: user.username,
+      displayName: user.name,
+      handle: hub?.handle ?? null,
+      hubId: hub?.id ?? null,
       email: user.email,
       bio: user.bio,
-      role: user.role,
+      image: user.image,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
     };

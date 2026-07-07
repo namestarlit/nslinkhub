@@ -209,7 +209,7 @@ export class ImportsService {
       );
     }
 
-    const hubId = await this.hubs.getPrimaryHubId(user.userId);
+    const hubId = await this.hubs.getUserHubId(user.userId);
     if (!hubId) {
       throw new BadRequestException("No hub available for this user");
     }

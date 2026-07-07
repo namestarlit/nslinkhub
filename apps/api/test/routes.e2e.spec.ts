@@ -38,7 +38,6 @@ describe("Collection routes (e2e)", () => {
         email: `${username}@example.com`,
         password: "Password123!",
         name: username,
-        username,
       })
       .expect(200);
     bearer = signUp.headers["set-auth-token"];

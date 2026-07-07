@@ -2,7 +2,7 @@ import "dotenv/config";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
-import { bearer, username } from "better-auth/plugins";
+import { bearer } from "better-auth/plugins";
 import { PrismaClient } from "../generated/prisma/client";
 import { createPersonalHub } from "../modules/hubs/hub-onboarding";
 
@@ -32,7 +32,6 @@ export const auth = betterAuth({
   },
   user: {
     additionalFields: {
-      role: { type: "string", defaultValue: "user", input: false },
       bio: { type: "string", required: false, input: false },
     },
   },
@@ -45,18 +44,20 @@ export const auth = betterAuth({
   databaseHooks: {
     user: {
       create: {
-        // Every new user gets a personal hub (owner membership) at sign-up.
-        // App-owned and auth-path-agnostic: SSO later reuses this hook.
+        // Every new user gets their one personal hub (their space) at sign-up,
+        // with a derived unique handle. App-owned and auth-path-agnostic: SSO
+        // later reuses this hook.
         after: async (user) => {
           await createPersonalHub(prisma, {
             userId: user.id,
             name: user.name,
+            email: user.email,
           });
         },
       },
     },
   },
-  plugins: [username(), bearer()],
+  plugins: [bearer()],
 });
 
 export type Auth = typeof auth;

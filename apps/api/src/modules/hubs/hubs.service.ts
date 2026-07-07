@@ -1,78 +1,99 @@
-import { ForbiddenException, Injectable } from "@nestjs/common";
-import { UserRole } from "src/common/enums/user-role.enum";
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from "@nestjs/common";
 import { AuthUser } from "src/common/interfaces/auth-user.interface";
 import { PrismaService } from "src/database/prisma.service";
-import { createPersonalHub } from "./hub-onboarding";
 
-export type HubRole = "owner" | "admin" | "member";
+// Handles that would collide with API path segments or read confusingly as a
+// public space identity. Format is enforced again by a DB CHECK constraint.
+const RESERVED_HANDLES = new Set([
+  "api",
+  "explore",
+  "me",
+  "hubs",
+  "collections",
+  "resources",
+  "tags",
+  "imports",
+  "exports",
+  "invitations",
+  "auth",
+  "admin",
+]);
 
-const ROLE_RANK: Record<string, number> = { member: 1, admin: 2, owner: 3 };
+const HANDLE_RE = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 
-export function roleRank(role: string | null | undefined): number {
-  return role ? (ROLE_RANK[role] ?? 0) : 0;
-}
-
-// Hub authority: creation, membership, and role checks. Collection-level
-// access resolution lives in CollectionPolicyService; this service answers
-// hub-scoped questions (who is a member, at what role).
+// Hub authority for the individual (Google-Drive) model: each user owns exactly
+// one hub — their personal space. Ownership is the only hub authority;
+// collection-level reader/editor sharing lives in CollectionPolicyService.
 @Injectable()
 export class HubsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  createHubWithOwner(userId: string, params: { name: string }) {
-    return createPersonalHub(this.prisma, { userId, name: params.name });
-  }
-
-  // The user's oldest owned hub — the personal hub created at sign-up. Used
-  // as the default target for collection creation until hub-scoped creation
-  // routes exist.
-  async getPrimaryHubId(userId: string): Promise<string | null> {
-    const membership = await this.prisma.hubMembership.findFirst({
-      where: { userId, role: "owner" },
-      orderBy: { createdAt: "asc" },
-      select: { hubId: true },
+  // The user's one hub (their space).
+  async getUserHubId(userId: string): Promise<string | null> {
+    const hub = await this.prisma.hub.findUnique({
+      where: { ownerUserId: userId },
+      select: { id: true },
     });
-    return membership?.hubId ?? null;
+    return hub?.id ?? null;
   }
 
-  async getMembershipRole(hubId: string, userId: string): Promise<string | null> {
-    const membership = await this.prisma.hubMembership.findUnique({
-      where: { hubId_userId: { hubId, userId } },
-      select: { role: true },
+  async isOwner(hubId: string, userId: string): Promise<boolean> {
+    const hub = await this.prisma.hub.findUnique({
+      where: { id: hubId },
+      select: { ownerUserId: true },
     });
-    return membership?.role ?? null;
+    return hub?.ownerUserId === userId;
   }
 
-  async isMember(hubId: string, userId: string): Promise<boolean> {
-    return (await this.getMembershipRole(hubId, userId)) !== null;
-  }
-
-  async countOwners(hubId: string): Promise<number> {
-    return this.prisma.hubMembership.count({
-      where: { hubId, role: "owner" },
-    });
-  }
-
-  // Write authority over a hub's content: platform admins bypass; otherwise
-  // any membership suffices (members have full content write).
-  async assertMember(hubId: string, user: AuthUser): Promise<void> {
-    if (user.role === UserRole.ADMIN) {
-      return;
-    }
-    if (!(await this.isMember(hubId, user.userId))) {
+  // Full authority over a hub belongs to its owner alone.
+  async requireHubOwner(hubId: string, user: AuthUser): Promise<void> {
+    if (!(await this.isOwner(hubId, user.userId))) {
       throw new ForbiddenException("Forbidden");
     }
   }
 
-  // Role-gated hub authority: platform admins bypass; otherwise the caller's
-  // membership role must meet or exceed minRole.
-  async requireHubRole(hubId: string, user: AuthUser, minRole: HubRole): Promise<void> {
-    if (user.role === UserRole.ADMIN) {
-      return;
+  async getHubByHandle(handle: string) {
+    return this.prisma.hub.findUnique({ where: { handle: handle.toLowerCase() } });
+  }
+
+  // Rename the caller's hub handle. The handle is the mutable public identity;
+  // durable links use the immutable hub id, so a rename never breaks a saved
+  // link or a published-content reference.
+  async updateHandle(userId: string, rawHandle: string) {
+    const handle = rawHandle.trim().toLowerCase();
+    if (handle.length < 3 || handle.length > 60 || !HANDLE_RE.test(handle)) {
+      throw new BadRequestException(
+        "Handle must be 3-60 chars, lowercase letters, digits, hyphens",
+      );
     }
-    const role = await this.getMembershipRole(hubId, user.userId);
-    if (roleRank(role) < roleRank(minRole)) {
-      throw new ForbiddenException("Forbidden");
+    if (RESERVED_HANDLES.has(handle)) {
+      throw new BadRequestException("Handle is reserved");
     }
+
+    const hub = await this.prisma.hub.findUnique({
+      where: { ownerUserId: userId },
+      select: { id: true, handle: true },
+    });
+    if (!hub) {
+      throw new NotFoundException("Hub not found");
+    }
+
+    if (hub.handle !== handle) {
+      const taken = await this.prisma.hub.findUnique({
+        where: { handle },
+        select: { id: true },
+      });
+      if (taken) {
+        throw new BadRequestException("Handle already taken");
+      }
+      await this.prisma.hub.update({ where: { id: hub.id }, data: { handle } });
+    }
+
+    return { hubId: hub.id, handle };
   }
 }

@@ -35,7 +35,6 @@ describe("Foundation conventions (e2e)", () => {
         email: `${username}@example.com`,
         password: "Password123!",
         name: username,
-        username,
       })
       .expect(200);
     bearer = signUp.headers["set-auth-token"];
@@ -71,7 +70,7 @@ describe("Foundation conventions (e2e)", () => {
 
   it("returns the error envelope with matching request id on 404", async () => {
     const res = await request(app.getHttpServer())
-      .get("/api/v1/users/definitely-not-a-user")
+      .get("/api/v1/definitely-not-a-route")
       .expect(404);
 
     const body = res.body as {
@@ -83,7 +82,8 @@ describe("Foundation conventions (e2e)", () => {
       };
     };
     expect(body.error.code).toBe("not_found");
-    expect(body.error.message).toBe("User not found");
+    expect(typeof body.error.message).toBe("string");
+    expect(body.error.message.length).toBeGreaterThan(0);
     expect(body.error.requestId).toBe(res.headers["x-request-id"]);
     expect(body.error.details).toEqual({});
   });

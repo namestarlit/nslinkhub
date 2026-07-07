@@ -29,7 +29,6 @@ describe("Imports (e2e)", () => {
         email: `imp_${sfx}@example.com`,
         password: "Password123!",
         name: `imp_${sfx}`,
-        username: `imp_${sfx}`,
       })
       .expect(200);
     bearer = signUp.headers["set-auth-token"];

@@ -16,74 +16,38 @@ datasource db {
 }
 
 model User {
-  id              String   @id @default(dbgenerated("app_uuid_v7()")) @db.Uuid
-  name            String   @db.VarChar(255)
-  username        String   @unique @db.VarChar(60)
-  displayUsername String?  @map("display_username") @db.VarChar(60)
-  email           String   @unique @db.VarChar(255)
-  emailVerified   Boolean  @default(false) @map("email_verified")
-  image           String?
-  bio             String?
-  role            String   @default("user") @db.VarChar(16)
-  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt       DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
+  id            String   @id @default(dbgenerated("app_uuid_v7()")) @db.Uuid
+  name          String   @db.VarChar(255)
+  email         String   @unique @db.VarChar(255)
+  emailVerified Boolean  @default(false) @map("email_verified")
+  image         String?
+  bio           String?
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
 
-  memberships HubMembership[]
-  shares      CollectionShare[]
-  saves       CollectionSave[]
-  exportJobs  ExportJob[]
-  sessions    Session[]
-  accounts    Account[]
+  hub        Hub?
+  shares     CollectionShare[]
+  saves      CollectionSave[]
+  exportJobs ExportJob[]
+  sessions   Session[]
+  accounts   Account[]
 
   @@map("users")
 }
 
 model Hub {
   id          String   @id @default(dbgenerated("app_uuid_v7()")) @db.Uuid
-  name        String   @db.VarChar(120)
+  ownerUserId String   @unique @map("owner_user_id") @db.Uuid
+  handle      String   @unique @db.VarChar(60)
   description String?
   createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt   DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
 
-  memberships HubMembership[]
-  invitations HubInvitation[]
+  owner       User         @relation(fields: [ownerUserId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   collections Collection[]
   exportJobs  ExportJob[]
 
   @@map("hubs")
-}
-
-model HubMembership {
-  hubId     String   @map("hub_id") @db.Uuid
-  userId    String   @map("user_id") @db.Uuid
-  role      String   @db.VarChar(16)
-  status    String   @default("active") @db.VarChar(16)
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
-
-  hub  Hub  @relation(fields: [hubId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-
-  @@id([hubId, userId])
-  @@index([userId], map: "idx_hub_memberships_user_id")
-  @@map("hub_memberships")
-}
-
-model HubInvitation {
-  id        String   @id @default(dbgenerated("app_uuid_v7()")) @db.Uuid
-  hubId     String   @map("hub_id") @db.Uuid
-  email     String   @db.VarChar(255)
-  role      String   @db.VarChar(16)
-  tokenHash String   @unique @map("token_hash")
-  status    String   @default("pending") @db.VarChar(16)
-  expiresAt DateTime @map("expires_at") @db.Timestamptz(6)
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
-
-  hub Hub @relation(fields: [hubId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-
-  @@index([hubId], map: "idx_hub_invitations_hub_id")
-  @@map("hub_invitations")
 }
 
 model Collection {

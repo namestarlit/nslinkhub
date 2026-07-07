@@ -67,11 +67,12 @@ scope, not the theoretical ceiling.
 
 Two consequences:
 
-- **Product-level collaboration stays in the product.** NSLinkHub's shared hubs
-  (memberships, invitations, roles) are **individual-to-individual**
-  collaboration owned by the product's authorization — *not* organizations, and
-  *not* something nsauth models. "No orgs" is an IdP-scope statement; it does
-  not remove NSLinkHub's person-to-person hub sharing.
+- **Product-level authorization stays in the product.** NSLinkHub is a
+  Google-Drive model: one hub (space) per user, no memberships or hub roles;
+  collaboration is per-collection reader/editor sharing owned by the product's
+  authorization — *not* organizations, and *not* something nsauth models. "No
+  orgs" at the IdP is consistent with the product having no shared tenants at
+  all.
 - **Cross-service identity propagation is webhook-shaped, not broker-shaped.**
   The rare signals a product needs from nsauth — account disabled/deleted,
   email changed, identity-wide logout — are a handful of low-frequency HTTP

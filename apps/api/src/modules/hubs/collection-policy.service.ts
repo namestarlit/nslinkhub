@@ -1,16 +1,15 @@
 import { createHash } from "node:crypto";
 import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
-import { UserRole } from "src/common/enums/user-role.enum";
 import { AuthUser } from "src/common/interfaces/auth-user.interface";
 import { PrismaService } from "src/database/prisma.service";
 import { Collection } from "src/generated/prisma/client";
 
 export interface CollectionAccess {
   canRead: boolean;
-  canWriteContent: boolean; // resources, tags, imports (editor or member)
-  canManage: boolean; // publish, share, delete, settings (member/admin)
+  canWriteContent: boolean; // resources, tags, imports (owner or direct editor)
+  canManage: boolean; // publish, share, delete, settings (owner only)
   viaLinkToken: boolean; // access came from a presented share token
-  hubRole: string | null; // membership role when a member
+  isOwner: boolean; // the viewer owns the hub holding this collection
 }
 
 const NO_ACCESS: CollectionAccess = {
@@ -18,12 +17,13 @@ const NO_ACCESS: CollectionAccess = {
   canWriteContent: false,
   canManage: false,
   viaLinkToken: false,
-  hubRole: null,
+  isOwner: false,
 };
 
 // The single source of truth for collection access (design "Sharing Model").
-// First match wins: platform admin -> membership -> direct share -> active
-// link (row or token) -> published.
+// Individual/Drive model: the hub owner has full authority; everyone else gets
+// at most what a direct share -> active link (row or token) -> publication
+// grants. No memberships, no admin bypass.
 @Injectable()
 export class CollectionPolicyService {
   constructor(private readonly prisma: PrismaService) {}
@@ -33,30 +33,18 @@ export class CollectionPolicyService {
     viewer: AuthUser | null,
     shareToken?: string,
   ): Promise<CollectionAccess> {
-    if (viewer?.role === UserRole.ADMIN) {
-      return {
-        canRead: true,
-        canWriteContent: true,
-        canManage: true,
-        viaLinkToken: false,
-        hubRole: "admin",
-      };
-    }
-
     if (viewer) {
-      const membership = await this.prisma.hubMembership.findUnique({
-        where: {
-          hubId_userId: { hubId: collection.hubId, userId: viewer.userId },
-        },
-        select: { role: true },
+      const hub = await this.prisma.hub.findUnique({
+        where: { id: collection.hubId },
+        select: { ownerUserId: true },
       });
-      if (membership) {
+      if (hub?.ownerUserId === viewer.userId) {
         return {
           canRead: true,
           canWriteContent: true,
           canManage: true,
           viaLinkToken: false,
-          hubRole: membership.role,
+          isOwner: true,
         };
       }
     }
@@ -110,7 +98,7 @@ export class CollectionPolicyService {
       canWriteContent,
       canManage: false,
       viaLinkToken,
-      hubRole: null,
+      isOwner: false,
     };
   }
 

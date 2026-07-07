@@ -35,10 +35,11 @@ brand, built to solve the author's own problem and published for others.
 Hub → Collections → Resources
 ```
 
-- **Hub** — the tenant: a personal or shared space that owns collections.
-  Users belong to hubs through memberships (`owner | admin | member`) and
-  join by invitation. Every user gets a personal hub at sign-up; it is a
-  completely normal hub.
+- **Hub** — your one personal space (one hub per user, like a Google Drive),
+  the tenant that owns your collections. Created at sign-up and identified by a
+  unique, mutable **handle** (the "hub name", tailnet-style) that aliases the
+  immutable hub id. You never join anyone else's hub; there are no memberships,
+  invitations, or roles — collaboration is per-collection sharing (below).
 - **Collection** — the container of curated content; what a folder is to
   Google Drive. Collections nest.
 - **Resource** — an item in a collection: an external link (with title
@@ -79,13 +80,14 @@ chips) and ship the cross-collection filter as the surface that proves them.
 - **The curator** (primary; the author is user zero): collects resources on
   topics they care about, organizes them into collections, and shares or
   publishes the good ones.
-- **The recipient**: receives a shared collection link; can read without an
-  account, and with an account gets the collection in their shared/ surface
-  instead of re-bookmarking it elsewhere.
-- **The browser**: discovers published collections on the explore surface and
-  saves the ones worth keeping.
-- **The team/community hub**: a group curating collections together under a
-  shared hub.
+- **The recipient**: receives a shared collection (link or direct); can read
+  without an account, and with an account gets the collection in their own
+  space's shared/ surface instead of re-bookmarking it elsewhere.
+- **The collaborator**: a specific person the curator grants `editor` on a
+  collection (Drive-style) — they edit that one collection from their own
+  space, without joining anything.
+- **The browser**: discovers published collections on the explore surface
+  (optionally filtered by a hub handle) and saves the ones worth keeping.
 
 ## 4. Capabilities
 
@@ -109,15 +111,15 @@ chips) and ship the cross-collection filter as the surface that proves them.
   stays enabled.
 - **Direct sharing**: share to a specific account by email as `reader`
   (default) or `editor` (content-only write). Independent of the link,
-  individually revocable, lands in the recipient's shared/.
-- Hub membership is never required just to see or edit one collection —
-  invitations are for people who belong in the hub.
+  individually revocable, lands in the recipient's shared/. This is the only
+  collaboration mechanism — an editor works from their own space; there is no
+  hub to join.
 
 ### Publish and discover
 
 - **Publish/unpublish** (replaces public/unlisted/private): published
   collections appear on the product-wide **explore** surface and the hub's
-  public page; unpublished collections are visible to hub members and
+  public page; unpublished collections are visible to the hub owner and
   explicit shares only.
 - Account holders **save** published collections (social-style bookmark) into
   their **saved/** surface; saves go dormant when a collection is unpublished
@@ -134,9 +136,11 @@ chips) and ship the cross-collection filter as the surface that proves them.
 
 ### Account
 
-- Email/username + password via self-hosted better-auth (cookie sessions for
-  browsers, bearer tokens for API clients and the extension). Later:
-  "Continue with namestarlit" SSO (`docs/design-docs/identity-sso.md`).
+- Email + password via self-hosted better-auth (cookie sessions for browsers,
+  bearer tokens for API clients and the extension). No username: identity is a
+  free-form **display name** plus a unique, mutable **hub handle**. Profile
+  self-service lives at `/api/v1/profile`. Later: "Continue with namestarlit"
+  SSO (`docs/design-docs/identity-sso.md`).
 
 ## 5. Product Surfaces
 
@@ -160,8 +164,9 @@ defined in a dedicated design pass before web implementation (Track W3).
   see anything else in the hub.
 - Saving requires publication; a save survives unpublish (dormant) and
   revives on republish.
-- Removing the last owner of a hub is impossible; membership comes only from
-  explicit invitation + authenticated acceptance.
+- Each user owns exactly one hub (their space), created at sign-up with a
+  unique derived handle; the handle is mutable, but durable links use the
+  immutable hub id, so a rename never breaks a saved reference.
 - Reorder and update operations reject stale versions (409) rather than
   silently overwriting concurrent edits.
 - Imported files that are malformed produce per-row errors, not partial

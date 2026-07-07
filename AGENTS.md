@@ -84,20 +84,23 @@ authoritative.
 ## Non-Negotiable Invariants
 
 - Database identities are immutable UUIDv7 values. Mutable human-facing values
-  (usernames, display names, hub names, emails) never appear in authorization
-  rules, foreign keys, or route contracts.
+  (hub handles, display names, emails) never appear in authorization rules,
+  foreign keys, or route contracts. Durable links use `hubId`, never the
+  handle, so a handle rename never breaks a saved reference.
 - The backend owns authoritative business rules, validation, authorization,
   and derived state. Clients are replaceable delivery surfaces; UI hiding is
   never a security rule.
 - better-auth owns credentials, sessions, and verification primitives; the
-  product owns identity, membership, authorization, and workflows. Session
-  resolution goes through `resolveSessionUser`; services consume `AuthUser`,
-  never better-auth types.
+  product owns identity, authorization, and workflows. Session resolution goes
+  through `resolveSessionUser`; services consume `AuthUser`, never better-auth
+  types.
 - Sign-up onboarding stays in an app-owned service callable from any auth
   path (the SSO direction depends on this).
-- Once hubs land: every hub-owned query carries `hubId`; route IDs never
-  prove access; collection access flows through the single policy service
-  (published → membership → direct share → active link).
+- Every hub-owned query carries `hubId`; route IDs never prove access;
+  collection access flows through the single policy service — Google-Drive
+  model: hub owner (full) → direct share (reader/editor) → active link →
+  published. One hub per user; no memberships, no roles beyond owner/reader/
+  editor, no admin bypass.
 - NestJS route order: literal routes are declared before parameter routes in
   the same controller, and catch-all lookups never share a prefix with
   `:id/*` subresources.

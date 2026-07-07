@@ -10,17 +10,43 @@ type HubCapableClient = Pick<PrismaClient, "hub">;
 export interface PersonalHubParams {
   userId: string;
   name: string;
+  email: string;
 }
 
-// Atomically create a hub and the creator's owner membership. The membership
-// is a nested write, so both rows commit together.
+// Slugify a seed into the handle charset: lowercase, [a-z0-9-], single hyphens,
+// no leading/trailing hyphen. Falls back to "hub" when nothing usable remains.
+function slugifyHandle(seed: string): string {
+  const base = seed
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 50);
+  return base.length >= 3 ? base : "hub";
+}
+
+// Create the user's one personal hub with a unique, derived handle. The handle
+// is the mutable public identity; the immutable hub id is the durable key.
+// Retries with a numeric suffix until the unique handle constraint is satisfied.
 export async function createPersonalHub(prisma: HubCapableClient, params: PersonalHubParams) {
+  const seed = slugifyHandle(params.name) || slugifyHandle(params.email.split("@")[0] ?? "hub");
+
+  for (let attempt = 0; attempt < 25; attempt += 1) {
+    const handle = attempt === 0 ? seed : `${seed}-${attempt + 1}`.slice(0, 60);
+    const existing = await prisma.hub.findUnique({ where: { handle } });
+    if (existing) {
+      continue;
+    }
+    try {
+      return await prisma.hub.create({
+        data: { ownerUserId: params.userId, handle },
+      });
+    } catch {
+      // Lost a race on the unique handle; try the next suffix.
+    }
+  }
+
+  // Extremely unlikely fallback: guarantee uniqueness with the user id tail.
   return prisma.hub.create({
-    data: {
-      name: params.name,
-      memberships: {
-        create: { userId: params.userId, role: "owner" },
-      },
-    },
+    data: { ownerUserId: params.userId, handle: `hub-${params.userId.slice(0, 8)}` },
   });
 }

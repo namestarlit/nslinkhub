@@ -1,7 +1,6 @@
 import { InjectQueue } from "@nestjs/bullmq";
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { Queue } from "bullmq";
-import { UserRole } from "src/common/enums/user-role.enum";
 import { AuthUser } from "src/common/interfaces/auth-user.interface";
 import { PrismaService } from "src/database/prisma.service";
 import { Collection, ExportJob } from "src/generated/prisma/client";
@@ -81,9 +80,8 @@ export class ExportsService {
       throw new NotFoundException("Export job not found");
     }
 
-    if (user.role !== UserRole.ADMIN) {
-      await this.hubs.assertMember(job.hubId, user);
-    }
+    // Export jobs belong to the hub owner.
+    await this.hubs.requireHubOwner(job.hubId, user);
 
     return this.toView(job);
   }

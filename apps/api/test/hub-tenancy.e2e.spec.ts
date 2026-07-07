@@ -30,7 +30,6 @@ describe("Hub tenancy (e2e)", () => {
         email: `${owner}@example.com`,
         password: "Password123!",
         name: owner,
-        username: owner,
       })
       .expect(200);
     ownerBearer = signUp.headers["set-auth-token"];

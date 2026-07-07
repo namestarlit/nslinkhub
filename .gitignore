@@ -61,3 +61,6 @@ apps/api/src/generated/
 # Disposable implementation context (tracked README only)
 ref/*
 !ref/README.md
+
+# Impeccable plugin session cache
+.impeccable/

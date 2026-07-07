@@ -29,59 +29,28 @@ $$;
 CREATE TABLE IF NOT EXISTS users (
   id uuid PRIMARY KEY DEFAULT public.app_uuid_v7(),
   name varchar(255) NOT NULL,
-  username varchar(60) NOT NULL UNIQUE,
-  display_username varchar(60),
   email varchar(255) NOT NULL UNIQUE,
   email_verified boolean NOT NULL DEFAULT false,
   image text,
   bio text,
-  role varchar(16) NOT NULL DEFAULT 'user',
-  created_at timestamptz NOT NULL DEFAULT now(),
-  updated_at timestamptz NOT NULL DEFAULT now(),
-  CONSTRAINT users_role_check CHECK (role IN ('user', 'admin'))
-);
-
--- Hubs (tenant root) and memberships
-
-CREATE TABLE IF NOT EXISTS hubs (
-  id uuid PRIMARY KEY DEFAULT public.app_uuid_v7(),
-  name varchar(120) NOT NULL,
-  description text,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE TABLE IF NOT EXISTS hub_memberships (
-  hub_id uuid NOT NULL REFERENCES hubs(id) ON DELETE CASCADE,
-  user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  role varchar(16) NOT NULL,
-  status varchar(16) NOT NULL DEFAULT 'active',
-  created_at timestamptz NOT NULL DEFAULT now(),
-  updated_at timestamptz NOT NULL DEFAULT now(),
-  PRIMARY KEY (hub_id, user_id),
-  CONSTRAINT hub_memberships_role_check CHECK (role IN ('owner', 'admin', 'member')),
-  CONSTRAINT hub_memberships_status_check CHECK (status IN ('active', 'suspended'))
-);
+-- Hubs (one personal space per user; owner_user_id is the 1:1 ownership FK,
+-- handle is the mutable public identity that aliases the immutable id)
 
-CREATE INDEX IF NOT EXISTS idx_hub_memberships_user_id
-  ON hub_memberships (user_id);
-
-CREATE TABLE IF NOT EXISTS hub_invitations (
+CREATE TABLE IF NOT EXISTS hubs (
   id uuid PRIMARY KEY DEFAULT public.app_uuid_v7(),
-  hub_id uuid NOT NULL REFERENCES hubs(id) ON DELETE CASCADE,
-  email varchar(255) NOT NULL,
-  role varchar(16) NOT NULL,
-  token_hash text NOT NULL UNIQUE,
-  status varchar(16) NOT NULL DEFAULT 'pending',
-  expires_at timestamptz NOT NULL,
+  owner_user_id uuid NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+  handle varchar(60) NOT NULL UNIQUE,
+  description text,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now(),
-  CONSTRAINT hub_invitations_role_check CHECK (role IN ('owner', 'admin', 'member')),
-  CONSTRAINT hub_invitations_status_check CHECK (status IN ('pending', 'accepted', 'revoked', 'expired'))
+  CONSTRAINT hubs_handle_format_check CHECK (
+    char_length(handle) BETWEEN 3 AND 60 AND handle ~ '^[a-z0-9]+(-[a-z0-9]+)*$'
+  )
 );
-
-CREATE INDEX IF NOT EXISTS idx_hub_invitations_hub_id
-  ON hub_invitations (hub_id);
 
 -- Collections (hub-owned; publication booleans replace the visibility triad)
 
@@ -288,18 +257,6 @@ EXECUTE FUNCTION public.set_updated_at();
 DROP TRIGGER IF EXISTS trg_set_updated_at_hubs ON hubs;
 CREATE TRIGGER trg_set_updated_at_hubs
 BEFORE UPDATE ON hubs
-FOR EACH ROW
-EXECUTE FUNCTION public.set_updated_at();
-
-DROP TRIGGER IF EXISTS trg_set_updated_at_hub_memberships ON hub_memberships;
-CREATE TRIGGER trg_set_updated_at_hub_memberships
-BEFORE UPDATE ON hub_memberships
-FOR EACH ROW
-EXECUTE FUNCTION public.set_updated_at();
-
-DROP TRIGGER IF EXISTS trg_set_updated_at_hub_invitations ON hub_invitations;
-CREATE TRIGGER trg_set_updated_at_hub_invitations
-BEFORE UPDATE ON hub_invitations
 FOR EACH ROW
 EXECUTE FUNCTION public.set_updated_at();
 

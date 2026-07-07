@@ -2,19 +2,10 @@ import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from
 import { fromNodeHeaders } from "better-auth/node";
 import { Request } from "express";
 import { auth } from "src/auth/auth";
-import { UserRole } from "src/common/enums/user-role.enum";
 import { AuthUser } from "src/common/interfaces/auth-user.interface";
 
-export function toAuthUser(user: {
-  id: string;
-  username?: string | null;
-  role?: string | null;
-}): AuthUser {
-  return {
-    userId: user.id,
-    username: user.username ?? "",
-    role: (user.role ?? UserRole.USER) as UserRole,
-  };
+export function toAuthUser(user: { id: string }): AuthUser {
+  return { userId: user.id };
 }
 
 export async function resolveSessionUser(request: Request): Promise<AuthUser | null> {

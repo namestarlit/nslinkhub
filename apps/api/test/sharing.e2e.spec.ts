@@ -19,7 +19,7 @@ describe("Sharing, publication, and saves (e2e)", () => {
   const signUp = async (name: string, email: string) => {
     const res = await request(app.getHttpServer())
       .post("/api/v1/auth/sign-up/email")
-      .send({ email, password: "Password123!", name, username: name })
+      .send({ email, password: "Password123!", name })
       .expect(200);
     return res.headers["set-auth-token"];
   };

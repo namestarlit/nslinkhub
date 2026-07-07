@@ -8,7 +8,6 @@ import {
 import { CursorQueryDto } from "src/common/dto/cursor-query.dto";
 import { PaginationQueryDto } from "src/common/dto/pagination-query.dto";
 import { ResourceKind } from "src/common/enums/resource-kind.enum";
-import { UserRole } from "src/common/enums/user-role.enum";
 import { AuthUser } from "src/common/interfaces/auth-user.interface";
 import { decodeCursor, encodeCursor } from "src/common/utils/cursor.util";
 import { parseIfMatchVersion, toVersionEtag } from "src/common/utils/etag.util";
@@ -34,7 +33,7 @@ export class CollectionsService {
   // --- creation -----------------------------------------------------------
 
   async create(user: AuthUser, dto: CreateCollectionDto) {
-    const hubId = await this.requirePrimaryHub(user);
+    const hubId = await this.requireUserHub(user);
     return this.createInHub(user, hubId, dto);
   }
 
@@ -197,7 +196,7 @@ export class CollectionsService {
 
     const target = await this.prisma.user.findUnique({
       where: { email: dto.email.trim().toLowerCase() },
-      select: { id: true, username: true },
+      select: { id: true },
     });
     if (!target) {
       throw new NotFoundException("No account found for that email");
@@ -234,12 +233,12 @@ export class CollectionsService {
     await this.policy.requireManage(collection, user);
     const shares = await this.prisma.collectionShare.findMany({
       where: { collectionId: collection.id },
-      include: { user: { select: { id: true, username: true } } },
+      include: { user: { select: { id: true, name: true } } },
       orderBy: { createdAt: "asc" },
     });
     return shares.map((share) => ({
       userId: share.userId,
-      username: share.user.username,
+      displayName: share.user.name,
       role: share.role,
       source: share.source,
     }));
@@ -318,7 +317,7 @@ export class CollectionsService {
     }
     const collections = await this.listPublishedCollections(query, { hubId });
     return {
-      hub: { id: hub.id, name: hub.name, description: hub.description },
+      hub: { id: hub.id, handle: hub.handle, description: hub.description },
       collections: collections.items,
       meta: collections.meta,
     };
@@ -333,14 +332,12 @@ export class CollectionsService {
       throw new NotFoundException("Hub not found");
     }
 
-    const isMember =
-      viewer !== null &&
-      (viewer.role === UserRole.ADMIN || (await this.hubs.isMember(hubId, viewer.userId)));
+    const isOwner = viewer !== null && (await this.hubs.isOwner(hubId, viewer.userId));
 
-    // Members see every collection; everyone else sees the published subset.
+    // The owner sees every collection; everyone else sees the published subset.
     return this.listCollectionsKeyset(query, {
       hubId,
-      ...(isMember ? {} : { published: true }),
+      ...(isOwner ? {} : { published: true }),
     });
   }
 
@@ -487,8 +484,8 @@ export class CollectionsService {
     };
   }
 
-  private async requirePrimaryHub(user: AuthUser): Promise<string> {
-    const hubId = await this.hubs.getPrimaryHubId(user.userId);
+  private async requireUserHub(user: AuthUser): Promise<string> {
+    const hubId = await this.hubs.getUserHubId(user.userId);
     if (!hubId) {
       throw new BadRequestException("No hub available for this user");
     }

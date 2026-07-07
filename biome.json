@@ -7,7 +7,7 @@
   },
   "files": {
     "ignoreUnknown": true,
-    "includes": ["**", "!ref", "!apps/api/src/generated"]
+    "includes": ["**", "!ref", "!apps/api/src/generated", "!**/.impeccable"]
   },
   "formatter": {
     "enabled": true,

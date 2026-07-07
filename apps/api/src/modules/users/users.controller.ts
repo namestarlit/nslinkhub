@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Patch, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { CurrentUser } from "src/common/decorators/current-user.decorator";
 import { AuthGuard } from "src/common/guards/auth.guard";
@@ -7,34 +7,27 @@ import { apiOk } from "src/common/utils/response.util";
 import { UpdateUserDto } from "./dto/update-user.dto";
 import { UsersService } from "./users.service";
 
-@ApiTags("users")
-@Controller("api/v1/users")
+// The authenticated user's own profile. Public identity is the hub handle
+// (see the hub page), so there is no public user-by-username lookup.
+@ApiTags("profile")
+@ApiBearerAuth()
+@UseGuards(AuthGuard)
+@Controller("api/v1/profile")
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
-  @Get(":username")
-  async getByUsername(@Param("username") username: string) {
-    const data = await this.usersService.getByUsername(username);
-    return apiOk(data);
+  @Get()
+  async getMe(@CurrentUser() user: AuthUser) {
+    return apiOk(await this.usersService.getMe(user));
   }
 
-  @ApiBearerAuth()
-  @UseGuards(AuthGuard)
-  @Patch(":username")
-  async updateByUsername(
-    @Param("username") username: string,
-    @CurrentUser() user: AuthUser,
-    @Body() dto: UpdateUserDto,
-  ) {
-    const data = await this.usersService.updateByUsername(username, user, dto);
-    return apiOk(data);
+  @Patch()
+  async updateMe(@CurrentUser() user: AuthUser, @Body() dto: UpdateUserDto) {
+    return apiOk(await this.usersService.updateMe(user, dto));
   }
 
-  @ApiBearerAuth()
-  @UseGuards(AuthGuard)
-  @Delete(":username")
-  async deleteByUsername(@Param("username") username: string, @CurrentUser() user: AuthUser) {
-    const data = await this.usersService.deleteByUsername(username, user);
-    return apiOk(data);
+  @Delete()
+  async deleteMe(@CurrentUser() user: AuthUser) {
+    return apiOk(await this.usersService.deleteMe(user));
   }
 }

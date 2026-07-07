@@ -8,13 +8,13 @@ resources and are shared per-collection (Drive model) or published to the
 product-wide explore surface. See `PRODUCT.md` for the product definition and
 `docs/design-docs/hub-architecture.md` for the authoritative target design.
 
-The codebase is mid-transition on the locked order
-W1 → A → B → C → D → W2 → W3 → W4. Through Phase D the backend model is complete: Hub → Collections →
-Resources with a single `CollectionPolicyService` for collection access,
-role-enforced hub authority (owner > admin > member), invitations with
-authenticated acceptance, membership management under the last-owner rule,
-and explicit ownership transfer. Remaining tracks are the clients
-(W2 shared types, W3 web, W4 extension) and Phase E hardening.
+The backend model is complete: Hub → Collections → Resources with a single
+`CollectionPolicyService` for collection access. Tenancy is the Google-Drive
+individual model — **one hub (personal space) per user**, identified by a
+mutable handle + a free-form display name (no username, no memberships,
+invitations, hub roles, or admin). Collaboration is per-collection sharing:
+owner → direct reader/editor → active link → published. Remaining tracks are
+the clients (W2 shared types done; W3 web, W4 extension) and Phase E hardening.
 
 ## System Shape
 
@@ -56,8 +56,8 @@ ref/               disposable, git-ignored implementation context
 | --- | --- |
 | `auth` (`apps/api/src/auth`) | better-auth instance + personal-hub onboarding hook; handler mounted in `app.setup.ts` |
 | `common/guards` | `AuthGuard`/`OptionalAuthGuard` via `resolveSessionUser` |
-| `hubs` | hub creation + role-gated membership authority (`HubsService`), collection access policy (`CollectionPolicyService`), invitations and member/ownership management (`HubInvitationsService`, `HubMembersService`) |
-| `users` | profile read/update/delete |
+| `hubs` | one-hub-per-user ownership + handle management (`HubsService`), collection access policy — owner → direct share → link → published (`CollectionPolicyService`) |
+| `users` | self-service profile at `/profile` (display name, bio, hub handle) |
 | `collections` | collection CRUD, publish/unpublish, link + direct sharing, saves, `/explore`, public hub pages, `/me/{shared,saved}`, hub-scoped lookup |
 | `resources` | resource CRUD, reorder with version checks |
 | `tags` | normalized tags on collections and resources |
