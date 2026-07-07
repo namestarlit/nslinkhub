@@ -114,6 +114,13 @@ chips) and ship the cross-collection filter as the surface that proves them.
   individually revocable, lands in the recipient's shared/. This is the only
   collaboration mechanism — an editor works from their own space; there is no
   hub to join.
+- **Ownership transfer** (planned): a single collection can be transferred to a
+  user who is already an `editor` on it (Drive-style). On transfer it moves into
+  the new owner's hub ("MyDrive"), the previous owner keeps it as an editor in
+  their shared/, and the immutable **creator** is unchanged (owner is mutable,
+  creator is not). Handing over an entire account/hub is done by changing the
+  account email (with verification), not a separate transfer model — a hub is
+  1:1 with its account.
 
 ### Publish and discover
 

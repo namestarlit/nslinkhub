@@ -58,10 +58,28 @@ hand-written object, the auth smoke passed before the full suite, and the
 Deferred follow-ons (small, separate — not blocking W3):
 
 - **Handle-based discovery filter** on explore (`?hub=<handle>` → resolve to
-  `hubId`) so published content can be browsed "by hub". Durable routes stay
-  `hubId`; the handle is a discovery/attribution dimension only.
-- **Collection ownership transfer** endpoint (reassign `collection.hubId` to a
-  recipient's hub). Enabled by the model; no endpoint yet.
+  `hubId`) so published content can be browsed/searched "by hub"
+  (YouTube-handle style). Durable routes stay `hubId`; the handle is a mutable
+  discovery/search/attribution dimension only.
+- **Collection ownership transfer** (2026-07-04 decision) — Drive-accurate.
+  Distinguishes **owner** (`collection.hubId`, mutable) from **creator** (a new
+  immutable `creatorUserId`, set at creation, never changes on transfer — Drive
+  keeps "created by" after an ownership change). Transfer is allowed **only to
+  a user who is already a `CollectionShare` editor** on the collection, and:
+  1. reassigns the collection subtree (`collection.hubId`, recursively for
+     nested children, detaching the top's `parentCollectionId`) to the
+     recipient's hub — it moves into their personal hub ("MyDrive");
+  2. removes the recipient's now-redundant editor share (they own it);
+  3. adds an `editor` direct share for the previous owner, so it lands in
+     **their** `shared/` surface (Drive keeps the ex-owner as editor);
+  4. leaves `creatorUserId` untouched.
+  Requires adding `creatorUserId` to `Collection` (immutable). Buildable now
+  (no email); the field should ideally be added pre-deployment.
+- **Account/hub transfer is NOT a model** (2026-07-04 decision). A hub is 1:1
+  with the account, so handing over the hub = handing over the account =
+  **changing the account email** (better-auth `changeEmail` with code
+  verification). Arrives with the email/MFA hardening (needs real email
+  delivery — currently the deferred no-op). Do not build a hub-transfer model.
 - **Full rewrite of `hub-architecture.md`** below its superseding banner (the
   membership/invitation/role sections are marked historical, not yet excised).
 
