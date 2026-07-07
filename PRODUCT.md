@@ -42,9 +42,13 @@ Hub → Collections → Resources
   immutable hub id. You never join anyone else's hub; there are no memberships,
   invitations, or roles — collaboration is per-collection sharing (below).
 - **Collection** — the container of curated content; what a folder is to
-  Google Drive. Collections nest at most two levels: a collection and its
-  sections (a section cannot contain sub-sections, and a collection with
-  sections cannot itself be nested).
+  Google Drive. A collection is created standalone; **nesting is a separate
+  action on collections that already exist** — you add an existing collection
+  into another as a section (there is exactly one way to nest). Collections
+  nest at most two levels: a collection and its sections (a section cannot
+  contain sub-sections, and a collection with sections cannot itself be
+  nested). Removing a section's entry un-nests it (it becomes standalone
+  again).
 - **Resource** — an item in a collection, and the smallest unit of content
   (like text in a document). Its kind is set by *how it was added*, never by
   inspecting the URL:
@@ -52,13 +56,12 @@ Hub → Collections → Resources
     pointing to a collection's page): a hyperlink with an editable title, tags,
     and position. It does not expand or nest; opening it just navigates there,
     subject to that destination's own access.
-  - a **collection-link** (`kind = collection_link`) — a **section**. It exists
-    only as a child collection created inside its parent (the "add a section"
-    action), always in the same hub; it is the expandable table-of-contents
-    entry. Because a collection-link is always a structural section, it is
-    always access-inherited and bounded by the two-level cap. There is no way
-    to link an arbitrary collection as a floating pointer, and cross-hub
-    references are a future read-only shortcut.
+  - a **collection-link** (`kind = collection_link`) — a **section**. It is
+    created only by nesting an existing collection (same hub) into this one, and
+    is the expandable table-of-contents entry for it. Because a collection-link
+    is always a structural section, it is always access-inherited and bounded by
+    the two-level cap. There is no way to link an arbitrary collection as a
+    floating pointer, and cross-hub references are a future read-only shortcut.
 
   There is no URL auto-detection: the system never turns a pasted link into an
   expandable collection-link. A resource has no summary — clarify a vague link
@@ -212,9 +215,11 @@ defined in a dedicated design pass before web implementation (Track W3).
   publication on a collection grants the same access to its descendant
   collections (and their resources) — sharing a "folder" shares its contents.
   Ownership already spans the whole subtree (one hub).
-- Collections nest at most two levels: creating a sub-section, or re-parenting
-  in a way that would exceed two levels, is rejected.
-- A collection-link exists only as a section (a child collection); there is no
+- Nesting is a single action — add an existing same-hub collection into another
+  as a section; it creates the structural link and the section entry together,
+  and removing the entry un-nests it. Nesting a section into a collection, or
+  nesting a collection that already has sections, is rejected (two-level cap).
+- A collection-link exists only as a section (created by nesting); there is no
   way to link an arbitrary collection, so every collection-link is same-hub and
   access-inherited by construction.
 - Only a top-level collection can be transferred; transferring a section is

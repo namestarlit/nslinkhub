@@ -148,23 +148,26 @@ not perform resolve to 403.
 
 ## Collections and resources
 
+- **Nesting is one action on existing collections.** A collection is created
+  standalone; to nest, you add an existing same-hub collection into another as a
+  section (`POST /collections/:id/collections`). That single action creates the
+  structural parent link **and** the section entry together; removing the
+  section entry un-nests the collection. There is exactly one way to nest and
+  one to un-nest — no create-and-nest shortcut and no reparent-via-update.
 - **Nesting is capped at two levels**: a collection and its sections. A section
-  cannot contain sub-sections, and a collection that already has sections
-  cannot itself be nested. Enforced by the `check_collection_hierarchy` trigger
-  and the create/reparent service paths. "Chapters with sections, no
-  sub-chapters" — this keeps guides and breadcrumbs sane and forces good
-  organization.
+  cannot contain sub-sections, and a collection that already has sections cannot
+  itself be nested. Enforced by the `check_collection_hierarchy` trigger and the
+  nest service path. "Chapters with sections, no sub-chapters."
 - **Resource kind is set by how it was added, never by inspecting a URL.**
   - A pasted/copied URL is always an **external link** — a hyperlink with an
     editable title, tags, and position. It never expands or nests; opening it
     navigates outward, subject to the destination's own access.
-  - A **collection-link** is a **section**: it exists only as a child
-    collection created inside its parent (the "add a section" action), never as
-    a link to an arbitrary collection. Because a collection-link is always a
-    structural section, it is always in the same hub, always access-inherited,
-    and bounded by the two-level cap — so it cannot become a dead link or embed
-    (and re-publish) another owner's collection. Cross-hub references are a
-    future read-only **shortcut**, not an embed.
+  - A **collection-link** is a **section** — created only by nesting an existing
+    same-hub collection, never as a link to an arbitrary collection. Because a
+    collection-link is always a structural section, it is always in the same
+    hub, always access-inherited, and bounded by the two-level cap — so it
+    cannot become a dead link or embed (and re-publish) another owner's
+    collection. Cross-hub references are a future read-only **shortcut**.
 - **Resources carry no summary.** Clarify a vague link by renaming its title;
   tags carry the rest. Ordering makes a collection a guide; export expands its
   nested sections in order.

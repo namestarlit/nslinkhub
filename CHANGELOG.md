@@ -37,6 +37,15 @@ summary of what changed after completed work has been promoted out of `ref/`.
 
 ### Changed
 
+- Nesting is now a single action on existing collections. Removed `createChild`
+  (`POST /collections/:id/children`, create-and-nest) and reparenting via
+  `PATCH` (`parentCollectionId` dropped from the update DTO). The one way to
+  nest is `POST /collections/:id/collections { collectionId }` — add an existing
+  same-hub collection as a section, creating the structural parent link and the
+  section entry atomically. Removing the section entry un-nests the collection.
+  This eliminates the two-ways-to-nest ambiguity (and the hidden-section bug
+  where reparent created a child without an entry). Collections are always
+  created top-level.
 - Collection-links are now **sections only**, and transfer is **top-level
   only** (resolves review findings #1, #3, #5, #6, #7). Removed the standalone
   "link an arbitrary collection" endpoint (`POST .../resources/collection-link`,

@@ -37,7 +37,6 @@ export interface CreateCollectionRequest {
   title: string;
   description?: string;
   published?: boolean;
-  parentCollectionId?: string;
 }
 
 export interface UpdateCollectionRequest {
@@ -46,10 +45,12 @@ export interface UpdateCollectionRequest {
   title?: string;
   description?: string;
   published?: boolean;
-  parentCollectionId?: string | null;
 }
 
-export type CreateChildCollectionRequest = Omit<CreateCollectionRequest, "parentCollectionId">;
+// Nest an existing collection into another as a section (the one nesting path).
+export interface NestCollectionRequest {
+  collectionId: string;
+}
 
 export interface SetLinkSharingRequest {
   enabled: boolean;

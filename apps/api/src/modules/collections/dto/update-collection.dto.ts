@@ -3,7 +3,6 @@ import {
   IsInt,
   IsOptional,
   IsString,
-  IsUUID,
   Matches,
   MaxLength,
   Min,
@@ -32,10 +31,6 @@ export class UpdateCollectionDto {
   @IsOptional()
   @IsBoolean()
   published?: boolean;
-
-  @IsOptional()
-  @IsUUID()
-  parentCollectionId?: string | null;
 
   @IsInt()
   @Min(1)

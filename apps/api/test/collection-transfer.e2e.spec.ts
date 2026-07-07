@@ -160,17 +160,53 @@ describe("Collection transfer (e2e)", () => {
   it("rejects transferring a section (only top-level collections transfer)", async () => {
     const alice = await signUp("owner_sec");
     const root = await createCollection(alice.bearer, `sroot-${sfx}`);
-    const child = await request(app.getHttpServer())
-      .post(`/api/v1/collections/${root}/children`)
+    const cid = await createCollection(alice.bearer, `ssec-${sfx}`);
+    await request(app.getHttpServer())
+      .post(`/api/v1/collections/${root}/collections`)
       .set("Authorization", `Bearer ${alice.bearer}`)
-      .send({ slug: `ssec-${sfx}`, title: "Section" })
+      .send({ collectionId: cid })
       .expect(201);
-    const cid = (child.body as { data: { id: string } }).data.id;
 
     await request(app.getHttpServer())
       .post(`/api/v1/collections/${cid}/transfer`)
       .set("Authorization", `Bearer ${alice.bearer}`)
       .send({ email: `nobody_${sfx}@example.com` })
       .expect(400);
+  });
+
+  it("transfers a root together with its sections and section entries", async () => {
+    const alice = await signUp("xowner");
+    const bob = await signUp("xnewowner");
+    const root = await createCollection(alice.bearer, `xroot-${sfx}`);
+    const section = await createCollection(alice.bearer, `xsec-${sfx}`);
+
+    await request(app.getHttpServer())
+      .post(`/api/v1/collections/${root}/collections`)
+      .set("Authorization", `Bearer ${alice.bearer}`)
+      .send({ collectionId: section })
+      .expect(201);
+    await request(app.getHttpServer())
+      .post(`/api/v1/collections/${root}/shares`)
+      .set("Authorization", `Bearer ${alice.bearer}`)
+      .send({ email: bob.email, role: "editor" })
+      .expect(201);
+    await request(app.getHttpServer())
+      .post(`/api/v1/collections/${root}/transfer`)
+      .set("Authorization", `Bearer ${alice.bearer}`)
+      .send({ email: bob.email })
+      .expect(201);
+
+    // Bob now owns the section too (it moved with the root): he can manage it.
+    await request(app.getHttpServer())
+      .post(`/api/v1/collections/${section}/publish`)
+      .set("Authorization", `Bearer ${bob.bearer}`)
+      .expect(201);
+
+    // The section entry survived the move and still points to the section.
+    const resources = await request(app.getHttpServer())
+      .get(`/api/v1/collections/${root}/resources`)
+      .set("Authorization", `Bearer ${bob.bearer}`)
+      .expect(200);
+    expect(JSON.stringify(resources.body)).toContain(section);
   });
 });

@@ -22,9 +22,9 @@ import { OptionalAuthGuard } from "src/common/guards/optional-auth.guard";
 import type { AuthUser } from "src/common/interfaces/auth-user.interface";
 import { apiOk } from "src/common/utils/response.util";
 import { CollectionsService } from "./collections.service";
-import { CreateChildCollectionDto } from "./dto/create-child-collection.dto";
 import { CreateCollectionDto } from "./dto/create-collection.dto";
 import { CreateShareDto } from "./dto/create-share.dto";
+import { NestCollectionDto } from "./dto/nest-collection.dto";
 import { SetLinkSharingDto } from "./dto/set-link-sharing.dto";
 import { TransferCollectionDto } from "./dto/transfer-collection.dto";
 import { UpdateCollectionDto } from "./dto/update-collection.dto";
@@ -141,13 +141,13 @@ export class CollectionsController {
 
   @ApiBearerAuth()
   @UseGuards(AuthGuard)
-  @Post(":id/children")
-  async createChild(
+  @Post(":id/collections")
+  async nestCollection(
     @Param("id", new ParseUUIDPipe()) id: string,
     @CurrentUser() user: AuthUser,
-    @Body() dto: CreateChildCollectionDto,
+    @Body() dto: NestCollectionDto,
   ) {
-    return apiOk(await this.collectionsService.createChild(id, user, dto));
+    return apiOk(await this.collectionsService.nestCollection(id, user, dto));
   }
 
   @UseGuards(OptionalAuthGuard)

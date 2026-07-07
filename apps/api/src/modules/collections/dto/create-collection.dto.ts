@@ -1,12 +1,4 @@
-import {
-  IsBoolean,
-  IsOptional,
-  IsString,
-  IsUUID,
-  Matches,
-  MaxLength,
-  MinLength,
-} from "class-validator";
+import { IsBoolean, IsOptional, IsString, Matches, MaxLength, MinLength } from "class-validator";
 
 export class CreateCollectionDto {
   @IsString()
@@ -28,8 +20,4 @@ export class CreateCollectionDto {
   @IsOptional()
   @IsBoolean()
   published?: boolean;
-
-  @IsOptional()
-  @IsUUID()
-  parentCollectionId?: string;
 }

@@ -44,12 +44,18 @@ describe("Nested access inheritance (e2e)", () => {
       .expect(201);
     const pid = (parent.body as { data: { id: string } }).data.id;
 
+    // Create the child standalone, then nest it into the parent (the one way).
     const child = await request(app.getHttpServer())
-      .post(`/api/v1/collections/${pid}/children`)
+      .post("/api/v1/collections")
       .set("Authorization", `Bearer ${alice}`)
       .send({ slug: `chi-${sfx}`, title: "Child" })
       .expect(201);
     const cid = (child.body as { data: { id: string } }).data.id;
+    await request(app.getHttpServer())
+      .post(`/api/v1/collections/${pid}/collections`)
+      .set("Authorization", `Bearer ${alice}`)
+      .send({ collectionId: cid })
+      .expect(201);
 
     // Before any grant, Bob cannot see the child.
     await request(app.getHttpServer())

@@ -16,9 +16,9 @@ import { Collection } from "src/generated/prisma/client";
 import { CollectionPolicyService } from "../hubs/collection-policy.service";
 import { HubsService } from "../hubs/hubs.service";
 import { pruneOrphanTags } from "../tags/tag-cleanup";
-import { CreateChildCollectionDto } from "./dto/create-child-collection.dto";
 import { CreateCollectionDto } from "./dto/create-collection.dto";
 import { CreateShareDto } from "./dto/create-share.dto";
+import { NestCollectionDto } from "./dto/nest-collection.dto";
 import { SetLinkSharingDto } from "./dto/set-link-sharing.dto";
 import { TransferCollectionDto } from "./dto/transfer-collection.dto";
 import { UpdateCollectionDto } from "./dto/update-collection.dto";
@@ -38,32 +38,60 @@ export class CollectionsService {
     return this.createInHub(user, hubId, dto);
   }
 
-  async createChild(parentId: string, user: AuthUser, dto: CreateChildCollectionDto) {
-    const parent = await this.requireCollection(parentId, "Parent collection not found");
-    await this.policy.requireManage(parent, user);
+  // Nest an existing collection into another as a section. This is the single
+  // way to create nesting: a collection must exist first, then it is added into
+  // a container. Nesting is one relationship with two faces — the structural
+  // parent link and the section entry in the container — created atomically.
+  async nestCollection(containerId: string, user: AuthUser, dto: NestCollectionDto) {
+    const container = await this.requireCollection(containerId, "Collection not found");
+    await this.policy.requireManage(container, user); // owner-only
 
-    const child = await this.createInHub(user, parent.hubId, {
-      ...dto,
-      parentCollectionId: parent.id,
+    if (dto.collectionId === container.id) {
+      throw new BadRequestException("A collection cannot be nested in itself");
+    }
+
+    const target = await this.requireCollection(dto.collectionId, "Collection not found");
+    // Same hub — since the caller owns the container's hub, this is their hub.
+    if (target.hubId !== container.hubId) {
+      throw new BadRequestException("Both collections must be in your hub");
+    }
+    // Two-level rules (also enforced by the check_collection_hierarchy trigger).
+    if (container.parentCollectionId) {
+      throw new BadRequestException("A section cannot contain collections (two-level limit)");
+    }
+    if (target.parentCollectionId) {
+      throw new BadRequestException("That collection is already nested in another collection");
+    }
+    const targetSections = await this.prisma.collection.count({
+      where: { parentCollectionId: target.id },
     });
+    if (targetSections > 0) {
+      throw new BadRequestException("A collection that has its own sections cannot be nested");
+    }
 
     const maxPositionResult = await this.prisma.resource.aggregate({
-      where: { collectionId: parent.id },
+      where: { collectionId: container.id },
       _max: { position: true },
     });
     const nextPosition = (maxPositionResult._max.position ?? -1) + 1;
 
-    await this.prisma.resource.create({
-      data: {
-        collectionId: parent.id,
-        kind: ResourceKind.COLLECTION_LINK,
-        linkedCollectionId: child.id,
-        position: nextPosition,
-        titleOverride: child.title,
-      },
-    });
+    await this.prisma.$transaction([
+      this.prisma.collection.update({
+        where: { id: target.id },
+        data: { parentCollectionId: container.id },
+      }),
+      this.prisma.resource.create({
+        data: {
+          collectionId: container.id,
+          kind: ResourceKind.COLLECTION_LINK,
+          linkedCollectionId: target.id,
+          position: nextPosition,
+          titleOverride: target.title,
+        },
+      }),
+    ]);
 
-    return child;
+    return { containerId: container.id, collectionId: target.id, position: nextPosition };
   }
 
   // --- settings / lifecycle ----------------------------------------------
@@ -90,41 +118,8 @@ export class CollectionsService {
       }
     }
 
-    let parentCollectionId = collection.parentCollectionId;
-    if (
-      dto.parentCollectionId !== undefined &&
-      dto.parentCollectionId !== collection.parentCollectionId
-    ) {
-      if (dto.parentCollectionId === null) {
-        parentCollectionId = null;
-      } else {
-        if (dto.parentCollectionId === collection.id) {
-          throw new BadRequestException("Collection cannot be parent of itself");
-        }
-        const parent = await this.requireCollection(
-          dto.parentCollectionId,
-          "Parent collection not found",
-        );
-        if (parent.hubId !== collection.hubId) {
-          throw new BadRequestException("Parent collection must be in the same hub");
-        }
-        if (parent.parentCollectionId) {
-          throw new BadRequestException(
-            "Collections nest at most two levels; a section cannot contain sub-sections",
-          );
-        }
-        const sectionCount = await this.prisma.collection.count({
-          where: { parentCollectionId: collection.id },
-        });
-        if (sectionCount > 0) {
-          throw new BadRequestException(
-            "A collection with sections cannot be nested under another collection",
-          );
-        }
-        parentCollectionId = dto.parentCollectionId;
-      }
-    }
-
+    // Nesting is not changed here — it is managed only by nestCollection /
+    // removing a section entry, so there is one way to nest and un-nest.
     const saved = await this.prisma.collection.update({
       where: { id: collection.id },
       data: {
@@ -132,7 +127,6 @@ export class CollectionsService {
         title: dto.title ?? collection.title,
         description: dto.description ?? collection.description,
         published: dto.published ?? collection.published,
-        parentCollectionId,
         version: { increment: 1 },
       },
     });
@@ -544,22 +538,9 @@ export class CollectionsService {
 
   // --- internals ----------------------------------------------------------
 
+  // Collections are always created as top-level. Nesting is a separate action
+  // on an existing collection (nestCollection).
   private async createInHub(user: AuthUser, hubId: string, dto: CreateCollectionDto) {
-    if (dto.parentCollectionId) {
-      const parent = await this.requireCollection(
-        dto.parentCollectionId,
-        "Parent collection not found",
-      );
-      if (parent.hubId !== hubId) {
-        throw new BadRequestException("Parent collection must be in the same hub");
-      }
-      if (parent.parentCollectionId) {
-        throw new BadRequestException(
-          "Collections nest at most two levels; a section cannot contain sub-sections",
-        );
-      }
-    }
-
     const exists = await this.prisma.collection.findUnique({
       where: { hubId_slug: { hubId, slug: dto.slug } },
       select: { id: true },
@@ -578,7 +559,6 @@ export class CollectionsService {
         title: dto.title,
         description: dto.description,
         published: dto.published ?? false,
-        parentCollectionId: dto.parentCollectionId ?? null,
       },
     });
     return this.toPublicCollection(saved);

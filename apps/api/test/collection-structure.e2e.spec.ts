@@ -40,39 +40,71 @@ describe("Collection structure limits (e2e)", () => {
     await app.close();
   });
 
-  it("enforces a two-level nesting limit", async () => {
+  it("nests an existing collection and enforces the two-level limit", async () => {
     const alice = await signUp("s_depth");
+    const nest = (containerId: string, collectionId: string) =>
+      request(app.getHttpServer())
+        .post(`/api/v1/collections/${containerId}/collections`)
+        .set("Authorization", `Bearer ${alice}`)
+        .send({ collectionId });
+
     const root = await createCollection(alice, `root-${sfx}`);
-
-    // A section (child of a root) is allowed.
-    const section = await request(app.getHttpServer())
-      .post(`/api/v1/collections/${root}/children`)
-      .set("Authorization", `Bearer ${alice}`)
-      .send({ slug: `sec-${sfx}`, title: "Section" })
-      .expect(201);
-    const sid = (section.body as { data: { id: string } }).data.id;
-
-    // A sub-section (child of a section) is rejected.
-    await request(app.getHttpServer())
-      .post(`/api/v1/collections/${sid}/children`)
-      .set("Authorization", `Bearer ${alice}`)
-      .send({ slug: `sub-${sfx}`, title: "Sub" })
-      .expect(400);
-
-    // Re-parenting a root under a section is rejected (would be depth 3).
+    const section = await createCollection(alice, `sec-${sfx}`);
     const other = await createCollection(alice, `other-${sfx}`);
-    await request(app.getHttpServer())
-      .patch(`/api/v1/collections/${other}`)
-      .set("Authorization", `Bearer ${alice}`)
-      .send({ parentCollectionId: sid, version: 1 })
-      .expect(400);
+
+    // Nest an existing collection into a top-level collection — allowed.
+    await nest(root, section).expect(201);
+
+    // A section cannot contain collections (would be depth 3).
+    await nest(section, other).expect(400);
+
+    // A collection already nested elsewhere cannot be nested again.
+    await nest(other, section).expect(400);
 
     // A collection that already has sections cannot itself be nested.
     const otherRoot = await createCollection(alice, `oroot-${sfx}`);
+    await nest(otherRoot, root).expect(400);
+  });
+
+  it("removing a section entry un-nests the collection", async () => {
+    const alice = await signUp("s_unnest");
+    const root = await createCollection(alice, `unroot-${sfx}`);
+    const sec = await createCollection(alice, `unsec-${sfx}`);
+    const dest = await createCollection(alice, `undest-${sfx}`);
+
     await request(app.getHttpServer())
-      .patch(`/api/v1/collections/${root}`)
+      .post(`/api/v1/collections/${root}/collections`)
       .set("Authorization", `Bearer ${alice}`)
-      .send({ parentCollectionId: otherRoot, version: 1 })
+      .send({ collectionId: sec })
+      .expect(201);
+
+    // While nested, it cannot be nested elsewhere.
+    await request(app.getHttpServer())
+      .post(`/api/v1/collections/${dest}/collections`)
+      .set("Authorization", `Bearer ${alice}`)
+      .send({ collectionId: sec })
       .expect(400);
+
+    // Remove the section entry from root.
+    const resources = await request(app.getHttpServer())
+      .get(`/api/v1/collections/${root}/resources`)
+      .set("Authorization", `Bearer ${alice}`)
+      .expect(200);
+    const entry = (
+      resources.body as {
+        data: Array<{ id: string; linkedCollectionId: string | null }>;
+      }
+    ).data.find((r) => r.linkedCollectionId === sec);
+    await request(app.getHttpServer())
+      .delete(`/api/v1/collections/${root}/resources/${entry?.id}`)
+      .set("Authorization", `Bearer ${alice}`)
+      .expect(200);
+
+    // Now it is free to nest elsewhere (proving it was un-nested).
+    await request(app.getHttpServer())
+      .post(`/api/v1/collections/${dest}/collections`)
+      .set("Authorization", `Bearer ${alice}`)
+      .send({ collectionId: sec })
+      .expect(201);
   });
 });

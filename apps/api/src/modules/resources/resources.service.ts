@@ -139,6 +139,17 @@ export class ResourcesService {
       select: { tagId: true },
     });
     await this.prisma.resource.delete({ where: { id: resource.id } });
+
+    // A section entry and the child's structural parent link are two faces of
+    // one relationship: removing the entry un-nests the collection (it becomes
+    // a top-level collection again, staying in the same hub).
+    if (resource.kind === ResourceKind.COLLECTION_LINK && resource.linkedCollectionId) {
+      await this.prisma.collection.update({
+        where: { id: resource.linkedCollectionId },
+        data: { parentCollectionId: null },
+      });
+    }
+
     // Deleting the resource cascades its resource_tags; prune any tag those
     // rows left with no remaining references.
     await pruneOrphanTags(
