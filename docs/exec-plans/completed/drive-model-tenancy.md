@@ -57,10 +57,13 @@ hand-written object, the auth smoke passed before the full suite, and the
 
 Deferred follow-ons (small, separate — not blocking W3):
 
-- **Handle-based discovery filter** on explore (`?hub=<handle>` → resolve to
-  `hubId`) so published content can be browsed/searched "by hub"
-  (YouTube-handle style). Durable routes stay `hubId`; the handle is a mutable
-  discovery/search/attribution dimension only.
+- **Handle direction (revised 2026-07-04):** the handle is *not* an explore
+  search facet. Explore discovery is **tags + text** only. The handle is a
+  handy way to reach a *known* hub — a `/@handle` vanity route resolving to
+  `hubId` — and the attribution click-through on a published collection ("which
+  hub published this" → that hub's page, search their publications). Follow-on
+  is just the `/@handle` route + explore tag/text search (both in Phase E of
+  `hub-architecture.md`).
 - **Collection ownership transfer** — SHIPPED 2026-07-04
   (`POST /api/v1/collections/:id/transfer`). Drive-accurate.
   Distinguishes **owner** (`collection.hubId`, mutable) from **creator** (a new
@@ -82,8 +85,9 @@ Deferred follow-ons (small, separate — not blocking W3):
   **changing the account email** (better-auth `changeEmail` with code
   verification). Arrives with the email/MFA hardening (needs real email
   delivery — currently the deferred no-op). Do not build a hub-transfer model.
-- **Full rewrite of `hub-architecture.md`** below its superseding banner (the
-  membership/invitation/role sections are marked historical, not yet excised).
+- **Full rewrite of `hub-architecture.md`** — DONE 2026-07-04. The document now
+  states the Drive individual model authoritatively; the historical
+  membership/invitation/role sections are excised.
 
 ## Context And Orientation
 

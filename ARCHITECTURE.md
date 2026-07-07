@@ -2,11 +2,11 @@
 
 ## Purpose
 
-NSLinkHub organizes links into curated, shareable collections. Hubs are the
-tenant root; users belong to hubs through memberships; collections contain
-resources and are shared per-collection (Drive model) or published to the
-product-wide explore surface. See `PRODUCT.md` for the product definition and
-`docs/design-docs/hub-architecture.md` for the authoritative target design.
+NSLinkHub organizes links into curated, shareable collections. A hub is one
+personal space per user (the tenant root); collections contain resources and
+are shared per-collection (Drive model) or published to the product-wide
+explore surface. See `PRODUCT.md` for the product definition and
+`docs/design-docs/hub-architecture.md` for the authoritative architecture.
 
 The backend model is complete: Hub → Collections → Resources with a single
 `CollectionPolicyService` for collection access. Tenancy is the Google-Drive
@@ -20,8 +20,8 @@ the clients (W2 shared types done; W3 web, W4 extension) and Phase E hardening.
 
 A Bun-managed TypeScript codebase. The backend is a NestJS modular monolith
 backed by PostgreSQL 18 (Prisma 7 with the pg driver adapter) and BullMQ on
-Redis for queued exports. Auth is self-hosted better-auth (DB sessions,
-bearer + username plugins, argon2id via `Bun.password`) mounted as raw
+Redis for queued exports. Auth is self-hosted better-auth (DB sessions, bearer
+plugin, email + password, argon2id via `Bun.password`) mounted as raw
 middleware ahead of body parsing. A Next.js web app and an MV3 browser
 extension are planned client surfaces. The repository is a Bun workspace:
 the backend lives at `apps/api`; `apps/web`, `apps/extension`, and further
@@ -56,9 +56,9 @@ ref/               disposable, git-ignored implementation context
 | --- | --- |
 | `auth` (`apps/api/src/auth`) | better-auth instance + personal-hub onboarding hook; handler mounted in `app.setup.ts` |
 | `common/guards` | `AuthGuard`/`OptionalAuthGuard` via `resolveSessionUser` |
-| `hubs` | one-hub-per-user ownership + handle management (`HubsService`), collection access policy — owner → direct share → link → published (`CollectionPolicyService`) |
+| `hubs` | one-hub-per-user ownership + handle management (`HubsService`), collection access policy — owner → direct share → link → published, inheriting down the collection tree (`CollectionPolicyService`) |
 | `users` | self-service profile at `/profile` (display name, bio, hub handle) |
-| `collections` | collection CRUD, publish/unpublish, link + direct sharing, saves, `/explore`, public hub pages, `/me/{shared,saved}`, hub-scoped lookup |
+| `collections` | collection CRUD (two-level nesting), publish/unpublish, link + direct sharing, ownership transfer, saves, `/explore`, public hub pages, `/me/{shared,saved}`, hub-scoped lookup |
 | `resources` | resource CRUD, reorder with version checks |
 | `tags` | normalized tags on collections and resources |
 | `imports` | CSV / bookmarks-HTML / WhatsApp-TXT ingestion |

@@ -1,386 +1,271 @@
-# Hub Architecture Plan
+# Hub Architecture
 
-> **Superseded in part (2026-07-04): tenancy is now the Google-Drive
-> individual model.** A hub is **one personal space per user** (1:1),
-> identified by a mutable **handle** + a free-form **display name** — there are
-> **no hub memberships, invitations, or roles, no username, and no admin
-> role**. Collaboration is per-collection sharing only (owner → direct
-> reader/editor → active link → published). Collection access policy and the
-> data model below that mention `HubMembership`, `HubInvitation`, hub roles
-> (`owner|admin|member`), or `username` are **historical**. The current
-> authority for tenancy and identity is `PRODUCT.md` (§2–§4) and
-> `docs/exec-plans/active/drive-model-tenancy.md`; the durable, collection-level
-> parts of this document (collections/resources, publication, saves, explore,
-> the export/guide model, the monorepo/track plan) remain accurate. A full
-> rewrite of the sections below is tracked follow-on work.
-
-Authoritative design and implementation plan for restructuring NSLinkHub
-around **hubs** as the tenant root, with the collection/resource vocabulary,
-Drive-style sharing, the explore/save discovery loop, and the pigfarm-derived
-monorepo. All decisions herein are settled (finalized 2026-07-03); this
-document states the target design in its final form.
+Authoritative design for NSLinkHub's tenancy, identity, sharing, and discovery.
+This document states the system **as it is decided and built now** (the
+Google-Drive individual model), not its history. Where it and `PRODUCT.md`
+agree, both are canonical; `PRODUCT.md` holds the product-facing framing and
+acceptance criteria, this holds the architectural model and rules.
 
 Related documents:
 
-- `docs/design-docs/identity-sso.md` — ns-series identity ("Continue with
-  namestarlit"); imposes constraints noted in Phase B/C.
-- `docs/design-docs/infra-deployment.md` — ns-series deployment platform
-  (namestarlit VPS + Dokploy, GHCR images via GitHub Actions); Track W's
-  app split is the image boundary it consumes.
-- `ref/hub-upgrade-next-session.md` — implementation session starter
-  (untracked local context; regenerate from this plan if absent).
-- `docs/exec-plans/completed/stack-migration-bun-prisma-better-auth.md` — the completed Bun/Prisma/better-auth stack
-  migration this plan builds on (including the squash-don't-stack migration
-  pattern).
-- Architectural conventions inherited from the pigfarm design documents
-  (`/home/ns/Person/stack/hashikome/pigfarm/docs/design-docs/` — tenancy,
-  organization authority, auth sessions, foundation conventions, backend
-  authority). Design patterns only; no ownership relationship.
+- `PRODUCT.md` — product definition, capabilities, acceptance criteria.
+- `docs/design-docs/identity-sso.md` — ns-series identity (nsauth, "Continue
+  with namestarlit"), deliberately bounded to users + SSO (no orgs).
+- `docs/design-docs/conventions.md` — API/persistence casing and envelope.
+- `docs/design-docs/transactional-email.md`, `observability.md` — operational
+  direction (Resend, Pino/OTel), built at their triggers.
+- `docs/design-docs/infra-deployment.md` — namestarlit VPS + Dokploy.
+- `docs/exec-plans/completed/drive-model-tenancy.md` — the reshape from the
+  original shared-workspace model to this one, with the decision log.
+- Patterns inherited from the pigfarm design docs (design only; no ownership
+  relationship).
 
-## Vocabulary
+## The model in one line
 
 ```txt
-Hub → Collections → Resources
+User (1:1) Hub → Collections → Resources
 ```
 
-- A **hub** is the tenant root — the only true identity boundary.
-- A **collection** is the container of curated content — what a folder is to
-  Google Drive. Collections nest.
-- A **resource** is an item in a collection: an external link or a link to
-  another collection.
-- The internal `links` URL-dedupe table keeps its name.
+Each **user** owns exactly **one hub** — their personal space, like a Google
+Drive or a Tailscale tailnet. A hub owns **collections**; collections contain
+**resources** and nest one level into sections. There are **no memberships,
+invitations, roles, or usernames**. Collaboration is per-collection sharing
+only; a hub is never a space others "join".
 
 ## Principles
 
 1. **Immutable IDs are the only identity.** Every entity keys on an immutable
-   UUIDv7 (`hubId`, `userId`, `collectionId`). Human-facing values —
-   usernames, display names, hub names, emails — are mutable attributes and
-   never appear in authorization rules, foreign keys, or route contracts.
-2. **The hub is the tenant root.** A hub owns collections and everything in
-   them (resources, tags, shares, exports, imports). Users belong to hubs
-   through memberships and can belong to many. Nothing domain-owned hangs off
-   a user directly; user-level surfaces (shared/, saved/) are views over
-   grants and saves, not ownership.
-3. **Tenant-scoped query contract.** Every hub-owned lookup requires `hubId`,
-   not just the record id. Route IDs never prove access. Data-access methods
-   make unscoped queries hard to express.
-4. **Hub roles are minimal**: `owner | admin | member`.
-   - `owner` — administers the hub: invite/remove members, grant/revoke
-     admin, transfer ownership, delete/archive the hub. A hub always retains
-     at least one owner (removal/demotion of the last owner is blocked).
-   - `admin` — manages content and non-owner members; cannot grant admin,
-     remove owners, or archive the hub.
-   - `member` — full content write: creates/edits/deletes collections,
-     resources, tags, imports, exports within the hub.
-   Role policy is enforced in backend guards/policy services, never only in
-   client navigation. Member-level content restriction is intentionally not
-   modeled; non-members are covered by collection shares.
-5. **Invitations, not attachment.** Users join hubs only through explicit
-   invitation + authenticated acceptance. Invitee emails resolve against the
-   global identity: reuse an existing verified account (after authenticated
-   acceptance), create a pending identity only for a new email. Nothing
-   attaches a user to a hub implicitly. Invitation/verification tokens are
-   random, expiring, one-time, purpose-bound secrets — never UUIDv7 ids —
-   submitted in POST bodies, not path parameters.
-6. **Every user gets a personal hub at sign-up** — auto-created, named after
-   the display name, creator as owner — and it is a completely normal hub:
-   renameable, deletable, invitable, no special-casing. Users may
-   legitimately end up with zero hubs.
-7. **Auth boundary.** better-auth owns credentials, sessions, and
-   verification primitives. The product owns identity, membership,
-   authorization, audit, and workflows. Sign-up onboarding (personal hub
-   creation) lives in an app-owned service callable from any auth path — a
-   hard requirement of the SSO direction.
-8. **Backend authority.** Business rules, validation, authorization, and
-   derived state live in the API. Clients are replaceable delivery surfaces;
-   a hidden button is not a permission check.
-9. **Atomic bootstrap.** Creating a hub atomically persists the hub, the
-   creator's owner membership, and (once auditing exists) the audit record.
-10. **Stable error envelope.** Failures return
-    `{ "error": { code, message, requestId, details } }` with stable
-    machine-readable codes and server-generated PII-free request IDs;
-    successes keep the `{ data, meta }` shape.
-11. **Cursor pagination** for growth-prone lists (resources, collections,
-    explore). The contract locks before any client ships.
-12. **Audit sensitive actions** (tracked for Phase E): hub creation/archival,
-    invitations, membership and role changes, ownership transfer, publication
-    changes, share-link rotation. Tenant-scoped audit records in PostgreSQL.
-13. **Naming boundaries.** Product branding stays out of schemas,
-    table/column names, API fields, and env-var names.
+   UUIDv7 (`userId`, `hubId`, `collectionId`, `resourceId`). Human-facing
+   values — the hub **handle**, the **display name**, emails — are mutable
+   attributes and never appear in authorization rules, foreign keys, or durable
+   route contracts. A durable link uses `hubId`/`collectionId`; renaming a
+   handle never breaks a saved reference.
+2. **One hub per user.** The hub is the tenant root and is 1:1 with its owner
+   (`hub.ownerUserId`, unique). Every hub-owned query carries `hubId`; a route
+   id never proves access. A user has no domain data except through their hub.
+3. **Ownership is a transferable relationship, not identity.** A collection's
+   owner is its `hubId`; a resource belongs to its collection. Transferring a
+   collection reassigns the owning hub; the immutable **creator**
+   (`collection.creatorUserId`) never changes.
+4. **Collaboration is per-collection, Drive-style.** The only ways a non-owner
+   gains access are a direct share (reader/editor), an active share link, or
+   publication. There is no hub membership and no admin role — the hub owner is
+   the only full authority over their space.
+5. **Access inherits down the tree.** A grant on a collection applies to its
+   descendant collections and their resources — sharing a "folder" shares its
+   contents. Ownership already spans the whole subtree (one hub).
+6. **Backend authority.** Business rules, validation, authorization, and
+   derived state live in the API. Clients are replaceable delivery surfaces; a
+   hidden control is not a permission check.
+7. **Auth boundary.** better-auth owns credentials, sessions, and verification
+   primitives; the product owns identity, authorization, and workflows. Session
+   resolution goes through `resolveSessionUser`; services consume `AuthUser`.
+   Sign-up onboarding (personal-hub creation) is an app-owned service callable
+   from any auth path, so the later SSO integration is an integration, not a
+   rewrite.
+8. **Stable envelopes.** Success `{ data, meta? }`; failure
+   `{ error: { code, message, requestId, details } }`; every response carries a
+   server-generated PII-free `X-Request-Id`. Growth-prone lists paginate by
+   opaque cursor.
+9. **Naming boundaries.** Product branding stays out of schemas, table/column
+   names, API fields, and env-var names.
 
-Conventions already in place and unchanged: Bun as toolchain and runtime,
-Prisma as the backend-only persistence boundary behind a Nest `PrismaService`,
-PostgreSQL 18 with native uuidv7 defaults, `timestamptz` UTC storage,
-camelCase API / snake_case DB, global `ValidationPipe`, self-hosted
-better-auth with `Bun.password` argon2id, `bun test`, committed `bun.lock`.
+Conventions in place and unchanged: Bun toolchain + runtime; Prisma as the
+backend-only persistence boundary behind a Nest `PrismaService`; PostgreSQL 18
+with `app_uuid_v7()` defaults; `timestamptz` UTC; camelCase API / snake_case
+DB; global `ValidationPipe`; self-hosted better-auth with `Bun.password`
+argon2id; Biome; `bun test`; committed `bun.lock`.
 
-## Domain Model
+## Domain model
 
 ```txt
-User            — global identity (better-auth). userId immutable; username,
-                  displayName, email mutable. Username is a login/display
-                  convenience, never an authorization or routing key.
-Hub             — tenant root. hubId immutable UUIDv7. name/description
-                  mutable. Personal and shared hubs are the same thing.
-HubMembership   — (hubId, userId, role: owner|admin|member, status).
-                  Unique per (hubId, userId).
-HubInvitation   — (hubId, email, role, tokenHash, expiresAt, status).
-                  Accepted by an authenticated user; produces a membership.
-Collection      — belongs to a hub. `published` boolean (default false) +
-                  `linkSharingEnabled` boolean + rotatable share-token hash.
-                  Nests via parentCollectionId. Slug unique per hub.
-CollectionShare — (collectionId, userId, role: reader|editor,
-                  source: direct|link). Per-user access to one collection
-                  without hub membership. Feeds the shared/ surface.
-CollectionSave  — (collectionId, userId, savedAt). A social-style bookmark of
-                  a published collection. Feeds the saved/ surface.
-Resource        — external link or collection link inside a collection;
-                  access derives from the owning collection.
-Link/Tag        — `links` is the internal URL-dedupe table; tags attach to
-                  collections and resources.
-ExportJob       — belongs to hub + collection; requestedByUserId for audit.
+User            — global identity (better-auth). userId immutable; name (the
+                  free-form display name), email, bio, image mutable. No
+                  username, no role column.
+Hub             — the user's one personal space. hubId immutable; ownerUserId
+                  (unique FK, 1:1); handle (unique, mutable) — the public
+                  identity; description.
+Collection      — belongs to a hub (hubId = owner). creatorUserId immutable
+                  (provenance). slug (unique per hub), title, description,
+                  published, linkSharingEnabled, share_token_hash,
+                  parentCollectionId (≤ 2 levels), version.
+Resource        — an item in a collection; the smallest unit of content.
+                  kind = external_link (a Link/URL) | collection_link
+                  (linkedCollectionId, same hub only). titleOverride, position,
+                  version. No summary fields.
+CollectionShare — (collectionId, userId, role reader|editor, source
+                  direct|link). Per-collection access without any hub
+                  membership. Feeds the shared/ surface.
+CollectionSave  — (collectionId, userId, savedAt). A social-style bookmark of a
+                  published collection. Feeds the saved/ surface.
+Link / Tag      — `links` is the internal URL-dedupe table. Tags are global
+                  (unique by name), attach to collections and resources, and
+                  are pruned when nothing references them.
+ExportJob       — belongs to hub + collection; requestedByUserId.
 ```
 
-## API Surface
+## Identity and handles
 
-All routes under `/api/v1`.
+- **Handle** — a hub's public, mutable, unique identity (YouTube-handle style,
+  lowercase `[a-z0-9-]`, 3–60 chars, reserved words blocked). It is a *handy
+  way to reach a known hub* — `/@handle` resolves to the hub's page — never a
+  key. The durable key is `hubId`; a handle rename breaks nothing.
+- **Display name** — free-form (`user.name`), any text the person wants. Not a
+  login credential and not unique.
+- **Login** is email + password (SSO later). There is no username.
+- **Account/hub handover** is done by **changing the account email** (verified),
+  not a transfer model — a hub is 1:1 with its account, so handing over the
+  account hands over the hub. Lands with the email/MFA hardening.
+- **nsauth SSO** is bounded to users + SSO + profile (no orgs); see
+  `identity-sso.md`. Products keep their own userId authoritative and their own
+  authorization; the IdP never decides who may edit a collection.
 
-```txt
-POST   /api/v1/hubs                                  create hub (creator = owner)
-GET    /api/v1/hubs/:hubId                           hub page (public: display info
-                                                     + published collections; more for members)
-POST   /api/v1/hubs/:hubId/invitations               invite (owner/admin)
-POST   /api/v1/invitations/accept                    token in body
-GET    /api/v1/hubs/:hubId/collections               list (member; published subset otherwise)
-POST   /api/v1/hubs/:hubId/collections               create (member)
-GET    /api/v1/hubs/:hubId/collections/:slug         lookup by hub + slug
-/api/v1/collections/:id/*                            resources, tags, children,
-       exports — authorized via publication + membership + shares
-POST   /api/v1/collections/:id/publish               publish to explore
-POST   /api/v1/collections/:id/unpublish
-PUT    /api/v1/collections/:id/link-sharing          enable/disable/rotate link
-POST   /api/v1/collections/:id/shares                direct share {email, role}
-DELETE /api/v1/collections/:id/shares/:userId        revoke
-POST   /api/v1/collections/:id/save                  save (auth; published only)
-DELETE /api/v1/collections/:id/save                  unsave
-GET    /api/v1/explore                               published collections (public, cursor)
-GET    /api/v1/me/shared                             the user's shared/ surface
-GET    /api/v1/me/saved                              the user's saved/ surface
-```
+## Access model
 
-`hubId` is canonical in URLs. A mutable vanity handle may later alias it,
-resolved to `hubId` at the edge and never stored in references.
+A single policy service (`CollectionPolicyService`) is the one source of truth.
+For a collection it resolves, walking **up the ancestor chain** (same hub,
+depth-bounded), the strongest of:
 
-## Publication And Discovery
+1. **Owner** — the viewer owns the collection's hub → full authority (read,
+   write content, manage) over the whole subtree.
+2. **Direct share** — reader (read) or editor (read + content write) on the
+   collection or any ancestor.
+3. **Active link** — a valid presented share token, or a recorded link-share,
+   on the collection or any ancestor while link sharing stays enabled → read.
+4. **Published** — the collection or any ancestor is published → read (a
+   signed-in reader may save).
 
-Publishing puts a collection on NSLinkHub's product-wide public surface:
+Otherwise the collection is **not found** (404, so callers cannot probe for
+things they can't access). Reads that fail resolve to 404; writes a viewer may
+not perform resolve to 403.
 
-- Published collections are listed on `GET /api/v1/explore` (public,
-  cursor-paginated; recency-ordered initially) and on their hub's public
-  page. Anyone can view them, signed in or not.
-- Account holders **save** published collections — the social-media bookmark
-  gesture — into their **saved/** surface. Visitors are prompted to create an
-  account to save.
-- Saving requires publication. Unpublishing does not delete save rows; the
-  saved item goes dormant (presentation decided by the web pass) and revives
-  on republish.
-- Publishing/unpublishing is a hub-member action and an audited event.
+- **Manage** (publish, share, delete, settings, rename) is **owner-only**.
+- **Editor** scope is content-only: resources, tags, imports within the shared
+  collection (and, by inheritance, its sections). Editors never manage.
+- A link grant is recorded against the collection whose link actually matched
+  (which may be an ancestor), so it lands correctly in the recipient's
+  shared/.
 
-**shared/ vs saved/** — both user-level surfaces, never mixed: shared/ is
-access *granted to you* (CollectionShare); saved/ is what *you chose to keep*
-from the public surface (CollectionSave). A share grants access; a save
-grants nothing.
+## Collections and resources
 
-## Sharing Model
+- **Nesting is capped at two levels**: a collection and its sections. A section
+  cannot contain sub-sections, and a collection that already has sections
+  cannot itself be nested. Enforced by the `check_collection_hierarchy` trigger
+  and the create/reparent service paths. "Chapters with sections, no
+  sub-chapters" — this keeps guides and breadcrumbs sane and forces good
+  organization.
+- **Resource kind is set by how it was added, never by inspecting a URL.**
+  - A pasted/copied URL is always an **external link** — a hyperlink with an
+    editable title, tags, and position. It never expands or nests; opening it
+    navigates outward, subject to the destination's own access.
+  - A **collection-link** is created only by the internal "link a collection"
+    action, and only for a collection **in the same hub**. It carries a real
+    `linkedCollectionId` (the metadata that lets it expand in place). Same-hub
+    only prevents embedding — and thereby re-publishing — another owner's
+    collection. Cross-hub references are a future read-only **shortcut**, not an
+    embed.
+- **Resources carry no summary.** Clarify a vague link by renaming its title;
+  tags carry the rest. Ordering makes a collection a guide; export expands its
+  nested sections in order.
 
-Hub membership is intentionally heavyweight — it is for people who belong in
-the hub. Seeing or editing one collection never requires membership; that is
-what per-collection sharing (the Google Drive model) is for.
+## Ownership transfer
 
-A collection is **published** (public via explore) or **unpublished** (hub
-members + explicit shares only; default). On top of publication, two sharing
-mechanisms:
+- **Collection transfer** (`POST /collections/:id/transfer`) is Drive-accurate:
+  the owner transfers a collection only to a user who is **already an editor**
+  on it. The collection subtree moves into the recipient's hub (their space),
+  the recipient's now-redundant shares are removed, the previous owner is given
+  **editor** access across the subtree (it lands in their shared/), and the
+  immutable **creator** is untouched. Self-transfer and recipient-hub slug
+  collisions are rejected.
+- **Account/hub transfer** is not a model — see "Identity and handles" (email
+  change).
 
-1. **Link sharing — anyone with the link reads.** A per-collection toggle
-   with a rotatable unguessable token. Always read-only. When a signed-in
-   user opens a valid share link, the collection is recorded under their
-   shared/ surface (`CollectionShare`, `source: link`, role `reader`); that
-   access remains valid only while link sharing stays enabled — disabling or
-   rotating the link cuts it off.
-2. **Direct sharing — a specific person, read or write.** Share to an email
-   address; requires a namestarlit-product account (existing accounts only;
-   pending shares for unregistered emails are a Phase E item). Creates
-   `CollectionShare` with `source: direct`, role `reader` (default) or
-   `editor`. Independent of the link toggle, individually revocable, and
-   surfaces under the recipient's shared/.
+## Publication and discovery
 
-**Editor scope is content-only**: resources, tags, imports inside that one
-collection. Editors do not publish/unpublish, manage sharing, delete the
-collection, or touch anything else in the hub. Publication and share
-management stay with hub members per hub-role rules.
+- **Publish** puts a collection on the product-wide **explore** surface
+  (`GET /explore`, public, cursor-paginated, recency-ordered initially). Anyone
+  can view; account holders **save** into their **saved/** surface. Saving
+  requires publication; a save goes dormant on unpublish and revives on
+  republish.
+- **Discovery is tags + text — not handles.** In explore, the true north is
+  searching by **tags and text**; the handle is *not* a global search facet.
+  If you already know the hub you want, you go to it directly (`/@handle`) and
+  search *within* that hub's publications. When you open a published
+  collection, you can see **which hub published it** and follow that to explore
+  more of their collections. So the handle serves direct navigation and
+  attribution/click-through, while explore serves open discovery by tag/text.
+- **shared/ vs saved/** — never mixed. shared/ is access *granted to you*
+  (`CollectionShare`); saved/ is what *you chose to keep* from the public
+  surface (`CollectionSave`). A share grants access; a save grants nothing.
 
-**Access resolution for a collection** (single policy service; first match
-wins): published → anyone reads (signed-in may save); hub membership → per
-hub role; direct share → per share role; active link + valid token (or
-link-sourced share row while the link stays enabled) → read; otherwise →
-not found.
+## Tags
 
-## Workspace And Client Surfaces
+Two levels, one optional retrieval axis orthogonal to the collection hierarchy:
+collection tags for topical discovery, resource tags for item-level retrieval
+across collections plus format/status facets. Tagging is always optional;
+resource tags are justified by a cross-collection filter view. Tags are global
+and pruned when unreferenced. Keep them flat — no hierarchies or governance.
 
-Bun-workspace monorepo:
+## Export
+
+Export a collection as Markdown, PDF, or Word. Export **expands nested sections
+in order** into one document (a table-of-contents collection becomes a printed
+guide in a single pass); external-link resources stay as references and are not
+inlined. Markdown is synchronous; PDF and Word are queued jobs.
+
+## Workspace and client surfaces
+
+A Bun-workspace monorepo:
 
 ```txt
 apps/
-  api/        the NestJS backend (Prisma schema, migrations, generated
-              client, PrismaService stay inside — clients never touch
-              persistence)
-  web/        Next.js product surface (App Router, src/, Tailwind, @/* alias,
-              run through Bun) — the FULL product surface
-  extension/  WebExtension (Manifest V3) for Chrome/Edge/Firefox — a
-              constrained capture companion, not a second product surface
-
+  api/        NestJS backend. Prisma schema/migrations/generated client and
+              PrismaService stay inside; clients never touch persistence.
+  web/        Next.js — the full product surface (planned, Track W3).
+  extension/  MV3 capture companion (planned, Track W4).
 packages/
-  types/      shared API contracts (hand-curated first; OpenAPI-generated
-              clients are a later option — Swagger decorators exist)
-  config/     shared TypeScript/lint/tooling configuration
-  (domain/, events/, email/ only when a concrete need appears)
-
-tooling/      repository checks (no Prisma/persistence imports in clients,
-              docs freshness)
+  types/      @nslinkhub/types — hand-curated API wire contracts.
+  config/     shared TypeScript/tooling configuration.
+tooling/      repository checks (client boundary check).
 ```
 
-Dependency rules:
+Dependency rules: clients depend on the API contract and `@nslinkhub/types`
+only — never Prisma or `apps/api` internals (enforced by
+`tooling/check-client-boundaries.ts`). API authorization is the source of
+truth; UI hiding is not a security rule. Packages use the `@nslinkhub/*` scope.
 
-- Clients depend on backend API contracts; they never become alternate domain
-  engines and never import backend persistence code.
-- API authorization is the source of truth; UI hiding is not a security rule.
-- Workspace packages use the `@nslinkhub/*` scope.
+Surface roles: **Web** is the full surface (explore, hub page, collections,
+resources, tags, sharing, transfer, saves, account). **Extension** is a
+constrained capture companion (authenticate, pick collection, capture the tab
+or selection via popup/context-menu/shortcut) using the existing
+external-resource endpoint; no management surface, no reimplementation of
+dedupe or publication rules; bearer-token auth in session-scoped storage.
 
-Surface roles:
+## Delivery status and remaining tracks
 
-```txt
-Web        Full surface: explore, hubs, memberships, invitations, collections,
-           resources, tags, imports, exports, sharing, saves, account security.
-Extension  Capture companion: authenticate, pick hub + collection, capture
-           current tab / selection via popup, context menu, and keyboard
-           shortcut (all three from the first cut). Submits commands and
-           renders results; no management surface, no local reimplementation
-           of publication or dedupe rules. Bearer-token auth with
-           session-scoped storage (never long-lived secrets in sync storage).
-```
+The backend model above is **built and verified** (one hub per user, Drive
+sharing with downward inheritance, collection transfer, two-level nesting,
+same-hub collection-links, minimal resources, tag pruning). Shared contracts
+(`@nslinkhub/types`) and the client boundary check are in place. Nothing is
+deployed, so schema changes reshape `prisma/migrations/0_init` rather than
+stacking migrations.
 
-The web app's design and product philosophy are coined in a dedicated
-impeccable pass before building, producing NSLinkHub equivalents of pigfarm's
-web-product-experience / web-interface-system / web-design-tokens documents.
-Explore, shared/, and saved/ are first-class in that pass — the public face
-and the retention loop of the product.
+Remaining:
 
-## Implementation Plan
-
-Order: **W1 → A → B → C → D → W2 → W3 → W4**, with E tracked alongside.
-Every phase ends green (build, lint, `bun test`, smoke) and is committed
-separately. Nothing is deployed: schema changes reshape
-`prisma/migrations/0_init` rather than stacking data migrations.
-
-### W1 — Workspace restructure (mechanical, first)
-
-- Root becomes a Bun workspace; the backend moves to `apps/api` (source,
-  `prisma/`, `prisma.config.ts`, tsconfig, tests move together;
-  `compose.yml` and root scripts stay and delegate).
-- Add `packages/config`; keep root `bun.lock`.
-- No behavior change; everything builds/tests from the root before and after.
-
-### Phase A — Foundation conventions
-
-- Error envelope + request-id middleware (principle 10).
-- Configuration validated at startup (`@nestjs/config` schema validation).
-- Cursor pagination for resource/collection/explore listings (principle 11).
-
-### Phase B — Schema
-
-Current-code mapping for this phase: today's `repositories` table/module is
-the collection concept, `entries` is the resource concept, `owner_id` is the
-user-ownership column being replaced, and `visibility`
-(public/unlisted/private) is the publication state being replaced.
-
-- Rename: `repositories` → `collections`, `entries` → `resources` (modules,
-  services, controllers, DTOs follow).
-- Add `hubs`, `hub_memberships`, `collection_shares`, `collection_saves`
-  (+ `hub_invitations` if Phase D lands together).
-- `collections.owner_id` → `collections.hub_id` (FK to hubs, cascade).
-- `collections.visibility` → `published` boolean (default false) +
-  `link_sharing_enabled` boolean alongside the rotatable `share_token_hash`;
-  drop the visibility CHECK constraints.
-- `users.username` remains a mutable login/display convenience; it appears in
-  no route and no FK.
-- Atomic hub creation (hub + owner membership in one transaction); personal
-  hub auto-created at sign-up through an app-owned onboarding service
-  (auth-path-agnostic per the SSO constraints).
-
-### Phase C — Authorization + public surfaces
-
-- Hub policy service `requireHubRole(hubId, userId, minRole)` replaces all
-  user-ownership checks; the platform-admin bypass is preserved.
-- Scoped-query contract enforced (principle 3): collection lookups take
-  `hubId` + `collectionId`; resource/tag/export lookups resolve the
-  collection first and carry its hub.
-- Collection access resolution implemented as the single policy service from
-  "Sharing Model".
-- Public surfaces: `GET /explore` and the public hub page.
-- Sharing endpoints: publish/unpublish, link-sharing toggle+rotate, direct
-  shares CRUD, `GET /me/shared`, link-sourced share recording.
-- Saves: save/unsave (published only), `GET /me/saved` with dormant handling.
-- Route change: hub+slug lookup at `GET /hubs/:hubId/collections/:slug`; the
-  username-based lookup route is deleted (principle 1).
-- Regression tests (extend `test/routes.e2e.spec.ts`): unpublished collection
-  invisible to strangers and absent from explore; direct-share reader reads
-  but cannot write; editor writes resources but cannot publish or manage
-  shares; link rotation cuts off link-sourced access; saving an unpublished
-  collection is rejected; a save goes dormant on unpublish and revives on
-  republish.
-
-### Phase D — Invitations + membership management
-
-- `HubInvitation` flow per principle 5 (email delivery can be a logged no-op
-  until email infrastructure exists).
-- Membership endpoints: list members, change role, remove member — with the
-  last-owner rule enforced.
-- Ownership transfer as an explicit workflow.
-
-### W2 — Shared contracts
-
-- Extract `packages/types` with the API request/response types the web app
-  needs.
-- Add the `tooling/` boundary check (clients import neither `apps/api/src`
-  internals nor Prisma).
-
-### W3 — Web app
-
-- Impeccable design/product pass first (three design documents), then
-  scaffold `apps/web` and build vertical slices: explore (public), sign-in,
-  hub switcher, collection list/detail, resource capture, sharing
-  management, shared/ and saved/.
-- Cookie sessions (better-auth); same origin or configured CORS + trusted
-  origins.
-
-### W4 — Browser extension
-
-- `apps/extension` (MV3): sign-in, default hub+collection picker, capture via
-  popup + context menu + keyboard shortcut, using the existing
-  external-resource endpoint (dedupe/canonicalization stay backend-owned).
-
-### Phase E — Tracked, not blocking
-
-- ns-series SSO ("Continue with namestarlit") once nsauth exists — see
-  `docs/design-docs/identity-sso.md` for the integration shape and the
-  constraints Phases B/C already respect.
-- Audit records (principle 12).
-- Transactional outbox + worker split for exports/email.
-- Vanity hub handles (mutable, unique-while-active, resolve to hubId).
-- Pending shares for unregistered emails (invitation-style email, activated
-  on sign-up).
-- Resource-level saves — evaluate after collection saves prove the loop.
-- Explore ranking/curation beyond recency — a product decision for the web
-  pass.
-- Full-text search across collections and resources — revisit once the
-  product has real content; explore + title/tag filtering carries v1.
+- **W3 — Web app.** Opens with an impeccable design/product pass producing the
+  three web design documents (`web-product-experience`, `web-interface-system`,
+  `web-design-tokens`), then scaffolds `apps/web` and builds vertical slices:
+  explore, sign-in, the hub page, collection list/detail (guides), resource
+  capture, sharing + transfer management, shared/ and saved/. Cookie sessions.
+- **W4 — Browser extension.** `apps/extension` (MV3) capture companion.
+- **Phase E — tracked, not blocking.**
+  - nsauth SSO once it exists (users + SSO; see `identity-sso.md`).
+  - Audit records; transactional outbox + worker split; Resend email delivery;
+    Pino/OTel observability.
+  - `/@handle` vanity route resolving to `hubId` (direct hub navigation).
+  - Explore discovery by **tags + text** (search) beyond the initial recency
+    list; full-text search across collections/resources.
+  - Read-only cross-hub **shortcut** references to shared collections.
+  - Pending shares for unregistered emails (invitation-style, activated on
+    sign-up).
+  - Resource-level saves — evaluate after collection saves prove the loop.

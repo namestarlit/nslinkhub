@@ -8,9 +8,10 @@ short: it is a map for contributors and coding agents, not a complete manual.
 
 1. Read `ARCHITECTURE.md` for the stable system map and dependency rules.
 2. Read `PRODUCT.md` for the product definition and acceptance criteria.
-3. Read `docs/design-docs/hub-architecture.md` — the authoritative target
-   design (hubs → collections → resources, sharing, discovery, workspace) and
-   the locked implementation order (W1 → A → B → C → D → W2 → W3 → W4).
+3. Read `docs/design-docs/hub-architecture.md` — the authoritative architecture
+   (the Google-Drive individual model: one hub per user, collection-level
+   sharing with downward inheritance, discovery, workspace). The backend is
+   built; W3 (web) and W4 (extension) remain.
 4. Read the focused document for the area being changed
    (`docs/design-docs/index.md`).
 5. For substantial work, read `PLANS.md`, then create or update an ExecPlan in
@@ -43,8 +44,8 @@ authoritative.
 - `docs/RELIABILITY.md`: idempotency, concurrency, jobs, and data rules.
 - `docs/design-docs/index.md`: deeper design documents.
 - `docs/design-docs/conventions.md`: API/persistence casing and envelope rules.
-- `docs/design-docs/hub-architecture.md`: authoritative target design and
-  phased implementation plan.
+- `docs/design-docs/hub-architecture.md`: authoritative architecture — the
+  Google-Drive individual tenancy model, access rules, and remaining tracks.
 - `docs/design-docs/identity-sso.md`: ns-series IAM direction (nsauth,
   "Continue with namestarlit") — built as an IAM, first slice ships AuthN+SSO;
   domain authorization stays product-owned; constraints current work respects.
