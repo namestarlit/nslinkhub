@@ -46,13 +46,21 @@ Hub → Collections → Resources
   sections (a section cannot contain sub-sections, and a collection with
   sections cannot itself be nested).
 - **Resource** — an item in a collection, and the smallest unit of content
-  (like text in a document). Two kinds: an **external link** (an editable title
-  + position) or a **collection-link** (`kind = collection_link`) that points
-  to another collection **in the same hub** and expands in place. A resource
-  has no summary — clarify a vague link by renaming its title; tags carry the
-  rest. A collection-link cannot target another hub's collection (no embedding
-  someone else's collection); cross-hub references are a future read-only
-  shortcut.
+  (like text in a document). Its kind is set by *how it was added*, never by
+  inspecting the URL:
+  - an **external link** — what a pasted/copied URL always becomes (even one
+    pointing to a collection's page): a hyperlink with an editable title, tags,
+    and position. It does not expand or nest; opening it just navigates there,
+    subject to that destination's own access.
+  - a **collection-link** (`kind = collection_link`) — created only by the
+    internal "link a collection" action within your own hub. It references a
+    real collection (the metadata that lets it expand in place) and cannot
+    target another hub's collection. Cross-hub references are a future
+    read-only shortcut.
+
+  There is no URL auto-detection: the system never turns a pasted link into an
+  expandable collection-link. A resource has no summary — clarify a vague link
+  by renaming its title; tags carry the rest.
 - **Tag** — normalized lowercase labels attachable at two levels, on
   collections and on resources — a retrieval axis orthogonal to the collection
   hierarchy (see "Tags: the retrieval axis" below).
