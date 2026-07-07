@@ -64,6 +64,7 @@ CREATE TABLE IF NOT EXISTS collections (
   link_sharing_enabled boolean NOT NULL DEFAULT false,
   share_token_hash varchar(255),
   parent_collection_id uuid REFERENCES collections(id) ON DELETE CASCADE,
+  creator_user_id uuid REFERENCES users(id) ON DELETE SET NULL,
   version bigint NOT NULL DEFAULT 1,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now(),

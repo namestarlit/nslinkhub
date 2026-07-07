@@ -25,12 +25,13 @@ model User {
   createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt     DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
 
-  hub        Hub?
-  shares     CollectionShare[]
-  saves      CollectionSave[]
-  exportJobs ExportJob[]
-  sessions   Session[]
-  accounts   Account[]
+  hub                Hub?
+  createdCollections Collection[]      @relation("CollectionCreator")
+  shares             CollectionShare[]
+  saves              CollectionSave[]
+  exportJobs         ExportJob[]
+  sessions           Session[]
+  accounts           Account[]
 
   @@map("users")
 }
@@ -60,11 +61,13 @@ model Collection {
   linkSharingEnabled Boolean  @default(false) @map("link_sharing_enabled")
   shareTokenHash     String?  @map("share_token_hash") @db.VarChar(255)
   parentCollectionId String?  @map("parent_collection_id") @db.Uuid
+  creatorUserId      String?  @map("creator_user_id") @db.Uuid
   version            BigInt   @default(1)
   createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt          DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
 
   hub              Hub               @relation(fields: [hubId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  creator          User?             @relation("CollectionCreator", fields: [creatorUserId], references: [id], onDelete: SetNull, onUpdate: NoAction)
   parentCollection Collection?       @relation("CollectionHierarchy", fields: [parentCollectionId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   children         Collection[]      @relation("CollectionHierarchy")
   resources        Resource[]        @relation("CollectionResources")

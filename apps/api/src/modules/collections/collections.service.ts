@@ -400,7 +400,7 @@ export class CollectionsService {
 
   // --- internals ----------------------------------------------------------
 
-  private async createInHub(_user: AuthUser, hubId: string, dto: CreateCollectionDto) {
+  private async createInHub(user: AuthUser, hubId: string, dto: CreateCollectionDto) {
     if (dto.parentCollectionId) {
       const parent = await this.requireCollection(
         dto.parentCollectionId,
@@ -422,6 +422,9 @@ export class CollectionsService {
     const saved = await this.prisma.collection.create({
       data: {
         hubId,
+        // Immutable creator/provenance: unchanged if ownership is later
+        // transferred (the owning hubId changes, the creator does not).
+        creatorUserId: user.userId,
         slug: dto.slug,
         title: dto.title,
         description: dto.description,

@@ -11,6 +11,12 @@ summary of what changed after completed work has been promoted out of `ref/`.
 
 ### Changed
 
+- Collections gained an immutable `creatorUserId` (provenance), set at
+  creation, distinct from the mutable owner (`hubId`). Groundwork for
+  Drive-style collection ownership transfer: on transfer the owner (hub)
+  changes but the creator does not. `ON DELETE SET NULL` so a collection
+  outlives its creator's account after a transfer.
+
 - Tenancy reshaped to the Google-Drive individual model (before Track W3).
   A hub is now **one personal space per user** (1:1), identified by a mutable,
   unique **handle** (the "hub name") plus a free-form **display name**. Removed

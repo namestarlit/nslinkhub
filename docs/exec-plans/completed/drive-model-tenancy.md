@@ -73,8 +73,9 @@ Deferred follow-ons (small, separate — not blocking W3):
   3. adds an `editor` direct share for the previous owner, so it lands in
      **their** `shared/` surface (Drive keeps the ex-owner as editor);
   4. leaves `creatorUserId` untouched.
-  Requires adding `creatorUserId` to `Collection` (immutable). Buildable now
-  (no email); the field should ideally be added pre-deployment.
+  The immutable `creatorUserId` field is **now in place** (added 2026-07-04,
+  set at collection creation, FK `ON DELETE SET NULL`); only the transfer
+  endpoint itself remains. Buildable now (no email).
 - **Account/hub transfer is NOT a model** (2026-07-04 decision). A hub is 1:1
   with the account, so handing over the hub = handing over the account =
   **changing the account email** (better-auth `changeEmail` with code
