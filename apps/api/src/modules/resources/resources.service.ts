@@ -277,7 +277,10 @@ export class ResourcesService {
     }
     const access = await this.policy.requireRead(collection, viewer, shareToken);
     if (access.viaLinkToken && viewer) {
-      await this.policy.recordLinkAccess(collection.id, viewer.userId);
+      await this.policy.recordLinkAccess(
+        access.linkSourceCollectionId ?? collection.id,
+        viewer.userId,
+      );
     }
     return collection;
   }

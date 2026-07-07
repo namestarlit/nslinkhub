@@ -182,6 +182,10 @@ defined in a dedicated design pass before web implementation (Track W3).
 - Tags are global and shared; a tag is deleted once nothing references it (no
   collection and no resource, via detach or a cascading delete) — no dangling
   tags accumulate.
+- Access inherits down the hierarchy: a direct share, active link, or
+  publication on a collection grants the same access to its descendant
+  collections (and their resources) — sharing a "folder" shares its contents.
+  Ownership already spans the whole subtree (one hub).
 - All identifiers exposed in routes are immutable UUIDv7 values; changing a
   username, hub name, or collection title never breaks a stored reference.
 

@@ -11,6 +11,14 @@ summary of what changed after completed work has been promoted out of `ref/`.
 
 ### Added
 
+- Nested access inheritance: the collection access policy now resolves up the
+  ancestor chain, so a share, active link, or publication on a parent
+  collection grants the same access to its descendants (and their resources),
+  Drive-folder style. Also fixes published nested guides — a published
+  table-of-contents collection now makes its sub-sections readable. A link
+  grant records against the collection whose link was actually used (which may
+  be an ancestor).
+
 - Collection ownership transfer (`POST /api/v1/collections/:id/transfer`,
   `{ email }`). Drive-style: only the owner may transfer, only to a user who is
   already an `editor`. The collection subtree moves into the recipient's hub,
