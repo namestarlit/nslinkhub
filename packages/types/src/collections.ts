@@ -7,6 +7,7 @@ export interface Collection {
   slug: string;
   title: string;
   description: string | null;
+  tags: string[];
   published: boolean;
   linkSharingEnabled: boolean;
   parentCollectionId: string | null;
@@ -27,7 +28,7 @@ export interface SavedCollection extends Collection {
 
 export interface CollectionShareView {
   userId: string;
-  username: string;
+  displayName: string;
   role: ShareRole;
   source: ShareSource;
 }
@@ -36,6 +37,7 @@ export interface CreateCollectionRequest {
   slug: string;
   title: string;
   description?: string;
+  tags?: string[];
   published?: boolean;
 }
 
@@ -44,6 +46,7 @@ export interface UpdateCollectionRequest {
   slug?: string;
   title?: string;
   description?: string;
+  tags?: string[];
   published?: boolean;
 }
 

@@ -5,10 +5,10 @@ export interface Resource {
   id: string;
   collectionId: string;
   kind: ResourceKind;
-  linkId: string | null;
-  linkedCollectionId: string | null;
   url?: string;
+  linkedCollectionId: string | null;
   titleOverride: string | null;
+  tags: string[];
   position: number;
   version: number;
   createdAt: IsoTimestamp;
@@ -18,12 +18,14 @@ export interface Resource {
 export interface CreateExternalResourceRequest {
   url: string;
   titleOverride?: string;
+  tags?: string[];
   position: number;
 }
 
 export interface UpdateResourceRequest {
   version: number;
   titleOverride?: string;
+  tags?: string[];
   position?: number;
 }
 

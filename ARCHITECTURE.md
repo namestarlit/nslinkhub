@@ -59,8 +59,7 @@ ref/               disposable, git-ignored implementation context
 | `hubs` | one-hub-per-user ownership + handle management (`HubsService`), collection access policy — owner → direct share → link → published, inheriting down the collection tree (`CollectionPolicyService`) |
 | `users` | self-service profile at `/profile` (display name, bio, hub handle) |
 | `collections` | collection CRUD (two-level nesting), publish/unpublish, link + direct sharing, ownership transfer, saves, `/explore`, public hub pages, `/me/{shared,saved}`, hub-scoped lookup |
-| `resources` | resource CRUD, reorder with version checks |
-| `tags` | normalized tags on collections and resources |
+| `resources` | resource CRUD (own canonical URL, tags array, nesting via section entries), reorder with version checks |
 | `imports` | CSV / bookmarks-HTML / WhatsApp-TXT ingestion |
 | `exports` | markdown export; queued PDF jobs (BullMQ + `export_jobs`) |
 | `health` | liveness endpoints |

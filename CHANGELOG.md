@@ -37,6 +37,16 @@ summary of what changed after completed work has been promoted out of `ref/`.
 
 ### Changed
 
+- De-normalized links and tags (the "store once, link many" / "shared tag pool"
+  normalization stopped paying off in a single-user tool). An external resource
+  now stores its own canonical `url` (dedup is a per-collection unique index);
+  the `links` table and its module are removed. Tags are a normalized `text[]`
+  on the resource and collection, set on create/update — the `tags`,
+  `collection_tags`, `resource_tags` tables, the tags module, the tag
+  attach/detach endpoints, and orphan-pruning are all removed. Cross-library
+  retrieval is deferred to full-text search (Phase E). `@nslinkhub/types`
+  updated (resource `url`/`tags`, collection `tags`, `CollectionShareView`
+  uses `displayName`).
 - Nesting is now a single action on existing collections. Removed `createChild`
   (`POST /collections/:id/children`, create-and-nest) and reparenting via
   `PATCH` (`parentCollectionId` dropped from the update DTO). The one way to

@@ -57,6 +57,7 @@ model Collection {
   slug               String   @db.VarChar(120)
   title              String   @db.VarChar(255)
   description        String?
+  tags               String[] @default([])
   published          Boolean  @default(false)
   linkSharingEnabled Boolean  @default(false) @map("link_sharing_enabled")
   shareTokenHash     String?  @map("share_token_hash") @db.VarChar(255)
@@ -72,7 +73,6 @@ model Collection {
   children         Collection[]      @relation("CollectionHierarchy")
   resources        Resource[]        @relation("CollectionResources")
   linkedBy         Resource[]        @relation("ResourceLinkedCollection")
-  collectionTags   CollectionTag[]
   shares           CollectionShare[]
   saves            CollectionSave[]
   exportJobs       ExportJob[]
@@ -112,72 +112,25 @@ model CollectionSave {
   @@map("collection_saves")
 }
 
-model Link {
-  id           String   @id @default(dbgenerated("app_uuid_v7()")) @db.Uuid
-  canonicalUrl String   @unique @map("canonical_url")
-  urlHash      String   @unique @map("url_hash") @db.VarChar(64)
-  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt    DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
-
-  resources Resource[]
-
-  @@map("links")
-}
-
 model Resource {
   id                 String   @id @default(dbgenerated("app_uuid_v7()")) @db.Uuid
   collectionId       String   @map("collection_id") @db.Uuid
-  linkId             String?  @map("link_id") @db.Uuid
   kind               String   @db.VarChar(24)
+  url                String?
   linkedCollectionId String?  @map("linked_collection_id") @db.Uuid
   titleOverride      String?  @map("title_override") @db.VarChar(255)
+  tags               String[] @default([])
   position           Int
   version            BigInt   @default(1)
   createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt          DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
 
-  collection       Collection    @relation("CollectionResources", fields: [collectionId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  link             Link?         @relation(fields: [linkId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  linkedCollection Collection?   @relation("ResourceLinkedCollection", fields: [linkedCollectionId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  resourceTags     ResourceTag[]
+  collection       Collection  @relation("CollectionResources", fields: [collectionId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  linkedCollection Collection? @relation("ResourceLinkedCollection", fields: [linkedCollectionId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@unique([collectionId, position], map: "resources_collection_position_unique")
   @@index([collectionId, updatedAt(sort: Desc)], map: "idx_resources_collection_updated_at")
   @@map("resources")
-}
-
-model Tag {
-  id        String   @id @default(dbgenerated("app_uuid_v7()")) @db.Uuid
-  name      String   @unique @db.VarChar(80)
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
-
-  collectionTags CollectionTag[]
-  resourceTags   ResourceTag[]
-
-  @@map("tags")
-}
-
-model CollectionTag {
-  collectionId String @map("collection_id") @db.Uuid
-  tagId        String @map("tag_id") @db.Uuid
-
-  collection Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  tag        Tag        @relation(fields: [tagId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-
-  @@id([collectionId, tagId])
-  @@map("collection_tags")
-}
-
-model ResourceTag {
-  resourceId String @map("resource_id") @db.Uuid
-  tagId      String @map("tag_id") @db.Uuid
-
-  resource Resource @relation(fields: [resourceId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  tag      Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-
-  @@id([resourceId, tagId])
-  @@map("resource_tags")
 }
 
 model ExportJob {

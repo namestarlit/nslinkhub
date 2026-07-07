@@ -1,4 +1,3 @@
-import { createHash } from "node:crypto";
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { ResourceKind } from "src/common/enums/resource-kind.enum";
 import { AuthUser } from "src/common/interfaces/auth-user.interface";
@@ -101,7 +100,7 @@ export class ImportsService {
   ) {
     const existingResources = await this.prisma.resource.findMany({
       where: { collectionId },
-      include: { link: true },
+      select: { position: true, url: true },
     });
 
     const maxPosition = existingResources.reduce(
@@ -109,8 +108,8 @@ export class ImportsService {
       -1,
     );
     let nextPosition = maxPosition + 1;
-    const existingHashes = new Set(
-      existingResources.map((resource) => resource.link?.urlHash).filter(Boolean) as string[],
+    const existingUrls = new Set(
+      existingResources.map((resource) => resource.url).filter(Boolean) as string[],
     );
 
     let importedCount = 0;
@@ -119,32 +118,24 @@ export class ImportsService {
 
     for (const row of rows) {
       try {
-        const canonicalUrl = canonicalizeUrl(row.url);
-        const urlHash = createHash("sha256").update(canonicalUrl).digest("hex");
+        const url = canonicalizeUrl(row.url);
 
-        if (existingHashes.has(urlHash)) {
+        if (existingUrls.has(url)) {
           skippedCount += 1;
           continue;
-        }
-
-        let link = await this.prisma.link.findUnique({ where: { urlHash } });
-        if (!link) {
-          link = await this.prisma.link.create({
-            data: { canonicalUrl, urlHash },
-          });
         }
 
         await this.prisma.resource.create({
           data: {
             collectionId,
             kind: ResourceKind.EXTERNAL_LINK,
-            linkId: link.id,
+            url,
             titleOverride: row.title ?? null,
             position: nextPosition,
           },
         });
 
-        existingHashes.add(urlHash);
+        existingUrls.add(url);
         importedCount += 1;
         nextPosition += 1;
       } catch {

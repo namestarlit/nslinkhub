@@ -66,36 +66,25 @@ Hub → Collections → Resources
   There is no URL auto-detection: the system never turns a pasted link into an
   expandable collection-link. A resource has no summary — clarify a vague link
   by renaming its title; tags carry the rest.
-- **Tag** — normalized lowercase labels attachable at two levels, on
-  collections and on resources — a retrieval axis orthogonal to the collection
-  hierarchy (see "Tags: the retrieval axis" below).
+- **Tag** — an optional normalized lowercase label. Tags are a plain **string
+  array** on a collection or a resource — no shared tag table, no global
+  namespace. They are set when creating or updating the item (see "Tags"
+  below).
 
-### Tags: the retrieval axis
+### Tags
 
-Collections are the primary *organization* (where a link belongs). Tags are a
-distinct, orthogonal *retrieval* axis, optional at two levels with different
-jobs:
+Tags are optional labels stored **directly on** a collection or a resource as a
+string array, normalized (lowercase, de-duplicated, capped) at write time. They
+describe what a link or collection is — `video`, `tool`, `free`, `must-read` —
+so a vague title reads clearly at a glance, and they are set as part of
+create/update (there is no separate attach/detach step).
 
-- **Collection tags — what a collection is about.** Coarse topical discovery
-  and grouping across collections (`design`, `react`, `recipes`); the
-  discovery-facing level (a person's collections, or the explore surface,
-  browsed/filtered by topic).
-- **Resource tags — what an individual link is.** The item-level axis
-  collections structurally cannot provide: retrieving one resource *across*
-  collections, plus facets that describe the link itself rather than its
-  collection — format/nature (`video`, `tool`, `pdf`, `free`, `paywalled`),
-  status (`must-read`, `todo`), and filtering within a large collection or
-  guide. This answers "where did I put that one article?" — the retrieval half
-  of escaping bookmarks hell that grouping alone does not solve.
-
-Principle: collections stay primary; **tagging is always optional, never a
-required step**, and grows more useful as a library grows. Resource tags are
-justified by a **cross-collection filter view** ("everything tagged `video`
-across my hub") — without that surface they are decoration; the view is what
-earns them. Keep tags flat and lightweight — no hierarchies, required tags, or
-tag governance. Full-text search (Phase E) is the heavier retrieval answer;
-tags are the manual precursor. **W3:** expose resource tags lightly (optional
-chips) and ship the cross-collection filter as the surface that proves them.
+Deliberately **not a global entity**: no shared tag table, no
+"click a tag → everything tagged it" cross-cutting view, no autocomplete pool.
+For a single-user tool that normalization added storage and cleanup complexity
+without real value — retrieving across a library is a **full-text search**
+concern (Phase E), which covers titles, tags, and text together. Tagging is
+always optional; keep tags flat (no hierarchies or governance).
 
 ## 3. Target Users
 
@@ -208,9 +197,10 @@ defined in a dedicated design pass before web implementation (Track W3).
   silently overwriting concurrent edits.
 - Imported files that are malformed produce per-row errors, not partial
   silent corruption.
-- Tags are global and shared; a tag is deleted once nothing references it (no
-  collection and no resource, via detach or a cascading delete) — no dangling
-  tags accumulate.
+- Tags are normalized (lowercase, de-duplicated) string arrays stored directly
+  on collections and resources; there is no shared tag table. An external
+  resource stores its own canonical URL (one copy of a given URL per
+  collection).
 - Access inherits down the hierarchy: a direct share, active link, or
   publication on a collection grants the same access to its descendant
   collections (and their resources) — sharing a "folder" shares its contents.

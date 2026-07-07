@@ -11,11 +11,11 @@ import { ResourceKind } from "src/common/enums/resource-kind.enum";
 import { AuthUser } from "src/common/interfaces/auth-user.interface";
 import { decodeCursor, encodeCursor } from "src/common/utils/cursor.util";
 import { parseIfMatchVersion, toVersionEtag } from "src/common/utils/etag.util";
+import { normalizeTags } from "src/common/utils/tags.util";
 import { PrismaService } from "src/database/prisma.service";
 import { Collection } from "src/generated/prisma/client";
 import { CollectionPolicyService } from "../hubs/collection-policy.service";
 import { HubsService } from "../hubs/hubs.service";
-import { pruneOrphanTags } from "../tags/tag-cleanup";
 import { CreateCollectionDto } from "./dto/create-collection.dto";
 import { CreateShareDto } from "./dto/create-share.dto";
 import { NestCollectionDto } from "./dto/nest-collection.dto";
@@ -126,6 +126,7 @@ export class CollectionsService {
         slug: dto.slug ?? collection.slug,
         title: dto.title ?? collection.title,
         description: dto.description ?? collection.description,
+        ...(dto.tags !== undefined ? { tags: normalizeTags(dto.tags) } : {}),
         published: dto.published ?? collection.published,
         version: { increment: 1 },
       },
@@ -137,10 +138,6 @@ export class CollectionsService {
     const collection = await this.requireCollection(id);
     await this.policy.requireManage(collection, user);
     await this.prisma.collection.delete({ where: { id: collection.id } });
-    // The delete cascades through nested collections, their resources, and all
-    // tag-join rows to an unknowable depth, so prune every orphaned tag rather
-    // than trying to enumerate the affected ones.
-    await pruneOrphanTags(this.prisma);
     return { id, deleted: true };
   }
 
@@ -558,6 +555,7 @@ export class CollectionsService {
         slug: dto.slug,
         title: dto.title,
         description: dto.description,
+        tags: normalizeTags(dto.tags),
         published: dto.published ?? false,
       },
     });
@@ -644,6 +642,7 @@ export class CollectionsService {
       slug: collection.slug,
       title: collection.title,
       description: collection.description,
+      tags: collection.tags,
       published: collection.published,
       linkSharingEnabled: collection.linkSharingEnabled,
       parentCollectionId: collection.parentCollectionId,

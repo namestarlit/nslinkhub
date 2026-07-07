@@ -1,4 +1,3 @@
-import { createHash } from "node:crypto";
 import {
   BadRequestException,
   ConflictException,
@@ -9,11 +8,11 @@ import { CursorQueryDto } from "src/common/dto/cursor-query.dto";
 import { ResourceKind } from "src/common/enums/resource-kind.enum";
 import { AuthUser } from "src/common/interfaces/auth-user.interface";
 import { decodeCursor, encodeCursor } from "src/common/utils/cursor.util";
+import { normalizeTags } from "src/common/utils/tags.util";
 import { canonicalizeUrl } from "src/common/utils/url.util";
 import { PrismaService } from "src/database/prisma.service";
 import { Collection, Resource } from "src/generated/prisma/client";
 import { CollectionPolicyService } from "../hubs/collection-policy.service";
-import { pruneOrphanTags } from "../tags/tag-cleanup";
 import { CreateExternalResourceDto } from "./dto/create-external-resource.dto";
 import { ReorderResourcesDto } from "./dto/reorder-resources.dto";
 import { UpdateResourceDto } from "./dto/update-resource.dto";
@@ -29,16 +28,9 @@ export class ResourcesService {
     const collection = await this.requireWritableCollection(collectionId, user);
     await this.ensurePositionAvailable(collection.id, dto.position);
 
-    const canonicalUrl = canonicalizeUrl(dto.url);
-    const urlHash = createHash("sha256").update(canonicalUrl).digest("hex");
-
-    let link = await this.prisma.link.findUnique({ where: { canonicalUrl } });
-    if (!link) {
-      link = await this.prisma.link.create({ data: { canonicalUrl, urlHash } });
-    }
-
+    const url = canonicalizeUrl(dto.url);
     const duplicate = await this.prisma.resource.findFirst({
-      where: { collectionId: collection.id, linkId: link.id },
+      where: { collectionId: collection.id, url },
       select: { id: true },
     });
     if (duplicate) {
@@ -48,14 +40,15 @@ export class ResourcesService {
     const saved = await this.prisma.resource.create({
       data: {
         collectionId: collection.id,
-        linkId: link.id,
         kind: ResourceKind.EXTERNAL_LINK,
+        url,
         titleOverride: dto.titleOverride ?? null,
+        tags: normalizeTags(dto.tags),
         position: dto.position,
       },
     });
 
-    return this.toPublicResource(saved, link.canonicalUrl);
+    return this.toPublicResource(saved);
   }
 
   async getByCollection(
@@ -77,7 +70,6 @@ export class ResourcesService {
         collectionId,
         ...(cursor ? { position: { gt: cursor.p } } : {}),
       },
-      include: { link: true, linkedCollection: true },
       orderBy: { position: "asc" },
       take: limit + 1,
     });
@@ -87,7 +79,7 @@ export class ResourcesService {
       rows.length > limit ? encodeCursor({ p: items[items.length - 1].position }) : null;
 
     return {
-      items: items.map((item) => this.toPublicResource(item, item.link?.canonicalUrl)),
+      items: items.map((item) => this.toPublicResource(item)),
       meta: { limit, nextCursor },
     };
   }
@@ -117,6 +109,7 @@ export class ResourcesService {
       data: {
         position,
         titleOverride: dto.titleOverride ?? resource.titleOverride,
+        ...(dto.tags !== undefined ? { tags: normalizeTags(dto.tags) } : {}),
         version: { increment: 1 },
       },
     });
@@ -134,10 +127,6 @@ export class ResourcesService {
       throw new NotFoundException("Resource not found");
     }
 
-    const tagRows = await this.prisma.resourceTag.findMany({
-      where: { resourceId: resource.id },
-      select: { tagId: true },
-    });
     await this.prisma.resource.delete({ where: { id: resource.id } });
 
     // A section entry and the child's structural parent link are two faces of
@@ -150,12 +139,6 @@ export class ResourcesService {
       });
     }
 
-    // Deleting the resource cascades its resource_tags; prune any tag those
-    // rows left with no remaining references.
-    await pruneOrphanTags(
-      this.prisma,
-      tagRows.map((row) => row.tagId),
-    );
     return { id: resource.id, deleted: true };
   }
 
@@ -272,15 +255,15 @@ export class ResourcesService {
     }
   }
 
-  private toPublicResource(resource: Resource, canonicalUrl?: string) {
+  private toPublicResource(resource: Resource) {
     return {
       id: resource.id,
       collectionId: resource.collectionId,
       kind: resource.kind,
-      linkId: resource.linkId,
+      url: resource.url ?? undefined,
       linkedCollectionId: resource.linkedCollectionId,
-      url: canonicalUrl,
       titleOverride: resource.titleOverride,
+      tags: resource.tags,
       position: resource.position,
       version: Number(resource.version),
       createdAt: resource.createdAt,

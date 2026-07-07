@@ -38,9 +38,7 @@ export class ExportsProcessor extends WorkerHost {
       const resources = await this.prisma.resource.findMany({
         where: { collectionId: collection.id },
         include: {
-          link: true,
           linkedCollection: true,
-          resourceTags: { include: { tag: true } },
         },
         orderBy: { position: "asc" },
       });

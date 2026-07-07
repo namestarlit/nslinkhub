@@ -1,4 +1,13 @@
-import { IsInt, IsOptional, IsString, MaxLength, Min, MinLength } from "class-validator";
+import {
+  ArrayMaxSize,
+  IsArray,
+  IsInt,
+  IsOptional,
+  IsString,
+  MaxLength,
+  Min,
+  MinLength,
+} from "class-validator";
 
 export class UpdateResourceDto {
   @IsOptional()
@@ -6,6 +15,13 @@ export class UpdateResourceDto {
   @MinLength(1)
   @MaxLength(255)
   titleOverride?: string;
+
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(30)
+  @IsString({ each: true })
+  @MaxLength(80, { each: true })
+  tags?: string[];
 
   @IsOptional()
   @IsInt()

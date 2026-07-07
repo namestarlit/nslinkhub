@@ -90,17 +90,15 @@ Collection      — belongs to a hub (hubId = owner). creatorUserId immutable
                   published, linkSharingEnabled, share_token_hash,
                   parentCollectionId (≤ 2 levels), version.
 Resource        — an item in a collection; the smallest unit of content.
-                  kind = external_link (a Link/URL) | collection_link
-                  (linkedCollectionId, same hub only). titleOverride, position,
-                  version. No summary fields.
+                  kind = external_link (its own canonical `url`, one per
+                  collection) | collection_link (linkedCollectionId, same hub).
+                  titleOverride, tags (text[]), position, version. No summary,
+                  no shared links/tags tables.
 CollectionShare — (collectionId, userId, role reader|editor, source
                   direct|link). Per-collection access without any hub
                   membership. Feeds the shared/ surface.
 CollectionSave  — (collectionId, userId, savedAt). A social-style bookmark of a
                   published collection. Feeds the saved/ surface.
-Link / Tag      — `links` is the internal URL-dedupe table. Tags are global
-                  (unique by name), attach to collections and resources, and
-                  are pruned when nothing references them.
 ExportJob       — belongs to hub + collection; requestedByUserId.
 ```
 
@@ -211,11 +209,13 @@ not perform resolve to 403.
 
 ## Tags
 
-Two levels, one optional retrieval axis orthogonal to the collection hierarchy:
-collection tags for topical discovery, resource tags for item-level retrieval
-across collections plus format/status facets. Tagging is always optional;
-resource tags are justified by a cross-collection filter view. Tags are global
-and pruned when unreferenced. Keep them flat — no hierarchies or governance.
+Optional labels stored **directly on** a collection or resource as a normalized
+`text[]` (lowercase, de-duplicated, capped at write time) — set as part of
+create/update, not a separate attach/detach step. There is no shared tag table,
+no global namespace, and no "click a tag → everything tagged it" view: that
+global machinery added complexity without value for a single-user tool.
+Cross-library retrieval is a full-text search concern (Phase E), covering
+titles, tags, and text together. Keep tags flat — no hierarchies or governance.
 
 ## Export
 

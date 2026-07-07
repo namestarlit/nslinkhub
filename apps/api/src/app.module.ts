@@ -7,9 +7,7 @@ import { ExportsModule } from "./modules/exports/exports.module";
 import { HealthModule } from "./modules/health/health.module";
 import { HubsModule } from "./modules/hubs/hubs.module";
 import { ImportsModule } from "./modules/imports/imports.module";
-import { LinksModule } from "./modules/links/links.module";
 import { ResourcesModule } from "./modules/resources/resources.module";
-import { TagsModule } from "./modules/tags/tags.module";
 import { UsersModule } from "./modules/users/users.module";
 
 @Module({
@@ -19,9 +17,7 @@ import { UsersModule } from "./modules/users/users.module";
     HubsModule,
     UsersModule,
     CollectionsModule,
-    LinksModule,
     ResourcesModule,
-    TagsModule,
     ImportsModule,
     ExportsModule,
     HealthModule,

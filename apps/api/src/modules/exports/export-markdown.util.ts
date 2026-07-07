@@ -1,10 +1,8 @@
 import { ResourceKind } from "src/common/enums/resource-kind.enum";
-import { Collection, Link, Resource, ResourceTag, Tag } from "src/generated/prisma/client";
+import { Collection, Resource } from "src/generated/prisma/client";
 
 export type ResourceForExport = Resource & {
-  link: Link | null;
   linkedCollection: Collection | null;
-  resourceTags: (ResourceTag & { tag: Tag | null })[];
 };
 
 export function buildMarkdown(collection: Collection, resources: ResourceForExport[]) {
@@ -25,19 +23,16 @@ export function buildMarkdown(collection: Collection, resources: ResourceForExpo
 
   for (const resource of resources) {
     if ((resource.kind as ResourceKind) === ResourceKind.EXTERNAL_LINK) {
-      const title = resource.titleOverride ?? resource.link?.canonicalUrl ?? "Untitled Link";
-      const url = resource.link?.canonicalUrl ?? "";
+      const url = resource.url ?? "";
+      const title = resource.titleOverride ?? (url || "Untitled Link");
       lines.push(`- [${title}](${url})`);
     } else {
       const title = resource.titleOverride ?? resource.linkedCollection?.title ?? "Collection";
       lines.push(`- [Collection] ${title}`);
     }
 
-    const tagNames = resource.resourceTags
-      ?.map((resourceTag) => resourceTag.tag?.name)
-      .filter(Boolean);
-    if (tagNames && tagNames.length > 0) {
-      lines.push(`  - Tags: ${tagNames.join(", ")}`);
+    if (resource.tags.length > 0) {
+      lines.push(`  - Tags: ${resource.tags.join(", ")}`);
     }
   }
 

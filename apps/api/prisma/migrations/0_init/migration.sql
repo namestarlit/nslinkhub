@@ -60,6 +60,7 @@ CREATE TABLE IF NOT EXISTS collections (
   slug varchar(120) NOT NULL,
   title varchar(255) NOT NULL,
   description text,
+  tags text[] NOT NULL DEFAULT '{}',
   published boolean NOT NULL DEFAULT false,
   link_sharing_enabled boolean NOT NULL DEFAULT false,
   share_token_hash varchar(255),
@@ -149,63 +150,37 @@ CREATE TABLE IF NOT EXISTS collection_saves (
 CREATE INDEX IF NOT EXISTS idx_collection_saves_user_id
   ON collection_saves (user_id);
 
--- Links (internal URL dedupe) and resources
-
-CREATE TABLE IF NOT EXISTS links (
-  id uuid PRIMARY KEY DEFAULT public.app_uuid_v7(),
-  canonical_url text NOT NULL UNIQUE,
-  url_hash varchar(64) NOT NULL UNIQUE,
-  created_at timestamptz NOT NULL DEFAULT now(),
-  updated_at timestamptz NOT NULL DEFAULT now()
-);
+-- Resources (each stores its own canonical URL; tags are a denormalized array)
 
 CREATE TABLE IF NOT EXISTS resources (
   id uuid PRIMARY KEY DEFAULT public.app_uuid_v7(),
   collection_id uuid NOT NULL REFERENCES collections(id) ON DELETE CASCADE,
-  link_id uuid REFERENCES links(id),
   kind varchar(24) NOT NULL,
+  url text,
   linked_collection_id uuid REFERENCES collections(id) ON DELETE CASCADE,
   title_override varchar(255),
+  tags text[] NOT NULL DEFAULT '{}',
   position integer NOT NULL,
   version bigint NOT NULL DEFAULT 1,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now(),
   CONSTRAINT resources_kind_check CHECK (kind IN ('external_link', 'collection_link')),
   CONSTRAINT resources_external_requirements_check CHECK (
-    kind <> 'external_link' OR (link_id IS NOT NULL AND linked_collection_id IS NULL)
+    kind <> 'external_link' OR (url IS NOT NULL AND linked_collection_id IS NULL)
   ),
   CONSTRAINT resources_collection_link_requirements_check CHECK (
-    kind <> 'collection_link' OR (linked_collection_id IS NOT NULL AND link_id IS NULL)
+    kind <> 'collection_link' OR (linked_collection_id IS NOT NULL AND url IS NULL)
   ),
   CONSTRAINT resources_collection_position_unique UNIQUE (collection_id, position)
 );
 
-CREATE UNIQUE INDEX IF NOT EXISTS uq_resources_collection_link
-  ON resources (collection_id, link_id)
-  WHERE link_id IS NOT NULL;
+-- One copy of a given URL per collection (md5 keeps the index within btree size
+-- limits for long URLs); canonicalization happens in the application.
+CREATE UNIQUE INDEX IF NOT EXISTS uq_resources_collection_url
+  ON resources (collection_id, md5(url))
+  WHERE url IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_resources_collection_updated_at
   ON resources (collection_id, updated_at DESC);
-
--- Tags
-
-CREATE TABLE IF NOT EXISTS tags (
-  id uuid PRIMARY KEY DEFAULT public.app_uuid_v7(),
-  name varchar(80) NOT NULL UNIQUE,
-  created_at timestamptz NOT NULL DEFAULT now(),
-  updated_at timestamptz NOT NULL DEFAULT now()
-);
-
-CREATE TABLE IF NOT EXISTS collection_tags (
-  collection_id uuid NOT NULL REFERENCES collections(id) ON DELETE CASCADE,
-  tag_id uuid NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
-  PRIMARY KEY (collection_id, tag_id)
-);
-
-CREATE TABLE IF NOT EXISTS resource_tags (
-  resource_id uuid NOT NULL REFERENCES resources(id) ON DELETE CASCADE,
-  tag_id uuid NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
-  PRIMARY KEY (resource_id, tag_id)
-);
 
 -- Export jobs (hub + collection scoped)
 
@@ -265,21 +240,9 @@ BEFORE UPDATE ON collection_shares
 FOR EACH ROW
 EXECUTE FUNCTION public.set_updated_at();
 
-DROP TRIGGER IF EXISTS trg_set_updated_at_links ON links;
-CREATE TRIGGER trg_set_updated_at_links
-BEFORE UPDATE ON links
-FOR EACH ROW
-EXECUTE FUNCTION public.set_updated_at();
-
 DROP TRIGGER IF EXISTS trg_set_updated_at_resources ON resources;
 CREATE TRIGGER trg_set_updated_at_resources
 BEFORE UPDATE ON resources
-FOR EACH ROW
-EXECUTE FUNCTION public.set_updated_at();
-
-DROP TRIGGER IF EXISTS trg_set_updated_at_tags ON tags;
-CREATE TRIGGER trg_set_updated_at_tags
-BEFORE UPDATE ON tags
 FOR EACH ROW
 EXECUTE FUNCTION public.set_updated_at();
 
