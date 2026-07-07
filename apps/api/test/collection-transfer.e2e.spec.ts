@@ -91,6 +91,52 @@ describe("Collection transfer (e2e)", () => {
     expect(JSON.stringify(shared.body)).toContain(cid);
   });
 
+  it("leaves other editors and viewers untouched after transfer", async () => {
+    const alice = await signUp("owner3");
+    const bob = await signUp("newowner3");
+    const dave = await signUp("editor3");
+    const eve = await signUp("viewer3");
+    const cid = await createCollection(alice.bearer, `xfer3-${sfx}`);
+
+    // Bob is the transfer target (editor); Dave is a third-party editor; Eve a
+    // third-party reader. Only Bob and the previous owner should change.
+    for (const [who, role] of [
+      [bob, "editor"],
+      [dave, "editor"],
+      [eve, "reader"],
+    ] as const) {
+      await request(app.getHttpServer())
+        .post(`/api/v1/collections/${cid}/shares`)
+        .set("Authorization", `Bearer ${alice.bearer}`)
+        .send({ email: who.email, role })
+        .expect(201);
+    }
+
+    await request(app.getHttpServer())
+      .post(`/api/v1/collections/${cid}/transfer`)
+      .set("Authorization", `Bearer ${alice.bearer}`)
+      .send({ email: bob.email })
+      .expect(201);
+
+    // Dave still has editor access — can write content.
+    await request(app.getHttpServer())
+      .post(`/api/v1/collections/${cid}/resources/external`)
+      .set("Authorization", `Bearer ${dave.bearer}`)
+      .send({ url: `https://example.com/dave-${sfx}`, position: 0 })
+      .expect(201);
+
+    // Eve still has reader access — can read, cannot write.
+    await request(app.getHttpServer())
+      .get(`/api/v1/collections/${cid}/resources`)
+      .set("Authorization", `Bearer ${eve.bearer}`)
+      .expect(200);
+    await request(app.getHttpServer())
+      .post(`/api/v1/collections/${cid}/resources/external`)
+      .set("Authorization", `Bearer ${eve.bearer}`)
+      .send({ url: `https://example.com/eve-${sfx}`, position: 1 })
+      .expect(403);
+  });
+
   it("rejects transfer to a non-editor and to self", async () => {
     const alice = await signUp("owner2");
     const carol = await signUp("stranger");
