@@ -29,6 +29,10 @@ summary of what changed after completed work has been promoted out of `ref/`.
 
 ### Changed
 
+- Resources simplified to a link, an editable title, and tags. Removed the
+  `description` and `note` fields from the resource model, DTOs, `@nslinkhub/types`
+  contract, Markdown export, and CSV import — a resource carries no summary;
+  clarify a vague link by renaming its title.
 - Collections gained an immutable `creatorUserId` (provenance), set at
   creation, distinct from the mutable owner (`hubId`). Groundwork for
   Drive-style collection ownership transfer: on transfer the owner (hub)

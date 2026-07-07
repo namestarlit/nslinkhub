@@ -42,8 +42,10 @@ Hub → Collections → Resources
   invitations, or roles — collaboration is per-collection sharing (below).
 - **Collection** — the container of curated content; what a folder is to
   Google Drive. Collections nest.
-- **Resource** — an item in a collection: an external link (with title
-  override, description, note, position) or a link to another collection.
+- **Resource** — an item in a collection: an external link (with an editable
+  title and position) or a link to another collection. A resource has no
+  summary field — clarify a vague link by renaming its title; tags carry the
+  rest. It is the smallest unit of content, like text in a document.
 - **Tag** — normalized lowercase labels attachable at two levels, on
   collections and on resources — a retrieval axis orthogonal to the collection
   hierarchy (see "Tags: the retrieval axis" below).

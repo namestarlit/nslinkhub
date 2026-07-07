@@ -31,8 +31,6 @@ export class ImportsService {
     const headers = lines[0].split(",").map((header) => header.trim().toLowerCase());
     const urlIdx = headers.indexOf("url");
     const titleIdx = headers.indexOf("title");
-    const descriptionIdx = headers.indexOf("description");
-    const noteIdx = headers.indexOf("note");
 
     if (urlIdx < 0) {
       throw new BadRequestException("CSV must contain url column");
@@ -47,8 +45,6 @@ export class ImportsService {
           index: index + 2,
           url: columns[urlIdx] ?? "",
           title: titleIdx >= 0 ? columns[titleIdx] : undefined,
-          description: descriptionIdx >= 0 ? columns[descriptionIdx] : undefined,
-          note: noteIdx >= 0 ? columns[noteIdx] : undefined,
         };
       }),
     );
@@ -101,8 +97,6 @@ export class ImportsService {
       index: number;
       url: string;
       title?: string;
-      description?: string;
-      note?: string;
     }>,
   ) {
     const existingResources = await this.prisma.resource.findMany({
@@ -146,8 +140,6 @@ export class ImportsService {
             kind: ResourceKind.EXTERNAL_LINK,
             linkId: link.id,
             titleOverride: row.title ?? null,
-            description: row.description ?? null,
-            note: row.note ?? null,
             position: nextPosition,
           },
         });

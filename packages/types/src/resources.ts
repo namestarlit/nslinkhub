@@ -9,8 +9,6 @@ export interface Resource {
   linkedCollectionId: string | null;
   url?: string;
   titleOverride: string | null;
-  description: string | null;
-  note: string | null;
   position: number;
   version: number;
   createdAt: IsoTimestamp;
@@ -20,24 +18,18 @@ export interface Resource {
 export interface CreateExternalResourceRequest {
   url: string;
   titleOverride?: string;
-  description?: string;
-  note?: string;
   position: number;
 }
 
 export interface CreateCollectionLinkResourceRequest {
   linkedCollectionId: string;
   titleOverride?: string;
-  description?: string;
-  note?: string;
   position: number;
 }
 
 export interface UpdateResourceRequest {
   version: number;
   titleOverride?: string;
-  description?: string;
-  note?: string;
   position?: number;
 }
 

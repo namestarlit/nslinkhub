@@ -33,13 +33,6 @@ export function buildMarkdown(collection: Collection, resources: ResourceForExpo
       lines.push(`- [Collection] ${title}`);
     }
 
-    if (resource.description) {
-      lines.push(`  - Description: ${resource.description}`);
-    }
-    if (resource.note) {
-      lines.push(`  - Note: ${resource.note}`);
-    }
-
     const tagNames = resource.resourceTags
       ?.map((resourceTag) => resourceTag.tag?.name)
       .filter(Boolean);

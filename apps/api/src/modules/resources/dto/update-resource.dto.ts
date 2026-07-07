@@ -8,16 +8,6 @@ export class UpdateResourceDto {
   titleOverride?: string;
 
   @IsOptional()
-  @IsString()
-  @MaxLength(5000)
-  description?: string;
-
-  @IsOptional()
-  @IsString()
-  @MaxLength(10000)
-  note?: string;
-
-  @IsOptional()
   @IsInt()
   @Min(0)
   position?: number;

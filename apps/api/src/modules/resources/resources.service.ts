@@ -52,8 +52,6 @@ export class ResourcesService {
         linkId: link.id,
         kind: ResourceKind.EXTERNAL_LINK,
         titleOverride: dto.titleOverride ?? null,
-        description: dto.description ?? null,
-        note: dto.note ?? null,
         position: dto.position,
       },
     });
@@ -85,8 +83,6 @@ export class ResourcesService {
         kind: ResourceKind.COLLECTION_LINK,
         linkedCollectionId: linkedCollection.id,
         titleOverride: dto.titleOverride ?? linkedCollection.title,
-        description: dto.description ?? null,
-        note: dto.note ?? null,
         position: dto.position,
       },
     });
@@ -153,8 +149,6 @@ export class ResourcesService {
       data: {
         position,
         titleOverride: dto.titleOverride ?? resource.titleOverride,
-        description: dto.description ?? resource.description,
-        note: dto.note ?? resource.note,
         version: { increment: 1 },
       },
     });
@@ -308,8 +302,6 @@ export class ResourcesService {
       linkedCollectionId: resource.linkedCollectionId,
       url: canonicalUrl,
       titleOverride: resource.titleOverride,
-      description: resource.description,
-      note: resource.note,
       position: resource.position,
       version: Number(resource.version),
       createdAt: resource.createdAt,

@@ -11,16 +11,6 @@ export class CreateExternalResourceDto {
   @MaxLength(255)
   titleOverride?: string;
 
-  @IsOptional()
-  @IsString()
-  @MaxLength(5000)
-  description?: string;
-
-  @IsOptional()
-  @IsString()
-  @MaxLength(10000)
-  note?: string;
-
   @IsInt()
   @Min(0)
   position: number;

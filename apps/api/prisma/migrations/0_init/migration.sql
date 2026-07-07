@@ -172,8 +172,6 @@ CREATE TABLE IF NOT EXISTS resources (
   kind varchar(24) NOT NULL,
   linked_collection_id uuid REFERENCES collections(id) ON DELETE CASCADE,
   title_override varchar(255),
-  description text,
-  note text,
   position integer NOT NULL,
   version bigint NOT NULL DEFAULT 1,
   created_at timestamptz NOT NULL DEFAULT now(),
