@@ -27,6 +27,14 @@ summary of what changed after completed work has been promoted out of `ref/`.
   immutable creator is untouched. Guards: self-transfer and recipient-hub slug
   collisions are rejected.
 
+### Fixed
+
+- Sign-up no longer auto-issues a reserved hub handle (review finding #2). The
+  handle rules moved to a shared `hubs/handle.ts` used by both `HubsService`
+  and the framework-free onboarding path; `createPersonalHub` skips reserved
+  handles when deriving one (e.g. a user named "Explore" gets `explore-2`, not
+  the reserved `explore`).
+
 ### Changed
 
 - Collection-links are now **sections only**, and transfer is **top-level

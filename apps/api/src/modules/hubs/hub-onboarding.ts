@@ -4,6 +4,7 @@
 // call it from its user-create hook. This is the single onboarding entry
 // point — any auth path (local sign-up today, SSO later) funnels through it.
 import type { PrismaClient } from "../../generated/prisma/client";
+import { isReservedHandle } from "./handle";
 
 type HubCapableClient = Pick<PrismaClient, "hub">;
 
@@ -32,6 +33,11 @@ export async function createPersonalHub(prisma: HubCapableClient, params: Person
 
   for (let attempt = 0; attempt < 25; attempt += 1) {
     const handle = attempt === 0 ? seed : `${seed}-${attempt + 1}`.slice(0, 60);
+    // Never issue a reserved handle at sign-up (the bare seed can be one, e.g.
+    // a user named "Explore"); the suffixed forms below are never reserved.
+    if (isReservedHandle(handle)) {
+      continue;
+    }
     const existing = await prisma.hub.findUnique({ where: { handle } });
     if (existing) {
       continue;

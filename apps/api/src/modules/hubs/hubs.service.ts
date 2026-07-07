@@ -6,25 +6,7 @@ import {
 } from "@nestjs/common";
 import { AuthUser } from "src/common/interfaces/auth-user.interface";
 import { PrismaService } from "src/database/prisma.service";
-
-// Handles that would collide with API path segments or read confusingly as a
-// public space identity. Format is enforced again by a DB CHECK constraint.
-const RESERVED_HANDLES = new Set([
-  "api",
-  "explore",
-  "me",
-  "hubs",
-  "collections",
-  "resources",
-  "tags",
-  "imports",
-  "exports",
-  "invitations",
-  "auth",
-  "admin",
-]);
-
-const HANDLE_RE = /^[a-z0-9]+(-[a-z0-9]+)*$/;
+import { hasValidHandleFormat, isReservedHandle } from "./handle";
 
 // Hub authority for the individual (Google-Drive) model: each user owns exactly
 // one hub — their personal space. Ownership is the only hub authority;
@@ -66,12 +48,12 @@ export class HubsService {
   // link or a published-content reference.
   async updateHandle(userId: string, rawHandle: string) {
     const handle = rawHandle.trim().toLowerCase();
-    if (handle.length < 3 || handle.length > 60 || !HANDLE_RE.test(handle)) {
+    if (!hasValidHandleFormat(handle)) {
       throw new BadRequestException(
         "Handle must be 3-60 chars, lowercase letters, digits, hyphens",
       );
     }
-    if (RESERVED_HANDLES.has(handle)) {
+    if (isReservedHandle(handle)) {
       throw new BadRequestException("Handle is reserved");
     }
 
