@@ -40,28 +40,6 @@ describe("Collection structure limits (e2e)", () => {
     await app.close();
   });
 
-  it("a collection-link must target a collection in the same hub", async () => {
-    const alice = await signUp("s_alice");
-    const bob = await signUp("s_bob");
-    const a1 = await createCollection(alice, `a1-${sfx}`);
-    const a2 = await createCollection(alice, `a2-${sfx}`);
-    const b1 = await createCollection(bob, `b1-${sfx}`);
-
-    // Same-hub link is allowed.
-    await request(app.getHttpServer())
-      .post(`/api/v1/collections/${a1}/resources/collection-link`)
-      .set("Authorization", `Bearer ${alice}`)
-      .send({ linkedCollectionId: a2, position: 0 })
-      .expect(201);
-
-    // Cross-hub link is rejected (no embedding another hub's collection).
-    await request(app.getHttpServer())
-      .post(`/api/v1/collections/${a1}/resources/collection-link`)
-      .set("Authorization", `Bearer ${alice}`)
-      .send({ linkedCollectionId: b1, position: 1 })
-      .expect(400);
-  });
-
   it("enforces a two-level nesting limit", async () => {
     const alice = await signUp("s_depth");
     const root = await createCollection(alice, `root-${sfx}`);

@@ -14,7 +14,6 @@ import { PrismaService } from "src/database/prisma.service";
 import { Collection, Resource } from "src/generated/prisma/client";
 import { CollectionPolicyService } from "../hubs/collection-policy.service";
 import { pruneOrphanTags } from "../tags/tag-cleanup";
-import { CreateCollectionLinkResourceDto } from "./dto/create-collection-link-resource.dto";
 import { CreateExternalResourceDto } from "./dto/create-external-resource.dto";
 import { ReorderResourcesDto } from "./dto/reorder-resources.dto";
 import { UpdateResourceDto } from "./dto/update-resource.dto";
@@ -57,44 +56,6 @@ export class ResourcesService {
     });
 
     return this.toPublicResource(saved, link.canonicalUrl);
-  }
-
-  async createCollectionLink(
-    collectionId: string,
-    user: AuthUser,
-    dto: CreateCollectionLinkResourceDto,
-  ) {
-    const collection = await this.requireWritableCollection(collectionId, user);
-    await this.ensurePositionAvailable(collection.id, dto.position);
-
-    const linkedCollection = await this.prisma.collection.findUnique({
-      where: { id: dto.linkedCollectionId },
-    });
-    if (!linkedCollection) {
-      throw new NotFoundException("Linked collection not found");
-    }
-    if (linkedCollection.id === collection.id) {
-      throw new BadRequestException("Collection cannot link to itself");
-    }
-    // Collection-links embed a collection (they expand, and are re-shareable via
-    // the parent). Restrict them to the same hub so you cannot embed and
-    // re-publish another owner's collection. Cross-hub references are a future
-    // read-only "shortcut", not an embed.
-    if (linkedCollection.hubId !== collection.hubId) {
-      throw new BadRequestException("A collection-link must target a collection in the same hub");
-    }
-
-    const saved = await this.prisma.resource.create({
-      data: {
-        collectionId: collection.id,
-        kind: ResourceKind.COLLECTION_LINK,
-        linkedCollectionId: linkedCollection.id,
-        titleOverride: dto.titleOverride ?? linkedCollection.title,
-        position: dto.position,
-      },
-    });
-
-    return this.toPublicResource(saved);
   }
 
   async getByCollection(

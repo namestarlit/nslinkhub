@@ -52,11 +52,13 @@ Hub → Collections → Resources
     pointing to a collection's page): a hyperlink with an editable title, tags,
     and position. It does not expand or nest; opening it just navigates there,
     subject to that destination's own access.
-  - a **collection-link** (`kind = collection_link`) — created only by the
-    internal "link a collection" action within your own hub. It references a
-    real collection (the metadata that lets it expand in place) and cannot
-    target another hub's collection. Cross-hub references are a future
-    read-only shortcut.
+  - a **collection-link** (`kind = collection_link`) — a **section**. It exists
+    only as a child collection created inside its parent (the "add a section"
+    action), always in the same hub; it is the expandable table-of-contents
+    entry. Because a collection-link is always a structural section, it is
+    always access-inherited and bounded by the two-level cap. There is no way
+    to link an arbitrary collection as a floating pointer, and cross-hub
+    references are a future read-only shortcut.
 
   There is no URL auto-detection: the system never turns a pasted link into an
   expandable collection-link. A resource has no summary — clarify a vague link
@@ -131,9 +133,11 @@ chips) and ship the cross-collection filter as the surface that proves them.
   individually revocable, lands in the recipient's shared/. This is the only
   collaboration mechanism — an editor works from their own space; there is no
   hub to join.
-- **Ownership transfer**: a single collection can be transferred to a user who
-  is already an `editor` on it (Drive-style; `POST /collections/:id/transfer`).
-  On transfer the collection subtree moves into the new owner's hub ("MyDrive"),
+- **Ownership transfer**: a **top-level** collection can be transferred to a
+  user who is already an `editor` on it (Drive-style;
+  `POST /collections/:id/transfer`) — a section cannot be transferred alone; it
+  moves with its parent. On transfer the collection subtree moves into the new
+  owner's hub ("MyDrive"),
   the previous owner keeps it as an editor in their shared/, and the immutable
   **creator** is unchanged (owner is mutable, creator is not). Handing over an
   entire account/hub is instead done by changing the account email (with
@@ -205,8 +209,11 @@ defined in a dedicated design pass before web implementation (Track W3).
   Ownership already spans the whole subtree (one hub).
 - Collections nest at most two levels: creating a sub-section, or re-parenting
   in a way that would exceed two levels, is rejected.
-- A collection-link resource targets a collection in the same hub; linking
-  another hub's collection is rejected.
+- A collection-link exists only as a section (a child collection); there is no
+  way to link an arbitrary collection, so every collection-link is same-hub and
+  access-inherited by construction.
+- Only a top-level collection can be transferred; transferring a section is
+  rejected.
 - All identifiers exposed in routes are immutable UUIDv7 values; changing a
   username, hub name, or collection title never breaks a stored reference.
 

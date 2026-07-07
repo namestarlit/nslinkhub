@@ -20,7 +20,6 @@ import { AuthGuard } from "src/common/guards/auth.guard";
 import { OptionalAuthGuard } from "src/common/guards/optional-auth.guard";
 import type { AuthUser } from "src/common/interfaces/auth-user.interface";
 import { apiOk } from "src/common/utils/response.util";
-import { CreateCollectionLinkResourceDto } from "./dto/create-collection-link-resource.dto";
 import { CreateExternalResourceDto } from "./dto/create-external-resource.dto";
 import { ReorderResourcesDto } from "./dto/reorder-resources.dto";
 import { UpdateResourceDto } from "./dto/update-resource.dto";
@@ -40,18 +39,6 @@ export class ResourcesController {
     @Body() dto: CreateExternalResourceDto,
   ) {
     const data = await this.resourcesService.createExternal(collectionId, user, dto);
-    return apiOk(data);
-  }
-
-  @ApiBearerAuth()
-  @UseGuards(AuthGuard)
-  @Post("collection-link")
-  async createCollectionLink(
-    @Param("id", new ParseUUIDPipe()) collectionId: string,
-    @CurrentUser() user: AuthUser,
-    @Body() dto: CreateCollectionLinkResourceDto,
-  ) {
-    const data = await this.resourcesService.createCollectionLink(collectionId, user, dto);
     return apiOk(data);
   }
 

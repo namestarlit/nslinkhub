@@ -21,12 +21,6 @@ export interface CreateExternalResourceRequest {
   position: number;
 }
 
-export interface CreateCollectionLinkResourceRequest {
-  linkedCollectionId: string;
-  titleOverride?: string;
-  position: number;
-}
-
 export interface UpdateResourceRequest {
   version: number;
   titleOverride?: string;

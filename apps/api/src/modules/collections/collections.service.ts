@@ -268,6 +268,15 @@ export class CollectionsService {
     const collection = await this.requireCollection(id);
     await this.policy.requireManage(collection, user); // owner-only
 
+    // Only a top-level collection can be transferred — it moves with its whole
+    // subtree (sections). Transferring a section alone would strand the parent's
+    // section link and split third parties' inherited access.
+    if (collection.parentCollectionId) {
+      throw new BadRequestException(
+        "Only a top-level collection can be transferred (it moves with its sections)",
+      );
+    }
+
     const recipient = await this.prisma.user.findUnique({
       where: { email: dto.email.trim().toLowerCase() },
       select: { id: true },

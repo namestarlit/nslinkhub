@@ -158,12 +158,13 @@ not perform resolve to 403.
   - A pasted/copied URL is always an **external link** — a hyperlink with an
     editable title, tags, and position. It never expands or nests; opening it
     navigates outward, subject to the destination's own access.
-  - A **collection-link** is created only by the internal "link a collection"
-    action, and only for a collection **in the same hub**. It carries a real
-    `linkedCollectionId` (the metadata that lets it expand in place). Same-hub
-    only prevents embedding — and thereby re-publishing — another owner's
-    collection. Cross-hub references are a future read-only **shortcut**, not an
-    embed.
+  - A **collection-link** is a **section**: it exists only as a child
+    collection created inside its parent (the "add a section" action), never as
+    a link to an arbitrary collection. Because a collection-link is always a
+    structural section, it is always in the same hub, always access-inherited,
+    and bounded by the two-level cap — so it cannot become a dead link or embed
+    (and re-publish) another owner's collection. Cross-hub references are a
+    future read-only **shortcut**, not an embed.
 - **Resources carry no summary.** Clarify a vague link by renaming its title;
   tags carry the rest. Ordering makes a collection a guide; export expands its
   nested sections in order.
@@ -171,8 +172,9 @@ not perform resolve to 403.
 ## Ownership transfer
 
 - **Collection transfer** (`POST /collections/:id/transfer`) is Drive-accurate:
-  the owner transfers a collection only to a user who is **already an editor**
-  on it. The collection subtree moves into the recipient's hub (their space),
+  the owner transfers a **top-level** collection only to a user who is
+  **already an editor** on it (a section cannot be transferred alone — it moves
+  with its parent). The collection subtree moves into the recipient's hub,
   the recipient's now-redundant shares are removed, the previous owner is given
   **editor** access across the subtree (it lands in their shared/), and the
   immutable **creator** is untouched. Self-transfer and recipient-hub slug

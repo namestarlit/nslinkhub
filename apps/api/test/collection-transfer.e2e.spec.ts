@@ -156,4 +156,21 @@ describe("Collection transfer (e2e)", () => {
       .send({ email: alice.email })
       .expect(400);
   });
+
+  it("rejects transferring a section (only top-level collections transfer)", async () => {
+    const alice = await signUp("owner_sec");
+    const root = await createCollection(alice.bearer, `sroot-${sfx}`);
+    const child = await request(app.getHttpServer())
+      .post(`/api/v1/collections/${root}/children`)
+      .set("Authorization", `Bearer ${alice.bearer}`)
+      .send({ slug: `ssec-${sfx}`, title: "Section" })
+      .expect(201);
+    const cid = (child.body as { data: { id: string } }).data.id;
+
+    await request(app.getHttpServer())
+      .post(`/api/v1/collections/${cid}/transfer`)
+      .set("Authorization", `Bearer ${alice.bearer}`)
+      .send({ email: `nobody_${sfx}@example.com` })
+      .expect(400);
+  });
 });

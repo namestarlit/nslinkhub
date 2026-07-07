@@ -29,6 +29,15 @@ summary of what changed after completed work has been promoted out of `ref/`.
 
 ### Changed
 
+- Collection-links are now **sections only**, and transfer is **top-level
+  only** (resolves review findings #1, #3, #5, #6, #7). Removed the standalone
+  "link an arbitrary collection" endpoint (`POST .../resources/collection-link`,
+  its DTO, and the shared type): a collection-link exists only as a child
+  collection created via `POST /collections/:id/children`, so every
+  collection-link is same-hub, access-inherited, and within the two-level cap
+  by construction. `POST /collections/:id/transfer` now rejects transferring a
+  section — only a top-level collection transfers, moving with its whole
+  subtree, so nothing is stranded cross-hub and no inherited access is dropped.
 - Collection structure limits. Collection-links must target a collection in the
   same hub (rejecting cross-hub embeds that could re-expose another owner's
   collection). Collections nest at most two levels (a collection and its
