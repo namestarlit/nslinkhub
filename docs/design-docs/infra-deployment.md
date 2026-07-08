@@ -103,9 +103,12 @@ container. In local development the web dev server proxies `/api/*` to the API
 process (Next.js rewrites; API listens on 4000, web on 3000). Consequences,
 relied on by the app code:
 
-- No CORS configuration exists anywhere — same-origin end to end. Adding a
-  second origin later means adding CORS + better-auth `trustedOrigins`
-  deliberately, not flipping a wildcard.
+- No CORS configuration exists anywhere — same-origin end to end. This is
+  deliberate and complete, not missing: the security rationale (browser
+  Same-Origin Policy at full default strength, CSRF nuance, the rule for
+  future "simple"-shaped endpoints) is recorded in `docs/SECURITY.md`
+  § Origins, CORS, and CSRF. Adding a second origin later means adding CORS
+  + better-auth `trustedOrigins` deliberately, not flipping a wildcard.
 - better-auth cookies are host-only, first-party, and need no cross-site
   attributes; `BETTER_AUTH_URL` is the public origin in production and the
   API's own origin (`http://localhost:4000`) in development.

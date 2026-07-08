@@ -35,7 +35,7 @@
 
 - Self-hosted better-auth owns credentials (argon2id via `Bun.password`),
   sessions, and verification primitives. The product owns identity,
-  membership, authorization, and workflows.
+  authorization, and workflows.
 - Session resolution goes through `resolveSessionUser`
   (`src/common/guards/auth.guard.ts`); services consume `AuthUser`, never
   better-auth types.
@@ -44,6 +44,40 @@
   invariant.
 - Account linking (SSO or otherwise) is explicit: verified-email match or an
   authenticated linking step — never silent takeover.
+
+## Origins, CORS, and CSRF
+
+**There is deliberately no CORS configuration anywhere, and none is missing.**
+Recorded so a future security review doesn't read the absence as an oversight:
+
+- CORS is not an access-control mechanism — it is the server *relaxing* the
+  browser's Same-Origin Policy so foreign origins may read it. Configuring
+  nothing means no relaxation was ever granted: browser scripts on any other
+  origin cannot read API responses, enforced by every browser, at full
+  default strength. The absence *is* the implementation.
+- Nothing needs the relaxation by design: the web app is same-origin with the
+  API (one public origin, Traefik path-routes `/api/*`; Next.js rewrites in
+  dev — `docs/design-docs/infra-deployment.md` § Origins), and the W4
+  extension fetches with `host_permissions` + bearer tokens, outside page
+  origin rules.
+- CORS could never be the security boundary anyway: non-browser clients
+  (curl, servers, apps) do not enforce the Same-Origin Policy. Real access
+  control is authentication (sessions/bearer) + `CollectionPolicyService` —
+  per the invariant that client-side behavior is never a security rule.
+- **CSRF is the adjacent, separate concern**: without CORS a foreign page
+  still *sends* "simple" requests (e.g. form-encoded POSTs) with cookies
+  attached — it just cannot read the response. Exposure is small by
+  construction: API writes take JSON bodies (a JSON `Content-Type` forces a
+  preflight, which fails without CORS headers, so the request never leaves
+  the browser), and better-auth applies its own origin checks and `SameSite`
+  cookie attributes on auth endpoints. **Rule: any future state-changing
+  endpoint that accepts a "simple" request shape (form-encoded/multipart
+  from browsers — imports are the current multipart surface, guarded by
+  bearer/JSON-first clients today) must add explicit CSRF protection at that
+  moment.**
+- Adding a second public origin later is a deliberate act: CORS with exact
+  origins + credentials + exposed headers, together with better-auth
+  `trustedOrigins` — never a wildcard.
 
 ## Boundary Validation
 
@@ -55,8 +89,8 @@
 
 ## Auditability (target state)
 
-- Sensitive actions — hub lifecycle, invitations, membership and role
-  changes, ownership transfer, publication changes, share-link rotation —
+- Sensitive actions — hub lifecycle, share and role changes, ownership
+  transfer, publication changes, share-link rotation, account email change —
   produce tenant-scoped audit records in PostgreSQL (hub design doc,
   deferred list).
 

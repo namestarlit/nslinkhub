@@ -11,6 +11,17 @@ summary of what changed after completed work has been promoted out of `ref/`.
 
 ### Added
 
+- `docs/SECURITY.md` § "Origins, CORS, and CSRF": records that the absence of
+  CORS configuration is deliberate and complete (CORS relaxes the browser's
+  Same-Origin Policy; configuring nothing grants no relaxation), why CORS can
+  never be the access-control boundary, the CSRF nuance (simple-shaped
+  requests still send; JSON bodies force failing preflights; better-auth owns
+  origin checks on auth routes), and the standing rule: any future
+  state-changing endpoint accepting a "simple" browser request shape adds
+  explicit CSRF protection at that moment. Written so future security reviews
+  don't misread the absence as an oversight. Also de-staled the membership-era
+  wording in the auth-boundary and audit sections.
+
 - Root scripts adopt the `<service>:<action>` convention: `infra:up` /
   `infra:down` (docker compose), `api:dev` / `api:start` / `api:prod` /
   `api:build` / `api:test`, `email:test`, `types:typecheck`. Per-service dev
