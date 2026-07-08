@@ -284,7 +284,7 @@ export class CollectionsService {
       where: { collectionId_userId: { collectionId: collection.id, userId: recipient.id } },
       select: { role: true },
     });
-    if (!share || share.role !== "editor") {
+    if (share?.role !== "editor") {
       throw new BadRequestException("Recipient must already be an editor on this collection");
     }
 

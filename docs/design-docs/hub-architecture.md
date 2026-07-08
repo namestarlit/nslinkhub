@@ -99,8 +99,9 @@ CollectionShare — (collectionId, userId, role reader|editor, source
                   membership. Feeds the shared/ surface.
 CollectionSave  — (collectionId, userId, savedAt). A social-style bookmark of a
                   published collection. Feeds the saved/ surface.
-ExportJob       — belongs to hub + collection; requestedByUserId.
 ```
+
+(No export entity: exports are synchronous and stateless — see Export below.)
 
 ## Identity and handles
 
@@ -219,10 +220,21 @@ titles, tags, and text together. Keep tags flat — no hierarchies or governance
 
 ## Export
 
-Export a collection as Markdown, PDF, or Word. Export **expands nested sections
-in order** into one document (a table-of-contents collection becomes a printed
-guide in a single pass); external-link resources stay as references and are not
-inlined. Markdown is synchronous; PDF and Word are queued jobs.
+Export one or more collections as Markdown, PDF, or Word — synchronously.
+`POST /exports { format, collectionIds[], expand? }` authorizes every id up
+front and responds with the file itself (a zip when several collections are
+selected, one document per collection). Export **expands nested sections in
+order** into one document (a table-of-contents collection becomes a printed
+guide in a single pass): root collection = H1 + description, each section =
+H2 + description, hyperlinked resource lines under each — never an H3, by the
+two-level cap. `expand: false` collapses sections to a single line instead.
+External-link resources stay as references and are not inlined.
+
+All three renderers are programmatic (markdown string-building, `pdfkit`,
+`docx`) — milliseconds even for large collections — so no format needs a job
+queue, no artifacts are stored server-side, and there is nothing to retain or
+clean up. BullMQ/Redis remain in the stack solely as the async backbone for
+future email/notification delivery.
 
 ## Workspace and client surfaces
 

@@ -182,28 +182,6 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_resources_collection_url
 CREATE INDEX IF NOT EXISTS idx_resources_collection_updated_at
   ON resources (collection_id, updated_at DESC);
 
--- Export jobs (hub + collection scoped)
-
-CREATE TABLE IF NOT EXISTS export_jobs (
-  id uuid PRIMARY KEY DEFAULT public.app_uuid_v7(),
-  hub_id uuid NOT NULL REFERENCES hubs(id) ON DELETE CASCADE,
-  collection_id uuid NOT NULL REFERENCES collections(id) ON DELETE CASCADE,
-  requested_by_user_id uuid REFERENCES users(id) ON DELETE SET NULL,
-  format varchar(16) NOT NULL,
-  status varchar(16) NOT NULL,
-  output_ref text,
-  error_message text,
-  created_at timestamptz NOT NULL DEFAULT now(),
-  updated_at timestamptz NOT NULL DEFAULT now(),
-  CONSTRAINT export_jobs_format_check CHECK (format IN ('pdf')),
-  CONSTRAINT export_jobs_status_check CHECK (status IN ('queued', 'running', 'completed', 'failed'))
-);
-
-CREATE INDEX IF NOT EXISTS idx_export_jobs_collection_created_at
-  ON export_jobs (collection_id, created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_export_jobs_status_created_at
-  ON export_jobs (status, created_at DESC);
-
 -- updated_at triggers (product tables; better-auth tables use Prisma @updatedAt)
 
 CREATE OR REPLACE FUNCTION public.set_updated_at()
@@ -243,12 +221,6 @@ EXECUTE FUNCTION public.set_updated_at();
 DROP TRIGGER IF EXISTS trg_set_updated_at_resources ON resources;
 CREATE TRIGGER trg_set_updated_at_resources
 BEFORE UPDATE ON resources
-FOR EACH ROW
-EXECUTE FUNCTION public.set_updated_at();
-
-DROP TRIGGER IF EXISTS trg_set_updated_at_export_jobs ON export_jobs;
-CREATE TRIGGER trg_set_updated_at_export_jobs
-BEFORE UPDATE ON export_jobs
 FOR EACH ROW
 EXECUTE FUNCTION public.set_updated_at();
 

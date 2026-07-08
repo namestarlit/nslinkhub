@@ -38,16 +38,4 @@ export class ImportsController {
     const data = await this.importsService.importBookmarksHtml(user, file, dto);
     return apiOk(data);
   }
-
-  @Post("whatsapp-txt")
-  @ApiConsumes("multipart/form-data")
-  @UseInterceptors(FileInterceptor("file"))
-  async importWhatsappTxt(
-    @UploadedFile() file: unknown,
-    @CurrentUser() user: AuthUser,
-    @Body() dto: ImportTargetDto,
-  ) {
-    const data = await this.importsService.importWhatsappTxt(user, file, dto);
-    return apiOk(data);
-  }
 }

@@ -29,7 +29,6 @@ model User {
   createdCollections Collection[]      @relation("CollectionCreator")
   shares             CollectionShare[]
   saves              CollectionSave[]
-  exportJobs         ExportJob[]
   sessions           Session[]
   accounts           Account[]
 
@@ -46,7 +45,6 @@ model Hub {
 
   owner       User         @relation(fields: [ownerUserId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   collections Collection[]
-  exportJobs  ExportJob[]
 
   @@map("hubs")
 }
@@ -75,7 +73,6 @@ model Collection {
   linkedBy         Resource[]        @relation("ResourceLinkedCollection")
   shares           CollectionShare[]
   saves            CollectionSave[]
-  exportJobs       ExportJob[]
 
   @@unique([hubId, slug], map: "collections_hub_slug_unique")
   @@index([published, updatedAt(sort: Desc)], map: "idx_collections_published_updated_at")
@@ -131,27 +128,6 @@ model Resource {
   @@unique([collectionId, position], map: "resources_collection_position_unique")
   @@index([collectionId, updatedAt(sort: Desc)], map: "idx_resources_collection_updated_at")
   @@map("resources")
-}
-
-model ExportJob {
-  id                String   @id @default(dbgenerated("app_uuid_v7()")) @db.Uuid
-  hubId             String   @map("hub_id") @db.Uuid
-  collectionId      String   @map("collection_id") @db.Uuid
-  requestedByUserId String?  @map("requested_by_user_id") @db.Uuid
-  format            String   @db.VarChar(16)
-  status            String   @db.VarChar(16)
-  outputRef         String?  @map("output_ref")
-  errorMessage      String?  @map("error_message")
-  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt         DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
-
-  hub         Hub        @relation(fields: [hubId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  collection  Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  requestedBy User?      @relation(fields: [requestedByUserId], references: [id], onDelete: SetNull, onUpdate: NoAction)
-
-  @@index([collectionId, createdAt(sort: Desc)], map: "idx_export_jobs_collection_created_at")
-  @@index([status, createdAt(sort: Desc)], map: "idx_export_jobs_status_created_at")
-  @@map("export_jobs")
 }
 
 model Session {

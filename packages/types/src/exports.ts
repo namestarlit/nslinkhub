@@ -1,21 +1,12 @@
-import type { ExportFormat, ExportStatus } from "./common";
-import type { IsoTimestamp } from "./envelope";
+import type { ExportFormat } from "./common";
 
-export interface ExportJob {
-  id: string;
-  hubId: string;
-  collectionId: string;
-  requestedByUserId: string | null;
+// Export is synchronous: POST /exports responds with the file itself
+// (Content-Disposition attachment) — one document per collection, zipped when
+// several collections are selected. There is no job to poll.
+export interface CreateExportRequest {
   format: ExportFormat;
-  status: ExportStatus;
-  outputRef: string | null;
-  errorMessage: string | null;
-  createdAt: IsoTimestamp;
-  updatedAt: IsoTimestamp;
-}
-
-export interface MarkdownExport {
-  collectionId: string;
-  format: "markdown";
-  content: string;
+  /** Collections to export, one document each (max 20). */
+  collectionIds: string[];
+  /** Expand sub-collections as sections (default true); false collapses them to a line. */
+  expand?: boolean;
 }

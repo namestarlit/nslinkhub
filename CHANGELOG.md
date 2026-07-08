@@ -37,6 +37,30 @@ summary of what changed after completed work has been promoted out of `ref/`.
 
 ### Changed
 
+- Exports are synchronous and complete: `POST /api/v1/exports`
+  `{ format, collectionIds[] (1–20), expand? }` replaces the queued-job design
+  (`POST /collections/:id/export/markdown`, `/export/pdf`, and job polling are
+  gone). All three formats ship — Markdown, PDF (`pdfkit`), and Word (`docx`)
+  — via programmatic renderers, so no format needs a queue. Every collection
+  id is authorization-checked up front; the response body is the file itself
+  (`Content-Disposition: attachment`), zipped when several collections are
+  selected (one document per collection). Documents read like a Google Doc:
+  root collection = H1 + description, sub-collections expand in order as H2
+  sections (never H3, by the two-level cap); `expand: false` collapses them to
+  a single line. Removed the `ExportJob` model, `export_jobs` table, BullMQ
+  processor, and export artifact/retention concerns; BullMQ/Redis stay in the
+  stack solely for future email/notification delivery.
+- Imports narrowed to bookmarks-HTML (primary migration path) plus a universal
+  CSV column format (fill `url` + optional `title` from any tool); the
+  WhatsApp-TXT parser is removed as too source-specific. Per-row error reports
+  flag outlier rows to fix or drop. Import dedup now checks the resource's own
+  canonical `url` (the `urlHash` lookup died with the links table).
+- `@nslinkhub/types` caught up with the Drive model: removed the stale
+  `ExportJob`/`ExportStatus`/`MarkdownExport` and membership-era types
+  (`HubRole`, `MembershipStatus`, `InvitationStatus`, `HubMember`,
+  `HubInvitation`, invitation/role-change/ownership-request shapes);
+  `HubSummary` now carries `handle` (not `name`); added `CreateExportRequest`
+  with `ExportFormat = "markdown" | "pdf" | "docx"`.
 - De-normalized links and tags (the "store once, link many" / "shared tag pool"
   normalization stopped paying off in a single-user tool). An external resource
   now stores its own canonical `url` (dedup is a per-collection unique index);

@@ -19,8 +19,9 @@ the clients (W2 shared types done; W3 web, W4 extension) and Phase E hardening.
 ## System Shape
 
 A Bun-managed TypeScript codebase. The backend is a NestJS modular monolith
-backed by PostgreSQL 18 (Prisma 7 with the pg driver adapter) and BullMQ on
-Redis for queued exports. Auth is self-hosted better-auth (DB sessions, bearer
+backed by PostgreSQL 18 (Prisma 7 with the pg driver adapter); BullMQ on
+Redis is reserved for future email/notification delivery (nothing queues
+today). Auth is self-hosted better-auth (DB sessions, bearer
 plugin, email + password, argon2id via `Bun.password`) mounted as raw
 middleware ahead of body parsing. A Next.js web app and an MV3 browser
 extension are planned client surfaces. The repository is a Bun workspace:
@@ -60,8 +61,8 @@ ref/               disposable, git-ignored implementation context
 | `users` | self-service profile at `/profile` (display name, bio, hub handle) |
 | `collections` | collection CRUD (two-level nesting), publish/unpublish, link + direct sharing, ownership transfer, saves, `/explore`, public hub pages, `/me/{shared,saved}`, hub-scoped lookup |
 | `resources` | resource CRUD (own canonical URL, tags array, nesting via section entries), reorder with version checks |
-| `imports` | CSV / bookmarks-HTML / WhatsApp-TXT ingestion |
-| `exports` | markdown export; queued PDF jobs (BullMQ + `export_jobs`) |
+| `imports` | bookmarks-HTML + universal-CSV ingestion with per-row error reports |
+| `exports` | synchronous export (`POST /exports`): markdown/PDF/Word, one document per collection, zipped when several — programmatic renderers, no queue |
 | `health` | liveness endpoints |
 
 ## Dependency Rules
@@ -91,9 +92,8 @@ ref/               disposable, git-ignored implementation context
    every response carries a server-generated `X-Request-Id`. Growth-prone
    lists paginate by opaque cursor (`meta: { limit, nextCursor }`).
 
-Async export flow: service writes an `export_jobs` row, enqueues a BullMQ
-job; the processor updates status (`queued → running → completed|failed`);
-clients poll the job endpoint.
+File responses (exports) bypass the JSON envelope: the body is the document
+itself with `Content-Disposition: attachment`.
 
 ## Cross-Cutting Concerns
 

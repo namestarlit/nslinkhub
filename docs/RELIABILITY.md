@@ -15,8 +15,9 @@
 
 ## Jobs And Queues
 
-- Current state: export jobs write a DB row and enqueue directly to BullMQ
-  (Redis). Acceptable while exports are the only async work.
+- Current state: nothing queues. Exports are synchronous (programmatic
+  renderers, file in the response); BullMQ/Redis stay in the stack for the
+  future email/notification path.
 - Target state (hub design doc, deferred list): PostgreSQL transactional
   outbox relayed to BullMQ, with queue consumers in separate worker
   processes. PostgreSQL stays authoritative; Redis dispatches and is never

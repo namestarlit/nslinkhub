@@ -68,28 +68,6 @@ export class ImportsService {
     return this.ingestRows(collection.id, rows);
   }
 
-  async importWhatsappTxt(user: AuthUser, file: unknown, dto: ImportTargetDto) {
-    const collection = await this.resolveTargetCollection(user, dto);
-    this.ensureValidFile(file);
-
-    const utf8 = file.buffer.toString("utf8");
-    const text = utf8.includes("�") ? file.buffer.toString("latin1") : utf8;
-    const urlRegex = /https?:\/\/[^\s<>()]+/gi;
-    const rows: Array<{ index: number; url: string }> = [];
-
-    const lines = text.split(/\r?\n/);
-    lines.forEach((line, lineIndex) => {
-      const matches = line.match(urlRegex);
-      if (matches) {
-        for (const url of matches) {
-          rows.push({ index: lineIndex + 1, url });
-        }
-      }
-    });
-
-    return this.ingestRows(collection.id, rows);
-  }
-
   private async ingestRows(
     collectionId: string,
     rows: Array<{

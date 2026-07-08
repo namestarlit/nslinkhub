@@ -14,9 +14,9 @@ one, because three layers meet here.
 - **Machine-token values → `lower_snake`.** Values that a client matches on
   programmatically — not prose — are lowercase snake tokens: error codes
   (`not_found`, `validation_failed`), resource kinds (`external_link`,
-  `collection_link`), roles (`owner`, `admin`, `member`, `reader`, `editor`),
-  share sources (`direct`, `link`), job statuses (`queued`, `running`,
-  `completed`, `failed`). This is deliberately distinct from field keys and
+  `collection_link`), share roles (`reader`, `editor`), share sources
+  (`direct`, `link`), export formats (`markdown`, `pdf`,
+  `docx`). This is deliberately distinct from field keys and
   is the common convention (HTTP, OAuth, Stripe error codes).
 - **Database columns → snake_case**, mapped to camelCase model fields with
   Prisma `@map`/`@@map` (`hub_id` ↔ `hubId`). PostgreSQL folds unquoted

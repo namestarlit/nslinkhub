@@ -107,8 +107,13 @@ always optional; keep tags flat (no hierarchies or governance).
 - Create collections (nested), add resources with commentary, reorder with
   optimistic-concurrency version checks, tag, and deduplicate URLs by
   canonical form.
-- Import from CSV, browser-bookmarks HTML, and WhatsApp chat exports, with a
-  partial-failure report (imported/skipped/error counts plus per-row errors).
+- Import from browser-bookmarks HTML (the primary migration path) and from a
+  **universal CSV format**: a documented required-column layout (`url`, plus
+  optional `title`) that users fill from any tool — a spreadsheet, a script
+  over a chat export, anything that writes CSV. Every import returns a
+  partial-failure report (imported/skipped/error counts plus per-row errors),
+  so outlier rows are flagged for the user to fix or drop rather than failing
+  the whole file. No source-specific parsers beyond bookmarks HTML.
 - Canonical URL identity: lowercase scheme/host, normalized paths, sorted
   query params, tracking params stripped (`utm_*`, `fbclid`, `gclid`) — so
   the same resource captured twice converges.
@@ -153,12 +158,17 @@ always optional; keep tags flat (no hierarchies or governance).
 
 ### Export
 
-- Export a collection as Markdown, PDF, or Word. Export **expands nested
-  sub-collections in order** into one document, so a table-of-contents
-  collection becomes a printed guide in a single pass; external-link resources
-  stay as references and are not inlined. Markdown is synchronous; PDF and Word
-  run as queued jobs with status polling. (Word replaces the earlier CSV idea —
-  CSV remains an import format only.)
+- Export one **or more** collections as Markdown, PDF, or Word in a single
+  synchronous request: the response body is the file itself (a zip when
+  several collections are selected, one document per collection). Each
+  document reads like one written in Google Docs — root collection = H1 with
+  its description under it, each sub-collection **expands in order** as an H2
+  section with its description, hyperlinked resource lines under each; never
+  an H3, by the two-level nesting cap. `expand: false` collapses
+  sub-collections to a single line instead. External-link resources stay as
+  references and are not inlined. Rendering is programmatic, so no format
+  needs a job queue and nothing is stored server-side. (Word replaces the
+  earlier CSV idea — CSV remains an import format only.)
 
 ### Account
 
