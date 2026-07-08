@@ -9,9 +9,9 @@
 
 ```bash
 bun install                                # also runs `prisma generate` (postinstall)
-docker compose up -d                       # PostgreSQL 18 + Redis 7 (compose.yml, local dev only)
+bun run infra:up                           # local services: PostgreSQL 18 + Redis 7 (docker compose up -d)
 (cd apps/api && bunx prisma migrate deploy)
-bun run start:dev                          # delegates into apps/api; :4000 (3000 is the web app's)
+bun run dev                                # everything for daily work (infra:up is idempotent, then API watch; web joins at W3)
 ```
 
 The repository is a Bun workspace; the backend is `apps/api`. Root scripts
@@ -26,15 +26,23 @@ a real value for anything beyond local development.
 
 ## Everyday Commands
 
+Root scripts follow the `<service>:<action>` convention (`infra:*`, `api:*`,
+`email:*`, `types:*`; `web:*` joins with W3). Bare `dev` is the daily
+orchestrator: it brings up everything (per-service dev scripts chain
+`infra:up`, which is idempotent, so no ordering to remember).
+
 ```bash
-bun run start:dev        # watch mode
-bun run build            # nest build → dist/
-bun run start:prod       # bun dist/main.js
+bun run dev              # daily: infra up + API watch (web joins at W3)
+bun run infra:up         # PostgreSQL 18 + Redis 7 (docker compose up -d)
+bun run infra:down       # stop the local services
+bun run api:dev          # infra:up + API watch mode
+bun run api:build        # nest build → dist/
+bun run api:prod         # bun dist/main.js
 bun run check            # biome format + lint, with autofix (workspace-wide)
 bun run lint             # biome lint (no writes)
-bun test src             # unit tests
-bun test test            # e2e (requires docker compose services)
-bun run verify           # boundaries + format + lint + build + typecheck + tests
+bun run api:test         # API unit + e2e (e2e requires the infra services)
+bun run email:test       # email template tests
+bun run verify           # boundaries + typechecks + format + lint + all tests + build
 ```
 
 Swagger UI: `http://localhost:4000/api/docs`.

@@ -8,22 +8,26 @@
     "packages/*"
   ],
   "scripts": {
-    "build": "bun run --cwd apps/api build",
+    "dev": "bun run api:dev",
+    "infra:up": "docker compose up -d",
+    "infra:down": "docker compose down",
+    "api:dev": "bun run infra:up && bun run --cwd apps/api start:dev",
+    "api:start": "bun run --cwd apps/api start",
+    "api:debug": "bun run --cwd apps/api start:debug",
+    "api:prod": "bun run --cwd apps/api start:prod",
+    "api:build": "bun run --cwd apps/api build",
+    "api:test": "bun run --cwd apps/api test",
+    "api:test:e2e": "bun run --cwd apps/api test:e2e",
+    "types:typecheck": "bun run --cwd packages/types typecheck",
+    "email:typecheck": "bun run --cwd packages/email typecheck",
+    "email:test": "bun test packages/email",
+    "build": "bun run api:build",
     "check:boundaries": "bun tooling/check-client-boundaries.ts",
-    "typecheck:types": "bun run --cwd packages/types typecheck",
-    "typecheck:email": "bun run --cwd packages/email typecheck",
-    "test:email": "bun test packages/email",
-    "verify": "bun run check:boundaries && bun run typecheck:types && bun run typecheck:email && bun run format:check && bun run lint && bun run test:email && bun run --cwd apps/api verify",
+    "verify": "bun run check:boundaries && bun run types:typecheck && bun run email:typecheck && bun run format:check && bun run lint && bun run email:test && bun run --cwd apps/api verify",
     "check": "biome check --write package.json biome.json apps packages tooling",
     "format": "biome format --write package.json biome.json apps packages tooling",
     "format:check": "biome format package.json biome.json apps packages tooling",
-    "lint": "biome lint package.json biome.json apps packages tooling",
-    "start": "bun run --cwd apps/api start",
-    "start:dev": "bun run --cwd apps/api start:dev",
-    "start:debug": "bun run --cwd apps/api start:debug",
-    "start:prod": "bun run --cwd apps/api start:prod",
-    "test": "bun run --cwd apps/api test",
-    "test:e2e": "bun run --cwd apps/api test:e2e"
+    "lint": "biome lint package.json biome.json apps packages tooling"
   },
   "devDependencies": {
     "@biomejs/biome": "2.4.16"

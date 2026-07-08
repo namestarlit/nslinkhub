@@ -3,6 +3,7 @@
 // loaded by the better-auth CLI, which cannot resolve the `src/*` alias) can
 // call it from its user-create hook. This is the single onboarding entry
 // point — any auth path (local sign-up today, SSO later) funnels through it.
+import { randomBytes } from "node:crypto";
 import type { PrismaClient } from "../../generated/prisma/client";
 import { isReservedHandle } from "./handle";
 
@@ -51,8 +52,20 @@ export async function createPersonalHub(prisma: HubCapableClient, params: Person
     }
   }
 
-  // Extremely unlikely fallback: guarantee uniqueness with the user id tail.
-  return prisma.hub.create({
-    data: { ownerUserId: params.userId, handle: `hub-${params.userId.slice(0, 8)}` },
-  });
+  // Suffix space exhausted: fall back to random handles. NOT the user id —
+  // ids are UUIDv7, whose leading hex chars are a timestamp, so id prefixes
+  // collide for users created close together.
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    try {
+      return await prisma.hub.create({
+        data: {
+          ownerUserId: params.userId,
+          handle: `hub-${randomBytes(4).toString("hex")}`,
+        },
+      });
+    } catch {
+      // Astronomically unlikely random collision; try again.
+    }
+  }
+  throw new Error("Could not derive a unique hub handle");
 }

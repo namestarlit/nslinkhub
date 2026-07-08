@@ -22,6 +22,29 @@ describe("validateEnv", () => {
     ).not.toThrow();
   });
 
+  // Zero-config is dev-only: production refuses to boot on missing secrets
+  // or the public dev default.
+  it("requires the secrets in production; dev stays zero-config", () => {
+    expect(() => validateEnv({ NODE_ENV: "production" })).toThrow(/DATABASE_URL/);
+    expect(() => validateEnv({ NODE_ENV: "production" })).toThrow(/BETTER_AUTH_SECRET/);
+    expect(() =>
+      validateEnv({
+        NODE_ENV: "production",
+        DATABASE_URL: "postgresql://x/y",
+        BETTER_AUTH_SECRET: "dev-better-auth-secret",
+      }),
+    ).toThrow(/dev default/);
+    expect(() =>
+      validateEnv({
+        NODE_ENV: "production",
+        DATABASE_URL_FILE: secretFile("postgresql://x/y\n"),
+        BETTER_AUTH_SECRET_FILE: secretFile("a-sufficiently-long-secret\n"),
+      }),
+    ).not.toThrow();
+    // No NODE_ENV (dev/test): nothing is required.
+    expect(() => validateEnv({})).not.toThrow();
+  });
+
   // The production path: secrets arriving via _FILE get the same checks.
   it("validates secrets delivered through the _FILE contract", () => {
     expect(() => validateEnv({ BETTER_AUTH_SECRET_FILE: secretFile("short\n") })).toThrow(

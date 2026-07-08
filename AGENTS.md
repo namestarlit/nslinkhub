@@ -17,7 +17,7 @@ short: it is a map for contributors and coding agents, not a complete manual.
 5. For substantial work, read `PLANS.md`, then create or update an ExecPlan in
    `docs/exec-plans/active/`.
 6. Run the verification workflow: `bun run verify`
-   (see `docs/runbooks/verification.md`; e2e needs `docker compose up -d`).
+   (see `docs/runbooks/verification.md`; e2e needs `bun run infra:up`).
 7. For completed work, update `CHANGELOG.md` before preparing commits.
 
 For web design work (Track W3), use the Impeccable skill after the design

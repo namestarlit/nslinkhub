@@ -11,6 +11,26 @@ summary of what changed after completed work has been promoted out of `ref/`.
 
 ### Added
 
+- Root scripts adopt the `<service>:<action>` convention: `infra:up` /
+  `infra:down` (docker compose), `api:dev` / `api:start` / `api:prod` /
+  `api:build` / `api:test`, `email:test`, `types:typecheck`. Per-service dev
+  scripts chain `infra:up` (idempotent), so there is no start-order to
+  remember; bare `dev` is the daily orchestrator (infra + API watch; the web
+  joins it at W3). The old `start:*`/`test`/`typecheck:*` root names are gone
+  (one way per action).
+
+- Account-email change is specified as the double-verified handover flow
+  (Substack model): confirm from the current address (which sees the target
+  address; ignoring changes nothing) → verify the new address → change
+  applies and all sessions are revoked. Sign-in direction decided:
+  **code-first from the get-go** (continue with email → code screen; the
+  email carries code + direct link; password is the explicit alternative,
+  never the headline — no username era to migrate away from). The W3
+  Impeccable pass shapes presentation, not flow order. Both documented in
+  SYSTEM_DESIGN/PRODUCT; templates for the two change steps
+  (`renderEmailChangeConfirmation`, `renderNewEmailVerification`) join
+  `packages/email` on a shared code-email base. Wiring lands with the
+  auth-delivery slice.
 - `packages/email` (`@nslinkhub/email`): backend-owned React Email templates,
   starting with the **sign-in code** email (`renderLoginCode`) — Substack-style
   minimal layout with the lowercase `nslinkhub` wordmark, large spaced code,
@@ -68,6 +88,14 @@ summary of what changed after completed work has been promoted out of `ref/`.
   `redis://127.0.0.1:6379`) — `REDIS_HOST`/`REDIS_PORT`/`REDIS_PASSWORD` are
   gone; the stale "nslinkhub-api-v2" service tag is gone with the old static
   status payload.
+- Zero-config dev / required prod: development needs no configuration
+  (in-code localhost defaults, no secret files), while anything provided is
+  honored — resolution order is exported env var → optional `apps/api/.env`
+  → in-code default. `_FILE` inputs are the deployed contract
+  (previews/staging/production). With
+  `NODE_ENV=production`, startup validation refuses to boot when
+  `DATABASE_URL`/`BETTER_AUTH_SECRET` are absent or the auth secret is the
+  public dev default (unit-tested).
 - Deployment-secret `_FILE` contract implemented
   (`apps/api/src/config/secret.ts` + unit tests): `DATABASE_URL_FILE` and
   `BETTER_AUTH_SECRET_FILE` (docker/swarm secrets) take precedence over the

@@ -113,10 +113,28 @@ CollectionSave  — (collectionId, userId, savedAt). A social-style bookmark of 
   key. The durable key is `hubId`; a handle rename breaks nothing.
 - **Display name** — free-form (`user.name`), any text the person wants. Not a
   login credential and not unique.
-- **Login** is email + password (SSO later). There is no username.
-- **Account/hub handover** is done by **changing the account email** (verified),
-  not a transfer model — a hub is 1:1 with its account, so handing over the
-  account hands over the hub. Lands with the email/MFA hardening.
+- **Login direction: code-first, from the get-go.** The primary sign-in is
+  Substack-style passwordless — continue with email → enter the emailed code
+  (the email carries both the code and a direct sign-in link; either
+  completes). Email + password remains the explicit alternative ("sign in
+  with your password"), never the headline; there is no username and never
+  was one to migrate away from. "Continue with namestarlit" SSO joins as a
+  third door later without reshaping this. The **flow** is decided here; the
+  **presentation** (screens, segmented code boxes, copy) is shaped by the W3
+  Impeccable design pass — Impeccable may restyle it, not reorder it.
+  Code-first ships with the auth-delivery slice; until then password sign-in
+  is what exists.
+- **Account/hub handover** is done by **changing the account email**, not a
+  transfer model — a hub is 1:1 with its account, so handing over the account
+  hands over the hub. The decided flow is double-verified (lands with the
+  auth-delivery slice):
+  1. the signed-in owner sets the new email;
+  2. a **confirmation** goes to the **current** address, naming the target
+     address — nothing changes unless it is confirmed (code or direct link);
+  3. on confirmation, a **verification** goes to the **new** address;
+  4. on verification the change applies, **all sessions are revoked**, and the
+     account signs in with the new email.
+  Templates for both steps exist in `packages/email`.
 - **nsauth SSO** is bounded to users + SSO + profile (no orgs); see
   `identity-sso.md`. Products keep their own userId authoritative and their own
   authorization; the IdP never decides who may edit a collection.

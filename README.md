@@ -80,7 +80,8 @@ bun install   # also runs `prisma generate` (postinstall)
 ## Local services
 
 ```bash
-docker compose up -d   # PostgreSQL 18 + Redis 7
+bun run infra:up       # PostgreSQL 18 + Redis 7 (docker compose up -d)
+bun run infra:down     # stop them
 ```
 
 ## Repository Layout
@@ -108,16 +109,17 @@ by an auto-generated diff.
 ## Run
 
 ```bash
-# dev (watch)
-bun run start:dev
+# daily driver (script convention: <service>:<action>; dev = orchestrator)
+bun run dev        # infra up (idempotent) + API watch (:4000); web joins at W3
+bun run api:dev    # the same, single service
 
 # build + prod
-bun run build
-bun run start:prod
+bun run api:build
+bun run api:prod
 
 # tests
-bun test src    # unit
-bun test test   # e2e (needs PostgreSQL + Redis running)
+bun run api:test       # API unit + e2e (e2e needs services running)
+bun run email:test     # email template tests
 ```
 
 ## Auth

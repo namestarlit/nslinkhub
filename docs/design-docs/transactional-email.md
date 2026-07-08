@@ -10,6 +10,9 @@ adapter so switching providers does not change domain workflows.
 
 Initial messages:
 
+- sign-in code (continue-with-email);
+- account-email change (confirmation to the current address, then
+  verification to the new address — the handover flow);
 - email verification;
 - password reset;
 - collection-share notification (a collection was shared directly with an
@@ -118,16 +121,24 @@ another purpose-limited opaque reference.
 
 ## Templates And Rendering
 
-`packages/email` is backend-owned and provider-neutral. The package exists with
-the first template; the remaining approved templates join it with the
-auth-delivery slice:
+`packages/email` is backend-owned and provider-neutral. All code-bearing
+messages render through one shared base (`code-email.tsx`) so the layout and
+warning language never drift between purposes, and **every code email carries
+both the code and a direct action link — either completes the flow**. Built
+templates (typed inputs, validated before render, HTML + plain text, subject
+never carries the code):
 
-- **sign-in code** (`renderLoginCode`) — built. Typed input (code, opaque
-  https sign-in URL, support URL, expiry minutes), validated before render,
-  HTML + plain text, subject never carries the code.
-- email verification;
-- password reset;
-- collection-share notification.
+- **sign-in code** (`renderLoginCode`) — continue-with-email sign-in.
+- **email-change confirmation** (`renderEmailChangeConfirmation`) — to the
+  **current** address, naming the target address; step one of the
+  double-verified account-email change (the account/hub handover —
+  `docs/SYSTEM_DESIGN.md` § Identity and handles). Ignoring it changes
+  nothing.
+- **new-email verification** (`renderNewEmailVerification`) — to the **new**
+  address; completing it applies the change and revokes all sessions.
+
+Still to build (auth-delivery slice): password reset; collection-share
+notification.
 
 **Visual direction (decided):** Substack-style minimal transactional layout —
 the lowercase `nslinkhub` wordmark (text, no image logo), one large

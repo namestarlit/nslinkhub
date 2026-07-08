@@ -16,6 +16,20 @@ export function validateEnv(config: Record<string, unknown>): Record<string, unk
   const errors: string[] = [];
   const env = config as Record<string, string | undefined>;
 
+  // Zero-config is a development affordance only. In production the in-code
+  // localhost defaults and the public dev auth secret are never acceptable:
+  // refuse to boot rather than run half-configured.
+  if (env.NODE_ENV === "production") {
+    for (const name of ["DATABASE_URL", "BETTER_AUTH_SECRET"]) {
+      if (readSecret(name, env) === undefined) {
+        errors.push(`${name} (or ${name}_FILE) is required in production`);
+      }
+    }
+    if (readSecret("BETTER_AUTH_SECRET", env) === "dev-better-auth-secret") {
+      errors.push("BETTER_AUTH_SECRET must not be the dev default in production");
+    }
+  }
+
   const port = config.PORT;
   if (typeof port === "string" && port !== "" && !isPort(port)) {
     errors.push(`PORT must be a TCP port (1-65535), got "${port}"`);

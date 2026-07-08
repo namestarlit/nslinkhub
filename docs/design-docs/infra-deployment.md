@@ -137,9 +137,17 @@ with this direction:
    image.
 2. The `_FILE` secret contract is **implemented** for `DATABASE_URL` and
    `BETTER_AUTH_SECRET` (`apps/api/src/config/secret.ts`: `<NAME>_FILE` wins
-   over `<NAME>`, trimmed file content, loud failure on an unreadable path;
-   local defaults keep dev zero-config). Redis credentials join through the
-   same `readSecret` when the email worker wires BullMQ (`REDIS_URL` /
+   over `<NAME>`, trimmed file content, loud failure on an unreadable path).
+   **Zero-config dev, required prod**: development needs no configuration —
+   in-code localhost defaults match `compose.yml` — but nothing is ignored
+   when provided. Resolution order: exported env var → `apps/api/.env`
+   (optional, loaded at startup) → in-code default; so overriding, say, the
+   port is one `.env` line, never a code change. `_FILE` inputs are the
+   *deployed* contract (previews/staging/production). Validation
+   enforces the boundary: with `NODE_ENV=production` the app refuses to boot
+   when `DATABASE_URL`/`BETTER_AUTH_SECRET` are absent or the auth secret is
+   the public dev default. Redis credentials join through the same
+   `readSecret` when the email worker wires BullMQ (`REDIS_URL` /
    `REDIS_URL_FILE` already feed the readiness check). Health endpoints are
    **implemented**: `GET /api/v1/health` (liveness, dependency-free) and
    `GET /api/v1/status` (readiness: postgres + queue Redis →

@@ -179,6 +179,18 @@ always optional; keep tags flat (no hierarchies or governance).
   free-form **display name** plus a unique, mutable **hub handle**. Profile
   self-service lives at `/api/v1/profile`. Later: "Continue with namestarlit"
   SSO (`docs/design-docs/identity-sso.md`).
+- **Sign-in code is the primary path** (ships with the email-delivery slice):
+  continue with email → enter the emailed code; the email also carries a
+  direct sign-in link, and either completes the flow. Password sign-in
+  remains the explicit alternative, not the default — the product starts
+  passwordless-first rather than migrating to it later. The W3 design pass
+  shapes the presentation; the flow itself is decided
+  (`docs/SYSTEM_DESIGN.md` § Identity and handles).
+- **Account handover = verified email change**, double-verified: confirm from
+  the **current** address (which sees the target address; ignoring it changes
+  nothing), then verify the **new** address; on completion all sessions are
+  revoked and the account signs in with the new email
+  (`docs/SYSTEM_DESIGN.md` § Identity and handles).
 
 ## 5. Product Surfaces
 
