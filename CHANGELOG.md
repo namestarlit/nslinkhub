@@ -11,6 +11,16 @@ summary of what changed after completed work has been promoted out of `ref/`.
 
 ### Added
 
+- `packages/email` (`@nslinkhub/email`): backend-owned React Email templates,
+  starting with the **sign-in code** email (`renderLoginCode`) — Substack-style
+  minimal layout with the lowercase `nslinkhub` wordmark, large spaced code,
+  validity line, sign-in button + plain-link fallback, bold do-not-share
+  warning, muted support footer. Typed and validated inputs (https-only URLs,
+  code format, 1–60 min expiry), HTML + plain-text renders, subject never
+  carries the code. Wired into `bun run verify` (typecheck + tests). Delivery
+  (Resend adapter, outbox, worker) still lands with the auth-delivery slice
+  per `docs/design-docs/transactional-email.md`.
+
 - Nested access inheritance: the collection access policy now resolves up the
   ancestor chain, so a share, active link, or publication on a parent
   collection grants the same access to its descendants (and their resources),

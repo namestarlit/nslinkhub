@@ -118,11 +118,23 @@ another purpose-limited opaque reference.
 
 ## Templates And Rendering
 
-`packages/email` is backend-owned and provider-neutral. It initially includes:
+`packages/email` is backend-owned and provider-neutral. The package exists with
+the first template; the remaining approved templates join it with the
+auth-delivery slice:
 
+- **sign-in code** (`renderLoginCode`) — built. Typed input (code, opaque
+  https sign-in URL, support URL, expiry minutes), validated before render,
+  HTML + plain text, subject never carries the code.
 - email verification;
 - password reset;
 - collection-share notification.
+
+**Visual direction (decided):** Substack-style minimal transactional layout —
+the lowercase `nslinkhub` wordmark (text, no image logo), one large
+letter-spaced code, a short validity line, one action button with a plain-text
+link fallback, one bold "do not share" warning, then a muted footer with the
+support route. Neutral near-black palette until product brand tokens exist;
+the web Tailwind theme (Track W3) remains not an email rendering contract.
 
 Each render returns an application-owned subject, HTML body, and plain-text
 body. Keep subjects free of personal or sensitive data. Use conservative

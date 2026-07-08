@@ -45,6 +45,7 @@ apps/
 packages/
   config/          shared TypeScript base configuration
   types/           @nslinkhub/types — shared API wire contracts for clients
+  email/           @nslinkhub/email — backend-owned React Email templates
 tooling/           repository checks (client boundary check)
 compose.yml        local dev services (root; serves the whole workspace)
 docs/              product/design docs, exec plans, runbooks

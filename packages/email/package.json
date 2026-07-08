@@ -1,0 +1,24 @@
+{
+  "name": "@nslinkhub/email",
+  "version": "0.0.1",
+  "private": true,
+  "license": "UNLICENSED",
+  "type": "module",
+  "description": "Backend-owned transactional email templates and rendering (React Email).",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@react-email/components": "^0.5.6",
+    "react": "^19.0.0"
+  },
+  "devDependencies": {
+    "@nslinkhub/config": "workspace:*",
+    "@types/bun": "^1.3.14",
+    "@types/react": "^19.0.0",
+    "typescript": "^5.7.3"
+  }
+}
