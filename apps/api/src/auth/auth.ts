@@ -3,11 +3,14 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { bearer } from "better-auth/plugins";
+import { readSecret } from "../config/secret";
 import { PrismaClient } from "../generated/prisma/client";
 import { createPersonalHub } from "../modules/hubs/hub-onboarding";
 
+// Secrets follow the _FILE deployment contract (readSecret); local defaults
+// keep dev zero-config.
 function databaseUrl(): string {
-  return process.env.DATABASE_URL ?? "postgresql://postgres:postgres@127.0.0.1:5432/nslinkhub";
+  return readSecret("DATABASE_URL") ?? "postgresql://postgres:postgres@127.0.0.1:5432/nslinkhub";
 }
 
 // Dedicated client for better-auth (separate from Nest's PrismaService so the
@@ -19,8 +22,10 @@ const prisma = new PrismaClient({
 
 export const auth = betterAuth({
   basePath: "/api/v1/auth",
-  secret: process.env.BETTER_AUTH_SECRET ?? "dev-better-auth-secret",
-  baseURL: process.env.BETTER_AUTH_URL ?? "http://localhost:3000",
+  secret: readSecret("BETTER_AUTH_SECRET") ?? "dev-better-auth-secret",
+  // The API's own origin (port 4000 in dev; 3000 belongs to the web app). In
+  // production the web fronts the API same-origin, so this is the public origin.
+  baseURL: process.env.BETTER_AUTH_URL ?? "http://localhost:4000",
   database: prismaAdapter(prisma, { provider: "postgresql" }),
   emailAndPassword: {
     enabled: true,

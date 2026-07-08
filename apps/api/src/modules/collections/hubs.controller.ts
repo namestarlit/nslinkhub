@@ -15,14 +15,23 @@ import { CurrentUser } from "src/common/decorators/current-user.decorator";
 import { CursorQueryDto } from "src/common/dto/cursor-query.dto";
 import { OptionalAuthGuard } from "src/common/guards/optional-auth.guard";
 import type { AuthUser } from "src/common/interfaces/auth-user.interface";
-import { ifNoneMatchHit } from "src/common/utils/etag.util";
+import { conditionalGetHit } from "src/common/utils/etag.util";
 import { apiOk } from "src/common/utils/response.util";
+import { shareTokenFrom } from "src/common/utils/token.util";
 import { CollectionsService } from "./collections.service";
 
 @ApiTags("hubs")
 @Controller("api/v1/hubs")
 export class HubsController {
   constructor(private readonly collectionsService: CollectionsService) {}
+
+  // Handle → hub-page resolution (backs the web's /@handle URLs). Literal
+  // segment, so it is declared before the :hubId parameter route.
+  @Get("by-handle/:handle")
+  async getHubPageByHandle(@Param("handle") handle: string, @Query() query: CursorQueryDto) {
+    const data = await this.collectionsService.getHubPageByHandle(handle, query);
+    return apiOk({ hub: data.hub, collections: data.collections }, data.meta);
+  }
 
   // Public hub page: display info + published collections.
   @Get(":hubId")
@@ -57,28 +66,15 @@ export class HubsController {
     @Req() req?: Request,
     @Res({ passthrough: true }) res?: Response,
   ) {
-    const shareToken = headerToken ?? (req?.query.s as string | undefined);
     const data = await this.collectionsService.getHubCollectionBySlug(
       hubId,
       slug,
       user,
-      shareToken,
+      shareTokenFrom(headerToken, req),
     );
-
-    if (res) {
-      res.setHeader("ETag", data.etag);
-      res.setHeader("Last-Modified", data.lastModified);
-    }
-
-    const ifNoneMatchHeader = req?.headers["if-none-match"];
-    const ifNoneMatchValue = Array.isArray(ifNoneMatchHeader)
-      ? ifNoneMatchHeader.join(",")
-      : ifNoneMatchHeader;
-    if (ifNoneMatchHit(ifNoneMatchValue, data.etag) && res) {
-      res.status(304);
+    if (conditionalGetHit(req, res, data.etag, data.lastModified)) {
       return;
     }
-
     return apiOk(data.collection, { etag: data.etag });
   }
 }

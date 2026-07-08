@@ -12,7 +12,8 @@ Initial messages:
 
 - email verification;
 - password reset;
-- hub invitation (existing member invites a collaborator);
+- collection-share notification (a collection was shared directly with an
+  account);
 - pending collection share to an unregistered email (Phase E — activated on
   sign-up);
 - account-security notification;
@@ -64,14 +65,14 @@ Template inputs:
 - contain only the minimum values needed to render the approved message;
 - never include recipient addresses because delivery metadata owns recipients;
 - use opaque, expiring application URLs rather than raw record IDs (hubId,
-  collectionId, and invitation/share IDs are immutable UUIDv7 values and must
+  collectionId, and share IDs are immutable UUIDv7 values and must
   not leak into provider-visible URLs or tags);
 - avoid names and hub details unless a reviewed message requires them;
 - remain typed and discriminated so unsupported message kinds fail before
   provider delivery.
 
 Implement this boundary alongside authentication delivery, not as late
-production polish. Email verification and hub invitations are not usable until
+production polish. Email verification and share notifications are not usable until
 the provider-neutral outbox path, worker delivery, and an
 environment-appropriate sender exist.
 
@@ -92,7 +93,7 @@ current logged no-op intent recorded in the tech-debt tracker.)
 Use a PostgreSQL outbox so API requests do not depend on synchronous email
 delivery:
 
-1. complete the business transaction (e.g. create the invitation row);
+1. complete the business transaction (e.g. create the share row);
 2. append an email-outbox record in the same database transaction where
    appropriate;
 3. let the outbox relay publish a minimal BullMQ email job;
@@ -104,9 +105,10 @@ delivery:
 8. process signed Resend webhooks idempotently;
 9. update delivery, bounce, complaint, delay, failure, and suppression status.
 
-This is the same outbox + worker split tracked for the export queue in Phase E
-(`docs/design-docs/hub-architecture.md`); email is the first consumer that makes
-it mandatory rather than optional. Run delivery in a separate worker process
+This is the outbox + worker split tracked in Phase E
+(`docs/SYSTEM_DESIGN.md`); email is the first — and currently
+only — consumer that makes it mandatory (exports are synchronous and never
+queue). Run delivery in a separate worker process
 built from the API image. Scale the worker independently or split specialized
 workers only when measured load or failure isolation justifies it.
 
@@ -120,7 +122,7 @@ another purpose-limited opaque reference.
 
 - email verification;
 - password reset;
-- hub invitation.
+- collection-share notification.
 
 Each render returns an application-owned subject, HTML body, and plain-text
 body. Keep subjects free of personal or sensitive data. Use conservative
@@ -150,7 +152,7 @@ ordinary logs, Redis payloads, and external telemetry
 ## Idempotency
 
 Every send must have an application-owned idempotency key. Do not include raw
-user, hub, collection, or invitation IDs in provider-visible idempotency keys.
+user, hub, collection, or share IDs in provider-visible idempotency keys.
 Use a random outbox-message ID or a purpose-limited opaque reference.
 
 Resend retains idempotency keys for a limited window. Keep the durable
@@ -198,7 +200,7 @@ Subscribe initially to `email.sent`, `email.delivered`, `email.delivery_delayed`
 
 Disable open and click tracking unless there is a concrete product requirement.
 They add privacy considerations and are not needed for authentication or
-invitation emails.
+share-notification emails.
 
 ## Privacy
 

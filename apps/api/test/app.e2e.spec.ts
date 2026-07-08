@@ -1,4 +1,4 @@
-import { beforeEach, describe, it } from "bun:test";
+import { beforeEach, describe, expect, it } from "bun:test";
 import { INestApplication } from "@nestjs/common";
 import { Test, TestingModule } from "@nestjs/testing";
 import request from "supertest";
@@ -17,10 +17,21 @@ describe("AppController (e2e)", () => {
     await app.init();
   });
 
-  it("/api/v1/health (GET)", () => {
+  it("/api/v1/health (GET) is a dependency-free liveness probe", () => {
     return request(app.getHttpServer())
       .get("/api/v1/health")
       .expect(200)
       .expect({ data: { status: "ok" } });
+  });
+
+  // e2e runs against the compose services, so both dependencies are up.
+  it("/api/v1/status (GET) reports per-dependency readiness", async () => {
+    const res = await request(app.getHttpServer()).get("/api/v1/status").expect(200);
+    const body = res.body as {
+      data: { status: string; dependencies: { postgres: string; redis_queue: string } };
+    };
+    expect(body.data.status).toBe("ready");
+    expect(body.data.dependencies.postgres).toBe("ready");
+    expect(body.data.dependencies.redis_queue).toBe("ready");
   });
 });

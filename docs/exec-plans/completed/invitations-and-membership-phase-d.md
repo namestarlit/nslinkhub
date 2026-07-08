@@ -4,7 +4,7 @@ This ExecPlan is a living document. Maintain it according to `PLANS.md`.
 
 ## Purpose / Big Picture
 
-Phase D of `docs/design-docs/hub-architecture.md`. Hub roles become
+Phase D of `docs/SYSTEM_DESIGN.md`. Hub roles become
 enforceable (owner > admin > member) and hubs gain the ways people join and
 are managed: invitations with authenticated acceptance, member listing, role
 changes, removal (under the last-owner rule), and explicit ownership transfer.

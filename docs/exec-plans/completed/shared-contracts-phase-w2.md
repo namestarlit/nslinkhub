@@ -4,7 +4,7 @@ This ExecPlan is a living document. Maintain it according to `PLANS.md`.
 
 ## Purpose / Big Picture
 
-Track W2 of `docs/design-docs/hub-architecture.md`. Extract the API's
+Track W2 of `docs/SYSTEM_DESIGN.md`. Extract the API's
 request/response shapes into a shared workspace package (`@nslinkhub/types`)
 that the web app (W3) and extension (W4) consume, and add a repository check
 that mechanically forbids clients from importing backend internals or Prisma.

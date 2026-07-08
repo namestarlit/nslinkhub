@@ -98,6 +98,59 @@ describe("Collection routes (e2e)", () => {
     expect(body.data.slug).toBe(slug);
   });
 
+  // The durable permalink: the immutable id keeps resolving after a slug
+  // rename, which the hub+slug URL by definition does not.
+  it("looks up a collection by its immutable id (survives a slug rename)", async () => {
+    const res = await request(app.getHttpServer())
+      .get(`/api/v1/collections/${collectionId}`)
+      .expect(200);
+    expect((res.body as { data: { id: string } }).data.id).toBe(collectionId);
+
+    const current = (res.body as { data: { version: number } }).data.version;
+    await request(app.getHttpServer())
+      .patch(`/api/v1/collections/${collectionId}`)
+      .set("Authorization", `Bearer ${bearer}`)
+      .send({ version: current, slug: `renamed-${sfx}` })
+      .expect(200);
+
+    const after = await request(app.getHttpServer())
+      .get(`/api/v1/collections/${collectionId}`)
+      .expect(200);
+    expect((after.body as { data: { slug: string } }).data.slug).toBe(`renamed-${sfx}`);
+  });
+
+  it("hides an unpublished collection id from anonymous readers with 404", async () => {
+    const priv = await request(app.getHttpServer())
+      .post("/api/v1/collections")
+      .set("Authorization", `Bearer ${bearer}`)
+      .send({ slug: `priv-${sfx}`, title: "Private" })
+      .expect(201);
+    const privId = (priv.body as { data: { id: string } }).data.id;
+
+    await request(app.getHttpServer()).get(`/api/v1/collections/${privId}`).expect(404);
+    await request(app.getHttpServer())
+      .get(`/api/v1/collections/${privId}`)
+      .set("Authorization", `Bearer ${bearer}`)
+      .expect(200);
+  });
+
+  it("resolves a hub page by handle (backs /@handle URLs)", async () => {
+    const profile = await request(app.getHttpServer())
+      .get("/api/v1/profile")
+      .set("Authorization", `Bearer ${bearer}`)
+      .expect(200);
+    const handle = (profile.body as { data: { handle: string } }).data.handle;
+
+    const res = await request(app.getHttpServer())
+      .get(`/api/v1/hubs/by-handle/${handle}`)
+      .expect(200);
+    const body = res.body as { data: { hub: { id: string; handle: string } } };
+    expect(body.data.hub.id).toBe(hubId);
+    expect(body.data.hub.handle).toBe(handle);
+
+    await request(app.getHttpServer()).get("/api/v1/hubs/by-handle/no-such-handle").expect(404);
+  });
+
   it("no longer exposes the username lookup route", async () => {
     await request(app.getHttpServer())
       .get(`/api/v1/users/${username}/collections/${slug}`)

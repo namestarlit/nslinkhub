@@ -8,7 +8,7 @@ short: it is a map for contributors and coding agents, not a complete manual.
 
 1. Read `ARCHITECTURE.md` for the stable system map and dependency rules.
 2. Read `PRODUCT.md` for the product definition and acceptance criteria.
-3. Read `docs/design-docs/hub-architecture.md` — the authoritative architecture
+3. Read `docs/SYSTEM_DESIGN.md` — the authoritative architecture
    (the Google-Drive individual model: one hub per user, collection-level
    sharing with downward inheritance, discovery, workspace). The backend is
    built; W3 (web) and W4 (extension) remain.
@@ -42,10 +42,10 @@ authoritative.
 - `docs/SECURITY.md`: tenant isolation, authorization, tokens, and auth
   boundary rules.
 - `docs/RELIABILITY.md`: idempotency, concurrency, jobs, and data rules.
-- `docs/design-docs/index.md`: deeper design documents.
+- `docs/SYSTEM_DESIGN.md`: the authoritative system design — the Google-Drive
+  individual tenancy model, access rules, web URL scheme, and remaining tracks.
+- `docs/design-docs/index.md`: focused satellite design documents.
 - `docs/design-docs/conventions.md`: API/persistence casing and envelope rules.
-- `docs/design-docs/hub-architecture.md`: authoritative architecture — the
-  Google-Drive individual tenancy model, access rules, and remaining tracks.
 - `docs/design-docs/identity-sso.md`: ns-series IAM direction (nsauth,
   "Continue with namestarlit") — built as an IAM, first slice ships AuthN+SSO;
   domain authorization stays product-owned; constraints current work respects.

@@ -4,7 +4,7 @@ This ExecPlan is a living document. Maintain it according to `PLANS.md`.
 
 ## Purpose / Big Picture
 
-Phase C of `docs/design-docs/hub-architecture.md`. A single
+Phase C of `docs/SYSTEM_DESIGN.md`. A single
 `CollectionPolicyService` becomes the source of truth for collection access,
 replacing the interim membership checks scattered across services. The real
 capability tiers land: hub **members** manage (publish, share, delete);

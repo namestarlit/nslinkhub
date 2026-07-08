@@ -35,6 +35,66 @@ summary of what changed after completed work has been promoted out of `ref/`.
   handles when deriving one (e.g. a user named "Explore" gets `explore-2`, not
   the reserved `explore`).
 
+### Added (W3 readiness)
+
+- `GET /api/v1/hubs/by-handle/:handle` — handle → hub-page resolution, backing
+  the web's `/@handle` URLs (the payload carries the immutable `hubId`).
+- `GET /api/v1/collections/:id` — the durable permalink read: the immutable id
+  survives slug renames (hub+slug stays the pretty URL). Same optional-auth +
+  share-token + ETag semantics as the hub+slug lookup.
+- `@nslinkhub/types` gained `users.ts` (`Profile`, `UpdateProfileRequest`) and
+  `CollectionShareView.email` — present for direct shares (the owner supplied
+  the email), `null` for link-source shares (their email was never the
+  owner's to see).
+
+- System status/readiness (pigfarm pattern): `GET /api/v1/status` now reports
+  per-dependency readiness — postgres (authoritative; down = 503
+  `dependencies_unavailable`) and the queue Redis (reserved for future email
+  delivery; down = `degraded`, product fully usable). Checks use a fresh,
+  non-reconnecting client with a 1.5s timeout; the API holds no standing Redis
+  connection until the email worker wires BullMQ. `GET /api/v1/health` stays
+  the dependency-free liveness probe. Redis config collapsed to one
+  `REDIS_URL` (validated, `_FILE`-capable, local default
+  `redis://127.0.0.1:6379`) — `REDIS_HOST`/`REDIS_PORT`/`REDIS_PASSWORD` are
+  gone; the stale "nslinkhub-api-v2" service tag is gone with the old static
+  status payload.
+- Deployment-secret `_FILE` contract implemented
+  (`apps/api/src/config/secret.ts` + unit tests): `DATABASE_URL_FILE` and
+  `BETTER_AUTH_SECRET_FILE` (docker/swarm secrets) take precedence over the
+  plain env vars; file content is trimmed; an unreadable `_FILE` path fails at
+  startup; local defaults keep dev zero-config. Redis credentials adopt the
+  same `readSecret` when the email worker wires BullMQ.
+
+### Changed (W3 readiness)
+
+- One public origin, no CORS: web and API are served same-origin (Traefik
+  path-routes `/api/*` in production; Next.js rewrites proxy in dev). The API
+  dev port moved to **4000** — 3000 belongs to the web app — and
+  `BETTER_AUTH_URL` defaults to `http://localhost:4000`
+  (see `docs/design-docs/infra-deployment.md` § Origins).
+- `GET /collections/:id/children` is unpaginated and returns the plain section
+  list: access inheritance guarantees every child of a readable parent is
+  readable, so the per-child policy loop and the page/limit dialect (the API's
+  only one) are gone; `PageMeta` left `@nslinkhub/types`. Section order lives
+  in the parent's resources.
+- Documented the web URL scheme as a W3 contract (`docs/SYSTEM_DESIGN.md`):
+  `/c/<id>` is the durable permalink (survives rename/transfer/re-nest; what
+  share buttons emit), `/@handle` + `/@handle/<slug>` are flat pretty browse
+  URLs allowed to break; no nested URL forms — structure never encodes into
+  an address.
+- Docs re-arranged: the authoritative design moved up to **`docs/SYSTEM_DESIGN.md`**
+  (was `docs/design-docs/hub-architecture.md` — the name had drifted; the doc
+  covers the whole system, and the deep design now sits at a glance beside
+  `SECURITY.md`/`RELIABILITY.md`). Root `ARCHITECTURE.md` stays the short
+  stable map; `docs/design-docs/` holds only focused satellite designs. All
+  references updated repo-wide.
+- Docs de-staled after the Drive reshape: `transactional-email.md` no longer
+  plans a "hub invitation" email (collection-share notification instead, and
+  the outbox note reflects synchronous exports), `identity-sso.md` and
+  `observability.md` dropped hub-role/invitation phrasing,
+  `infra-deployment.md` worker example is the future email worker, Swagger
+  metadata documents cookie + bearer auth (no more "Sprint 1").
+
 ### Changed
 
 - Exports are synchronous and complete: `POST /api/v1/exports`

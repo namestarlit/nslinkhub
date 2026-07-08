@@ -9,12 +9,6 @@ export interface CursorMeta {
   nextCursor: string | null;
 }
 
-export interface PageMeta {
-  page: number;
-  limit: number;
-  total: number;
-}
-
 export interface EtagMeta {
   etag: string;
 }

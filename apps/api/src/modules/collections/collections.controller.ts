@@ -9,18 +9,19 @@ import {
   Patch,
   Post,
   Put,
-  Query,
   Req,
+  Res,
   UseGuards,
 } from "@nestjs/common";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
-import type { Request } from "express";
+import type { Request, Response } from "express";
 import { CurrentUser } from "src/common/decorators/current-user.decorator";
-import { PaginationQueryDto } from "src/common/dto/pagination-query.dto";
 import { AuthGuard } from "src/common/guards/auth.guard";
 import { OptionalAuthGuard } from "src/common/guards/optional-auth.guard";
 import type { AuthUser } from "src/common/interfaces/auth-user.interface";
+import { conditionalGetHit } from "src/common/utils/etag.util";
 import { apiOk } from "src/common/utils/response.util";
+import { shareTokenFrom } from "src/common/utils/token.util";
 import { CollectionsService } from "./collections.service";
 import { CreateCollectionDto } from "./dto/create-collection.dto";
 import { CreateShareDto } from "./dto/create-share.dto";
@@ -150,17 +151,39 @@ export class CollectionsController {
     return apiOk(await this.collectionsService.nestCollection(id, user, dto));
   }
 
+  // Durable permalink read: the immutable id survives slug renames (hub+slug
+  // is the pretty URL, this is the reference clients keep).
+  @UseGuards(OptionalAuthGuard)
+  @Get(":id")
+  async getById(
+    @Param("id", new ParseUUIDPipe()) id: string,
+    @CurrentUser() user: AuthUser | null,
+    @Headers("x-share-token") headerToken?: string,
+    @Req() req?: Request,
+    @Res({ passthrough: true }) res?: Response,
+  ) {
+    const data = await this.collectionsService.getById(id, user, shareTokenFrom(headerToken, req));
+    if (conditionalGetHit(req, res, data.etag, data.lastModified)) {
+      return;
+    }
+    return apiOk(data.collection, { etag: data.etag });
+  }
+
+  // Sections of a collection: unpaginated — access inherits down from the
+  // parent, and section order lives in the parent's resources.
   @UseGuards(OptionalAuthGuard)
   @Get(":id/children")
   async getChildren(
     @Param("id", new ParseUUIDPipe()) id: string,
     @CurrentUser() user: AuthUser | null,
-    @Query() query: PaginationQueryDto,
     @Headers("x-share-token") headerToken?: string,
     @Req() req?: Request,
   ) {
-    const shareToken = headerToken ?? (req?.query.s as string | undefined);
-    const data = await this.collectionsService.getChildren(id, user, shareToken, query);
-    return apiOk(data.items, data.meta);
+    const children = await this.collectionsService.getChildren(
+      id,
+      user,
+      shareTokenFrom(headerToken, req),
+    );
+    return apiOk(children);
   }
 }

@@ -130,7 +130,7 @@ Never send:
 
 - names, email addresses, or other contact details;
 - passwords, hashes, tokens, cookies, authorization headers, session tokens,
-  share tokens, invitation tokens, or API keys;
+  share tokens, or API keys;
 - raw request or response bodies by default;
 - collection titles, resource URLs/notes, or other user-authored content;
 - direct hub IDs, user IDs, collection IDs, resource IDs, or other domain-record
@@ -152,7 +152,7 @@ affected hub, collection, and user identifiers in the internal audit record.
 
 Sensitive audit records belong in PostgreSQL, protected by hub-aware access
 control, retention rules, and audit access logging (the Phase E audit item in
-`docs/design-docs/hub-architecture.md`). Store the information required to
+`docs/SYSTEM_DESIGN.md`). Store the information required to
 explain who did what, to which entity, when, and why.
 
 When external telemetry needs to correlate with an internal audit record, emit an

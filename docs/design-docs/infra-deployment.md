@@ -82,7 +82,7 @@ namestarlit VPS
        -> nslinkhub web + api
        -> nsworklog
        -> nsauth (when it exists)
-  -> product workers (e.g. nslinkhub exports)
+  -> product workers (e.g. the nslinkhub email worker, when email ships)
   -> PostgreSQL 18 (one instance, one database per product)
   -> dedicated queue Redis per product that needs one
   -> shared services (uptime/observability) as nsinfra adds them
@@ -94,6 +94,23 @@ runs queues (AOF persistence, `noeviction`, never reused as a cache). The VPS
 is one failure domain: apply explicit resource limits, monitor disk and
 memory pressure, keep builds off-host, and keep required backups **off-host**
 with tested restores.
+
+### Origins: web and API share one origin (no CORS)
+
+Each product's web and API are served from **one public origin**, path-routed
+by Traefik: `/api/*` goes to the API container, everything else to the web
+container. In local development the web dev server proxies `/api/*` to the API
+process (Next.js rewrites; API listens on 4000, web on 3000). Consequences,
+relied on by the app code:
+
+- No CORS configuration exists anywhere — same-origin end to end. Adding a
+  second origin later means adding CORS + better-auth `trustedOrigins`
+  deliberately, not flipping a wildcard.
+- better-auth cookies are host-only, first-party, and need no cross-site
+  attributes; `BETTER_AUTH_URL` is the public origin in production and the
+  API's own origin (`http://localhost:4000`) in development.
+- File responses (exports) and headers like `X-Request-Id` are readable by
+  the web app without exposed-header lists.
 
 ## Conventions (inherited, apply to every ns product)
 
@@ -118,10 +135,18 @@ with this direction:
 1. Track W's workspace split (`apps/api`, `apps/web`) is exactly the image
    boundary: one API image (also runnable as a worker process later), one web
    image.
-2. When deployment nears, the repo adds: Dockerfiles per app, the production
-   compose topology, health/readiness endpoints beyond the current basic
-   health route, and `_FILE` variants for `DATABASE_URL`,
-   `BETTER_AUTH_SECRET`, and Redis credentials.
+2. The `_FILE` secret contract is **implemented** for `DATABASE_URL` and
+   `BETTER_AUTH_SECRET` (`apps/api/src/config/secret.ts`: `<NAME>_FILE` wins
+   over `<NAME>`, trimmed file content, loud failure on an unreadable path;
+   local defaults keep dev zero-config). Redis credentials join through the
+   same `readSecret` when the email worker wires BullMQ (`REDIS_URL` /
+   `REDIS_URL_FILE` already feed the readiness check). Health endpoints are
+   **implemented**: `GET /api/v1/health` (liveness, dependency-free) and
+   `GET /api/v1/status` (readiness: postgres + queue Redis →
+   ready/degraded/unavailable; 503 only when postgres is down, so
+   orchestration gates on the authoritative store while a Redis-only outage
+   reads as degraded). When deployment nears, the repo still adds:
+   Dockerfiles per app and the production compose topology.
 3. The existing `compose.yml` remains a **local development** file; the
    production topology is a separate repository-owned
    `docker.stack.prod.yml` consumed by Dokploy.

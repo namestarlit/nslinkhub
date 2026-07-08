@@ -5,3 +5,4 @@ export * from "./exports";
 export * from "./hubs";
 export * from "./imports";
 export * from "./resources";
+export * from "./users";

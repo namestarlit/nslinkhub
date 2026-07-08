@@ -6,7 +6,7 @@ NSLinkHub organizes links into curated, shareable collections. A hub is one
 personal space per user (the tenant root); collections contain resources and
 are shared per-collection (Drive model) or published to the product-wide
 explore surface. See `PRODUCT.md` for the product definition and
-`docs/design-docs/hub-architecture.md` for the authoritative architecture.
+`docs/SYSTEM_DESIGN.md` for the authoritative architecture.
 
 The backend model is complete: Hub → Collections → Resources with a single
 `CollectionPolicyService` for collection access. Tenancy is the Google-Drive
@@ -59,11 +59,11 @@ ref/               disposable, git-ignored implementation context
 | `common/guards` | `AuthGuard`/`OptionalAuthGuard` via `resolveSessionUser` |
 | `hubs` | one-hub-per-user ownership + handle management (`HubsService`), collection access policy — owner → direct share → link → published, inheriting down the collection tree (`CollectionPolicyService`) |
 | `users` | self-service profile at `/profile` (display name, bio, hub handle) |
-| `collections` | collection CRUD (two-level nesting), publish/unpublish, link + direct sharing, ownership transfer, saves, `/explore`, public hub pages, `/me/{shared,saved}`, hub-scoped lookup |
+| `collections` | collection CRUD (two-level nesting), publish/unpublish, link + direct sharing, ownership transfer, saves, `/explore`, public hub pages + handle resolution (`/hubs/by-handle/:handle`), `/me/{shared,saved}`, hub+slug lookup and the durable id permalink (`GET /collections/:id`) |
 | `resources` | resource CRUD (own canonical URL, tags array, nesting via section entries), reorder with version checks |
 | `imports` | bookmarks-HTML + universal-CSV ingestion with per-row error reports |
 | `exports` | synchronous export (`POST /exports`): markdown/PDF/Word, one document per collection, zipped when several — programmatic renderers, no queue |
-| `health` | liveness endpoints |
+| `health` | liveness (`/health`) + per-dependency readiness (`/status`: postgres, queue Redis → ready/degraded/unavailable; 503 when postgres is down) |
 
 ## Dependency Rules
 
@@ -115,7 +115,7 @@ here. Security and reliability rules are detailed in `docs/SECURITY.md` and
 - `docs/SECURITY.md`
 - `docs/RELIABILITY.md`
 - `docs/design-docs/index.md`
-- `docs/design-docs/hub-architecture.md`
+- `docs/SYSTEM_DESIGN.md`
 - `docs/design-docs/identity-sso.md`
 - `docs/design-docs/infra-deployment.md`
 - `docs/runbooks/local-development.md`

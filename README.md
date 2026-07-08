@@ -13,7 +13,7 @@ in `CHANGELOG.md`).
 
 ## Current Documentation
 
-- Hub architecture plan (authoritative target design): `docs/design-docs/hub-architecture.md`
+- Hub architecture plan (authoritative target design): `docs/SYSTEM_DESIGN.md`
 - ns-series identity direction: `docs/design-docs/identity-sso.md`
 - ns-series deployment direction: `docs/design-docs/infra-deployment.md`
 - Stack migration log (Bun + Prisma + better-auth): `docs/exec-plans/completed/stack-migration-bun-prisma-better-auth.md`
@@ -51,20 +51,25 @@ in `CHANGELOG.md`).
 Recommended `.env` values:
 
 ```bash
-PORT=3000
+# API port; 3000 belongs to the web app (Next.js dev default).
+PORT=4000
 
 DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5432/nslinkhub
 
 BETTER_AUTH_SECRET=change-me-to-a-long-random-string
-BETTER_AUTH_URL=http://localhost:3000
+BETTER_AUTH_URL=http://localhost:4000
 
-REDIS_HOST=127.0.0.1
-REDIS_PORT=6379
-# REDIS_PASSWORD=
+# Queue Redis (future email/notification delivery; checked by /status)
+REDIS_URL=redis://127.0.0.1:6379
 ```
 
-When `DATABASE_URL` is unset, the local dev default
-(`postgresql://postgres:postgres@127.0.0.1:5432/nslinkhub`) is used.
+When `DATABASE_URL` or `REDIS_URL` is unset, the local dev defaults
+(`postgresql://postgres:postgres@127.0.0.1:5432/nslinkhub`,
+`redis://127.0.0.1:6379`) are used.
+
+Deployment secrets use the `_FILE` contract: `DATABASE_URL_FILE`,
+`BETTER_AUTH_SECRET_FILE`, and `REDIS_URL_FILE` point at secret files
+(docker/swarm secrets) and take precedence over the plain variables.
 
 ## Install
 
@@ -134,7 +139,7 @@ DB-backed and refresh themselves server-side.
 
 When server is running:
 
-- Swagger UI: `http://localhost:3000/api/docs`
+- Swagger UI: `http://localhost:4000/api/docs`
 
 ## Notes
 

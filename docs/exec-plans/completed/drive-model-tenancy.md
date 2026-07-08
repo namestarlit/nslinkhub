@@ -43,7 +43,7 @@ green.
 - [x] (2026-07-04) Tests: stripped `username` from every sign-up; added
   `identity.e2e.spec.ts` (handle derivation, collision dedup, rename, reserved).
 - [x] (2026-07-04) Docs: `PRODUCT.md`, `AGENTS.md` invariants, `ARCHITECTURE.md`,
-  `identity-sso.md`, `hub-architecture.md` (superseding banner), CHANGELOG.
+  `identity-sso.md`, `docs/SYSTEM_DESIGN.md` (superseding banner), CHANGELOG.
 - [x] (2026-07-04) `bun run verify` green (24 e2e across 8 files).
 
 ## Outcomes & Retrospective
@@ -63,7 +63,7 @@ Deferred follow-ons (small, separate — not blocking W3):
   `hubId` — and the attribution click-through on a published collection ("which
   hub published this" → that hub's page, search their publications). Follow-on
   is just the `/@handle` route + explore tag/text search (both in Phase E of
-  `hub-architecture.md`).
+  `docs/SYSTEM_DESIGN.md`).
 - **Collection ownership transfer** — SHIPPED 2026-07-04
   (`POST /api/v1/collections/:id/transfer`). Drive-accurate.
   Distinguishes **owner** (`collection.hubId`, mutable) from **creator** (a new
@@ -85,7 +85,7 @@ Deferred follow-ons (small, separate — not blocking W3):
   **changing the account email** (better-auth `changeEmail` with code
   verification). Arrives with the email/MFA hardening (needs real email
   delivery — currently the deferred no-op). Do not build a hub-transfer model.
-- **Full rewrite of `hub-architecture.md`** — DONE 2026-07-04. The document now
+- **Full rewrite of `docs/SYSTEM_DESIGN.md`** — DONE 2026-07-04. The document now
   states the Drive individual model authoritatively; the historical
   membership/invitation/role sections are excised.
 
@@ -145,7 +145,7 @@ these must survive the reshape (see `docs/runbooks/migrations.md`).
    parts of `test/hub-tenancy.e2e.spec.ts` as owner/share/handle cases; remove
    `username` from every sign-up payload across all specs; keep the tag-cleanup
    and sharing specs green.
-9. **Docs**: update `hub-architecture.md` (tenancy + sharing + phased plan),
+9. **Docs**: update `docs/SYSTEM_DESIGN.md` (tenancy + sharing + phased plan),
    `PRODUCT.md` (§2 Hub, §3 target users, §4 remove invitations, Account
    identity), `AGENTS.md` invariants (drop membership from the policy chain;
    replace "usernames" language), `identity-sso.md` cross-ref, `CHANGELOG.md`.

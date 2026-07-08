@@ -1,7 +1,11 @@
 // Startup configuration validation (plain function — no schema dependency).
 // Every variable stays optional with in-code local defaults; validation only
 // rejects values that are present but malformed, so a bad deployment fails
-// fast instead of half-working.
+// fast instead of half-working. Secret-bearing values are resolved through
+// the _FILE contract (readSecret) so file-delivered secrets get the same
+// checks as plain env vars — the production path must not bypass validation.
+
+import { readSecret } from "./secret";
 
 function isPort(value: string): boolean {
   const n = Number(value);
@@ -10,21 +14,25 @@ function isPort(value: string): boolean {
 
 export function validateEnv(config: Record<string, unknown>): Record<string, unknown> {
   const errors: string[] = [];
+  const env = config as Record<string, string | undefined>;
 
-  for (const key of ["PORT", "DB_PORT", "REDIS_PORT"]) {
-    const value = config[key];
-    if (typeof value === "string" && value !== "" && !isPort(value)) {
-      errors.push(`${key} must be a TCP port (1-65535), got "${value}"`);
-    }
+  const port = config.PORT;
+  if (typeof port === "string" && port !== "" && !isPort(port)) {
+    errors.push(`PORT must be a TCP port (1-65535), got "${port}"`);
   }
 
-  const dbUrl = config.DATABASE_URL;
-  if (typeof dbUrl === "string" && dbUrl !== "" && !/^postgres(ql)?:\/\//.test(dbUrl)) {
+  const dbUrl = readSecret("DATABASE_URL", env);
+  if (dbUrl !== undefined && !/^postgres(ql)?:\/\//.test(dbUrl)) {
     errors.push("DATABASE_URL must be a postgresql:// URL");
   }
 
-  const secret = config.BETTER_AUTH_SECRET;
-  if (typeof secret === "string" && secret !== "" && secret.length < 16) {
+  const redisUrl = readSecret("REDIS_URL", env);
+  if (redisUrl !== undefined && !/^rediss?:\/\//.test(redisUrl)) {
+    errors.push("REDIS_URL must be a redis:// or rediss:// URL");
+  }
+
+  const secret = readSecret("BETTER_AUTH_SECRET", env);
+  if (secret !== undefined && secret.length < 16) {
     errors.push("BETTER_AUTH_SECRET must be at least 16 characters");
   }
 

@@ -29,6 +29,8 @@ export interface SavedCollection extends Collection {
 export interface CollectionShareView {
   userId: string;
   displayName: string;
+  /** Present for direct shares (the owner supplied it); null for link-source shares. */
+  email: string | null;
   role: ShareRole;
   source: ShareSource;
 }

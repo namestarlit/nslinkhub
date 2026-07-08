@@ -20,6 +20,7 @@ import { AuthGuard } from "src/common/guards/auth.guard";
 import { OptionalAuthGuard } from "src/common/guards/optional-auth.guard";
 import type { AuthUser } from "src/common/interfaces/auth-user.interface";
 import { apiOk } from "src/common/utils/response.util";
+import { shareTokenFrom } from "src/common/utils/token.util";
 import { CreateExternalResourceDto } from "./dto/create-external-resource.dto";
 import { ReorderResourcesDto } from "./dto/reorder-resources.dto";
 import { UpdateResourceDto } from "./dto/update-resource.dto";
@@ -51,7 +52,7 @@ export class ResourcesController {
     @Req() req?: Request,
     @Query() query?: CursorQueryDto,
   ) {
-    const shareToken = headerToken ?? (req?.query.s as string | undefined);
+    const shareToken = shareTokenFrom(headerToken, req);
     const safeQuery = query ?? { limit: 20 };
     const data = await this.resourcesService.getByCollection(
       collectionId,

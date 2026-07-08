@@ -1,10 +1,12 @@
-# Hub Architecture
+# System Design
 
-Authoritative design for NSLinkHub's tenancy, identity, sharing, and discovery.
-This document states the system **as it is decided and built now** (the
-Google-Drive individual model), not its history. Where it and `PRODUCT.md`
-agree, both are canonical; `PRODUCT.md` holds the product-facing framing and
-acceptance criteria, this holds the architectural model and rules.
+The authoritative design for NSLinkHub: tenancy, identity, sharing, discovery,
+the web URL scheme, export, and the workspace. This document states the system
+**as it is decided and built now** (the Google-Drive individual model), not its
+history. Where it and `PRODUCT.md` agree, both are canonical; `PRODUCT.md`
+holds the product-facing framing and acceptance criteria, this holds the
+architectural model and rules. The root `ARCHITECTURE.md` stays the short
+stable map; focused satellite designs live in `docs/design-docs/`.
 
 Related documents:
 
@@ -118,6 +120,31 @@ CollectionSave  — (collectionId, userId, savedAt). A social-style bookmark of 
 - **nsauth SSO** is bounded to users + SSO + profile (no orgs); see
   `identity-sso.md`. Products keep their own userId authoritative and their own
   authorization; the IdP never decides who may edit a collection.
+
+### Web URL scheme (W3 contract)
+
+Durable references carry only the immutable id of the thing itself; every
+mutable attribute — handle, slug, hub, parent — lives in the payload, never
+the address. The whole scheme is three URL shapes:
+
+| URL | Job |
+| --- | --- |
+| `/c/<collectionId>` | **Permalink** — any collection, nested or not. Survives slug renames, ownership transfers, and re-nesting. Backed by `GET /api/v1/collections/:id`. |
+| `/@handle` | Hub page. Backed by `GET /api/v1/hubs/by-handle/:handle`. |
+| `/@handle/<slug>` | **Pretty browse URL** — human-readable, *allowed to break* on rename/transfer (Drive path vs file id). Backed by `GET /api/v1/hubs/:hubId/collections/:slug` after handle resolution. Flat: slugs are unique per hub, so nesting never appears in the path. |
+
+Rules that keep it drift-proof:
+
+- There is **no `/sc/`** or any nested-collection URL form. A sub-collection
+  *is* a collection (same entity, id space, policy); "section" is a mutable
+  relationship, and structure never encodes into an address. Nesting context
+  (breadcrumb to the parent) renders from `parentCollectionId` in the payload.
+- **"Copy link" / share buttons always emit the `/c/<id>` permalink**, never
+  the slug URL. Slug URLs are for address bars and link previews only.
+- Pretty URLs never gain path segments (`/@handle/<parent>/<child>` is
+  forbidden — it adds no resolving power and breaks on re-nest).
+- Optional later polish, not contract: the web may redirect a stale slug URL
+  to the id permalink (GitHub-style rename redirects).
 
 ## Access model
 

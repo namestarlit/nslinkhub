@@ -6,14 +6,13 @@ import {
   NotFoundException,
 } from "@nestjs/common";
 import { CursorQueryDto } from "src/common/dto/cursor-query.dto";
-import { PaginationQueryDto } from "src/common/dto/pagination-query.dto";
 import { ResourceKind } from "src/common/enums/resource-kind.enum";
 import { AuthUser } from "src/common/interfaces/auth-user.interface";
 import { decodeCursor, encodeCursor } from "src/common/utils/cursor.util";
 import { parseIfMatchVersion, toVersionEtag } from "src/common/utils/etag.util";
 import { normalizeTags } from "src/common/utils/tags.util";
 import { PrismaService } from "src/database/prisma.service";
-import { Collection } from "src/generated/prisma/client";
+import { Collection, Hub } from "src/generated/prisma/client";
 import { CollectionPolicyService } from "../hubs/collection-policy.service";
 import { HubsService } from "../hubs/hubs.service";
 import { CreateCollectionDto } from "./dto/create-collection.dto";
@@ -238,12 +237,16 @@ export class CollectionsService {
     await this.policy.requireManage(collection, user);
     const shares = await this.prisma.collectionShare.findMany({
       where: { collectionId: collection.id },
-      include: { user: { select: { id: true, name: true } } },
+      include: { user: { select: { id: true, name: true, email: true } } },
       orderBy: { createdAt: "asc" },
     });
     return shares.map((share) => ({
       userId: share.userId,
       displayName: share.user.name,
+      // Display names are not unique, so direct shares echo back the email the
+      // owner shared with. Link-source viewers never gave the owner their
+      // email, so it is not exposed for them.
+      email: share.source === "direct" ? share.user.email : null,
       role: share.role,
       source: share.source,
     }));
@@ -444,10 +447,22 @@ export class CollectionsService {
 
   async getHubPage(hubId: string, query: CursorQueryDto) {
     const hub = await this.prisma.hub.findUnique({ where: { id: hubId } });
+    return this.buildHubPage(hub, query);
+  }
+
+  // Handle resolution for /@handle pages. The handle is the handy way in; the
+  // payload carries the immutable hubId, which is what clients keep. Handle
+  // semantics stay in the hubs module.
+  async getHubPageByHandle(handle: string, query: CursorQueryDto) {
+    const hub = await this.hubs.getHubByHandle(handle);
+    return this.buildHubPage(hub, query);
+  }
+
+  private async buildHubPage(hub: Hub | null, query: CursorQueryDto) {
     if (!hub) {
       throw new NotFoundException("Hub not found");
     }
-    const collections = await this.listPublishedCollections(query, { hubId });
+    const collections = await this.listPublishedCollections(query, { hubId: hub.id });
     return {
       hub: { id: hub.id, handle: hub.handle, description: hub.description },
       collections: collections.items,
@@ -485,7 +500,21 @@ export class CollectionsService {
     if (!collection) {
       throw new NotFoundException("Collection not found");
     }
+    return this.readCollectionView(collection, viewer, shareToken);
+  }
 
+  // Durable lookup by the immutable collection id — the reference that
+  // survives a slug rename (hub+slug is the pretty URL, this is the permalink).
+  async getById(id: string, viewer: AuthUser | null, shareToken?: string) {
+    const collection = await this.requireCollection(id);
+    return this.readCollectionView(collection, viewer, shareToken);
+  }
+
+  private async readCollectionView(
+    collection: Collection,
+    viewer: AuthUser | null,
+    shareToken?: string,
+  ) {
     const access = await this.policy.requireRead(collection, viewer, shareToken);
     if (access.viaLinkToken && viewer) {
       await this.policy.recordLinkAccess(
@@ -501,36 +530,19 @@ export class CollectionsService {
     };
   }
 
-  async getChildren(
-    id: string,
-    viewer: AuthUser | null,
-    shareToken: string | undefined,
-    query: PaginationQueryDto,
-  ) {
-    const page = query.page ?? 1;
-    const limit = query.limit ?? 20;
+  async getChildren(id: string, viewer: AuthUser | null, shareToken: string | undefined) {
     const parent = await this.requireCollection(id);
     await this.policy.requireRead(parent, viewer, shareToken);
 
+    // Access inherits down the ancestor chain, so any grant that reads the
+    // parent covers every child — no per-child policy check. Sections are
+    // human-curated and bounded by the two-level cap, so the list is small
+    // and unpaginated; section *order* lives in the parent's resources.
     const children = await this.prisma.collection.findMany({
       where: { parentCollectionId: id },
       orderBy: { updatedAt: "desc" },
     });
-
-    const visibleChildren: Collection[] = [];
-    for (const child of children) {
-      const access = await this.policy.resolve(child, viewer, shareToken);
-      if (access.canRead) {
-        visibleChildren.push(child);
-      }
-    }
-
-    const start = (page - 1) * limit;
-    const pagedChildren = visibleChildren.slice(start, start + limit);
-    return {
-      items: pagedChildren.map((child) => this.toPublicCollection(child)),
-      meta: { page, limit, total: visibleChildren.length },
-    };
+    return children.map((child) => this.toPublicCollection(child));
   }
 
   // --- internals ----------------------------------------------------------

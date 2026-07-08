@@ -40,7 +40,7 @@ export class HubsService {
   }
 
   async getHubByHandle(handle: string) {
-    return this.prisma.hub.findUnique({ where: { handle: handle.toLowerCase() } });
+    return this.prisma.hub.findUnique({ where: { handle: handle.trim().toLowerCase() } });
   }
 
   // Rename the caller's hub handle. The handle is the mutable public identity;

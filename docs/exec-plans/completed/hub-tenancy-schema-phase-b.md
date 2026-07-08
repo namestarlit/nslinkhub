@@ -4,7 +4,7 @@ This ExecPlan is a living document. Maintain it according to `PLANS.md`.
 
 ## Purpose / Big Picture
 
-Phase B of `docs/design-docs/hub-architecture.md`: the domain model becomes
+Phase B of `docs/SYSTEM_DESIGN.md`: the domain model becomes
 **Hub → Collections → Resources**. Hubs own collections; users get a personal
 hub at sign-up; publication is a boolean pair (`published`,
 `linkSharingEnabled`) instead of the visibility triad; the schema gains

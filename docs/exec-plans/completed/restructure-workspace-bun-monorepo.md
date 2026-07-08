@@ -8,7 +8,7 @@ Keep `Progress`, `Surprises & Discoveries`, `Decision Log`, and
 
 The repository becomes a Bun-workspace monorepo with the backend at
 `apps/api`, making room for `apps/web`, `apps/extension`, and `packages/*`
-(see `docs/design-docs/hub-architecture.md`, "Workspace And Client Surfaces").
+(see `docs/SYSTEM_DESIGN.md`, "Workspace And Client Surfaces").
 This is Track W1 — the first step of the locked order
 **W1 → A → B → C → D → W2 → W3 → W4** — and is purely mechanical: no behavior
 change, every later diff lives at its final path, and the `apps/api` +

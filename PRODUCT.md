@@ -2,7 +2,7 @@
 
 NSLinkHub is the canonical product definition for contributors and agents.
 Where this document and any older material conflict, this document and
-`docs/design-docs/hub-architecture.md` win. (The original v2 feature spec was
+`docs/SYSTEM_DESIGN.md` win. (The original v2 feature spec was
 retired after its durable content was absorbed here; git history keeps it.)
 
 ## 1. Product Overview
@@ -167,8 +167,10 @@ always optional; keep tags flat (no hierarchies or governance).
   an H3, by the two-level nesting cap. `expand: false` collapses
   sub-collections to a single line instead. External-link resources stay as
   references and are not inlined. Rendering is programmatic, so no format
-  needs a job queue and nothing is stored server-side. (Word replaces the
-  earlier CSV idea — CSV remains an import format only.)
+  needs a job queue and nothing is stored server-side. Export requires a
+  signed-in account — anonymous readers of published or link-shared
+  collections browse but do not export. (Word replaces the earlier CSV idea —
+  CSV remains an import format only.)
 
 ### Account
 

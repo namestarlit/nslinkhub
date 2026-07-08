@@ -4,7 +4,7 @@ This ExecPlan is a living document. Maintain it according to `PLANS.md`.
 
 ## Purpose / Big Picture
 
-Phase A of `docs/design-docs/hub-architecture.md`: the API contracts that
+Phase A of `docs/SYSTEM_DESIGN.md`: the API contracts that
 must lock before any client exists. After this change, every failure returns
 the stable envelope `{ "error": { code, message, requestId, details } }`
 with a server-generated request ID (also on successes as `X-Request-Id`),

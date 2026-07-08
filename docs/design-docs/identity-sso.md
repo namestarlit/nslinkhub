@@ -165,7 +165,7 @@ stay in the product; nsauth provides identity and coarse, identity-scoped
 claims.
 
 Rules, consistent with the decisions already adopted from pigfarm
-(`docs/design-docs/hub-architecture.md`, `pigfarm/docs/design-docs/auth-sessions.md`):
+(`docs/SYSTEM_DESIGN.md`, `pigfarm/docs/design-docs/auth-sessions.md`):
 
 1. **Products keep their own immutable userId.** The nsauth subject (`sub`)
    is stored as a one-to-one linked identity on the product user — never as
@@ -239,8 +239,9 @@ or IAM yet — but a few cheap constraints keep the door open:
    local credentials are the only path (e.g. keep sign-up onboarding —
    personal hub creation — in an app-owned service callable from any auth
    path, not hard-wired to one better-auth hook).
-4. Keep NSLinkHub's authorization firmly domain-scoped (hub roles,
-   `CollectionPolicyService`) so that if nsauth later supplies identity-scoped
+4. Keep NSLinkHub's authorization firmly domain-scoped (hub ownership +
+   collection shares, `CollectionPolicyService`) so that if nsauth later
+   supplies identity-scoped
    claims (a global platform-admin, say), they augment product decisions
    rather than needing product authorization to be untangled from identity.
 

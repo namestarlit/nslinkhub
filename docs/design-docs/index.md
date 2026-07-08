@@ -1,17 +1,15 @@
 # Design Documents
 
-Use focused design documents for decisions that are too detailed or likely to
-change too frequently for the root `ARCHITECTURE.md`.
+Focused satellite designs: decisions that are too detailed or change too
+frequently for the root `ARCHITECTURE.md`. The **authoritative system design**
+— tenancy, identity, access, URL scheme, export, workspace, tracks — is
+`docs/SYSTEM_DESIGN.md`, one level up.
 
 ## Current Documents
 
 - `conventions.md`: API and persistence conventions — casing (camelCase keys,
   snake-token values, snake_case DB columns via Prisma `@map`) and the
   response envelope.
-- `hub-architecture.md`: the authoritative architecture — the Google-Drive
-  individual tenancy model (one hub per user), identity/handles, the
-  access/inheritance rules, collections/resources, ownership transfer,
-  publication/discovery, workspace, and remaining tracks (W3 web, W4 extension).
 - `identity-sso.md`: ns-series IAM direction — nsauth built as an IAM system
   (the namestarlit account, "Continue with namestarlit") whose first slice is
   authentication + SSO; the four-pillar scope, the domain-vs-identity

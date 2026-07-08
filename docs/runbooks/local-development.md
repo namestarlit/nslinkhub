@@ -11,7 +11,7 @@
 bun install                                # also runs `prisma generate` (postinstall)
 docker compose up -d                       # PostgreSQL 18 + Redis 7 (compose.yml, local dev only)
 (cd apps/api && bunx prisma migrate deploy)
-bun run start:dev                          # delegates into apps/api; :3000
+bun run start:dev                          # delegates into apps/api; :4000 (3000 is the web app's)
 ```
 
 The repository is a Bun workspace; the backend is `apps/api`. Root scripts
@@ -37,7 +37,7 @@ bun test test            # e2e (requires docker compose services)
 bun run verify           # boundaries + format + lint + build + typecheck + tests
 ```
 
-Swagger UI: `http://localhost:3000/api/docs`.
+Swagger UI: `http://localhost:4000/api/docs`.
 
 ## Resetting Local Data
 
