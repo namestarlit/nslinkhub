@@ -12,7 +12,7 @@ answer in your own words before continuing. Reading the whole file in one go
 is the failure mode this structure exists to prevent. Every file is a
 clickable link.
 
-**Pin:** verified against commit `d568530`. This is enforced, not honor
+**Pin:** verified against commit `bf1b3fe`. This is enforced, not honor
 system: `check:guide-pin` (part of `bun run verify`) fails when any file this
 guide links changes after the pinned commit. To clear it, reread the affected
 sessions, fix any drift, and move the pin to the latest commit — in a
@@ -44,8 +44,9 @@ bun run verify           # the canonical gate — must be green
 ```
 
 While it runs, skim what it does in
-[verification.md](../runbooks/verification.md) (a 10-step chain: boundaries,
-typechecks, format/lint, email tests, build, unit, e2e).
+[verification.md](../runbooks/verification.md) (an 11-step chain: boundaries,
+this guide's own freshness pin, typechecks, format/lint, email tests, build,
+unit, e2e).
 
 ```bash
 bun run dev              # infra (idempotent) + API watch on :4000
