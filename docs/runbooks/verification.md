@@ -37,6 +37,27 @@ future `apps/web`. Autofix everything with `bun run check` (adds
 
 Requirements: `bun run infra:up` (PostgreSQL + Redis) for the e2e stage.
 
+## Local Enforcement
+
+A versioned `pre-push` hook in `tooling/git-hooks/` runs `bun run verify`
+before every push. Branch protection and rulesets are unavailable on a
+free-plan private repository, so the local hook is the blocking gate.
+`bun install` wires it through the root `prepare` script
+(`tooling/setup-git-hooks.ts` sets `core.hooksPath`; it no-ops without a
+`.git` entry, so deployment image builds are unaffected). Deletion-only
+pushes skip verification. Because the e2e stage needs the local services,
+push with `bun run infra:up` done — or bypass an emergency push with
+`git push --no-verify` or `SKIP_VERIFY=1` (generic name by the
+no-branding-in-env-vars rule).
+
+Keep the hook fast enough that nobody is tempted to bypass it by habit.
+When later milestones make the full suite slow (integration tests,
+container-backed checks), split the tiers: keep a fast command (format,
+lint, typechecks, unit tests, static checks) as the pre-push gate and move
+the full suite to hosted CI as the authoritative gate — enforced
+server-side through required status checks once a paid plan is justified.
+This escalation path is the decided design; only its trigger is pending.
+
 ## Expectations
 
 - Every phase/milestone ends green on `bun run verify` before it is

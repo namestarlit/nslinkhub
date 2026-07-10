@@ -1,0 +1,32 @@
+#!/bin/sh
+# Bypass for emergencies with `git push --no-verify` or SKIP_VERIFY=1.
+# (Generic name by rule: product branding stays out of env-var names.)
+
+if [ "${SKIP_VERIFY:-0}" = "1" ]; then
+  echo "pre-push: SKIP_VERIFY=1 set; skipping verification." >&2
+  exit 0
+fi
+
+# Git supplies pushed refs on stdin as:
+#   <local_ref> <local_sha> <remote_ref> <remote_sha>
+# A deletion pushes the all-zero SHA and carries no new content to verify.
+# When stdin is a terminal (manual hook run), skip the check and verify.
+if [ ! -t 0 ]; then
+  deleting_only=1
+  while read -r _local_ref local_sha _remote_ref _remote_sha; do
+    case "$local_sha" in
+      *[!0]*)
+        deleting_only=0
+        break
+        ;;
+    esac
+  done
+
+  if [ "$deleting_only" = "1" ]; then
+    echo "pre-push: only ref deletions; skipping verification." >&2
+    exit 0
+  fi
+fi
+
+cd "$(git rev-parse --show-toplevel)" || exit 1
+exec bun run verify

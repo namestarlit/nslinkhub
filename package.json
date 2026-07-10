@@ -8,6 +8,7 @@
     "packages/*"
   ],
   "scripts": {
+    "prepare": "bun run tooling/setup-git-hooks.ts",
     "dev": "bun run api:dev",
     "infra:up": "docker compose up -d",
     "infra:down": "docker compose down",

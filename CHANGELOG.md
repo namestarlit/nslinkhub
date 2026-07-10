@@ -11,6 +11,15 @@ summary of what changed after completed work has been promoted out of `ref/`.
 
 ### Added
 
+- Verified pushes, enforced locally (pigfarm pre-push handoff): a versioned
+  `tooling/git-hooks/pre-push` hook runs `bun run verify` before every push;
+  `bun install` wires it via the root `prepare` script
+  (`tooling/setup-git-hooks.ts` sets `core.hooksPath`, no-op without
+  `.git`). Deletion-only pushes skip; emergencies bypass with
+  `git push --no-verify` or `SKIP_VERIFY=1` (generic name — branding stays
+  out of env vars). The fast-hook/CI-authoritative escalation path is
+  documented in the verification runbook ahead of its trigger.
+
 - Developer onboarding walkthrough (`docs/guides/`, the first guide-track
   doc): six follow-along sessions — make it run, product model, curl
   walkthrough, failure drills + policy trace, config/verification, W3
