@@ -12,7 +12,7 @@ answer in your own words before continuing. Reading the whole file in one go
 is the failure mode this structure exists to prevent. Every file is a
 clickable link.
 
-**Pin:** verified against commit `bf1b3fe`. This is enforced, not honor
+**Pin:** verified against commit `c737a94`. This is enforced, not honor
 system: `check:guide-pin` (part of `bun run verify`) fails when any file this
 guide links changes after the pinned commit. To clear it, reread the affected
 sessions, fix any drift, and move the pin to the latest commit — in a
@@ -29,7 +29,7 @@ Goal: a working local stack and a green verification before any theory.
 ```bash
 bun --version            # expect 1.3.x
 docker compose version
-bun install              # also runs `prisma generate` (postinstall)
+bun install              # prisma generate (postinstall) + wires the pre-push verify hook
 bun run infra:up         # PostgreSQL 18 + Redis 7
 (cd apps/api && bunx prisma migrate deploy)
 ```
