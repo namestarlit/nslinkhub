@@ -10,18 +10,21 @@ It runs, in order:
 
 1. `bun run check:boundaries` — fails if a client app imports `apps/api`
    internals or Prisma (a no-op pass until clients exist).
-2. `bun run types:typecheck` — type-checks `packages/types`.
-3. `bun run email:typecheck` — type-checks `packages/email`.
-4. `bun run format:check` — Biome formatting check across the workspace.
-5. `bun run lint` — Biome lint across the workspace.
-6. `bun run email:test` — email template tests (both render formats,
+2. `bun run check:guide-pin` — fails if any file the onboarding walkthrough
+   (`docs/guides/`) links changed after the guide's pinned commit (fix:
+   sweep the guide, bump its pin in a guide-only commit).
+3. `bun run types:typecheck` — type-checks `packages/types`.
+4. `bun run email:typecheck` — type-checks `packages/email`.
+5. `bun run format:check` — Biome formatting check across the workspace.
+6. `bun run lint` — Biome lint across the workspace.
+7. `bun run email:test` — email template tests (both render formats,
    validation rejections).
-7. `bun run build` (in `apps/api`) — `nest build` (TypeScript compilation of
+8. `bun run build` (in `apps/api`) — `nest build` (TypeScript compilation of
    the app and the generated Prisma client).
-8. `bun run typecheck` (in `apps/api`) — `tsc --noEmit`, which also type-checks
+9. `bun run typecheck` (in `apps/api`) — `tsc --noEmit`, which also type-checks
    the test files that `nest build` does not compile.
-9. `bun test src` (in `apps/api`) — unit tests.
-10. `bun test test` (in `apps/api`) — e2e tests, which boot the real HTTP
+10. `bun test src` (in `apps/api`) — unit tests.
+11. `bun test test` (in `apps/api`) — e2e tests, which boot the real HTTP
     stack (`configureApp`: better-auth mount + body-parser ordering) against
     the local docker services.
 
