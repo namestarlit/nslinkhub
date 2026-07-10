@@ -6,6 +6,10 @@ short: it is a map for contributors and coding agents, not a complete manual.
 
 ## Start Here
 
+New to the repository entirely? Walk
+`docs/guides/developer-onboarding-walkthrough.md` first (six hands-on
+sessions; commit-pinned and freshness-enforced by `bun run verify`). Then:
+
 1. Read `ARCHITECTURE.md` for the stable system map and dependency rules.
 2. Read `PRODUCT.md` for the product definition and acceptance criteria.
 3. Read `docs/SYSTEM_DESIGN.md` — the authoritative architecture

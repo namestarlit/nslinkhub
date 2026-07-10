@@ -6,31 +6,38 @@ This repository is a greenfield NestJS v2 rewrite. The old Flask v1 is retained 
 
 ## Working In This Repository
 
-Start with `AGENTS.md` — the contributor/agent map: reading order, toolchain
-rules, non-negotiable invariants, and documentation conventions (ExecPlans in
-`docs/exec-plans/`, disposable context in git-ignored `ref/`, completed work
-in `CHANGELOG.md`).
+- **New here?** Walk `docs/guides/developer-onboarding-walkthrough.md` — six
+  hands-on sessions from zero to ready-to-build (commit-pinned; freshness is
+  enforced by `bun run verify`).
+- Then `AGENTS.md` — the contributor/agent map: reading order, toolchain
+  rules, non-negotiable invariants, and documentation conventions (ExecPlans
+  in `docs/exec-plans/`, disposable context in git-ignored `ref/`, completed
+  work in `CHANGELOG.md`).
 
 ## Current Documentation
 
-- Hub architecture plan (authoritative target design): `docs/SYSTEM_DESIGN.md`
+- Product definition: `PRODUCT.md`
+- Authoritative system design (Drive individual model): `docs/SYSTEM_DESIGN.md`
+- Onboarding walkthrough: `docs/guides/developer-onboarding-walkthrough.md`
 - ns-series identity direction: `docs/design-docs/identity-sso.md`
 - ns-series deployment direction: `docs/design-docs/infra-deployment.md`
-- Stack migration log (Bun + Prisma + better-auth): `docs/exec-plans/completed/stack-migration-bun-prisma-better-auth.md`
 
 ## Implemented So Far
 
-- PostgreSQL schema managed by Prisma Migrate (single `0_init` baseline)
-- Prisma models for users/repositories/links/entries/tags/export_jobs + better-auth tables
-- Auth via self-hosted [better-auth](https://better-auth.com) (email/username sign-in,
-  DB-backed sessions, bearer tokens for API clients, argon2id hashing via `Bun.password`)
-- Repository CRUD, visibility checks, share-link rotation, nested child creation
-- Entries CRUD + reorder with validation and version conflict checks
-- Tag attach/remove for repositories and entries
-- Import endpoints (CSV, bookmarks HTML, WhatsApp TXT) with initial parsing + persistence
-- Markdown export and PDF export queue jobs
-- Queue-backed + DB-backed export jobs (BullMQ + Redis + `export_jobs` table)
-- Swagger setup at `/api/docs`
+- **The entire backend** (tracks W1→A→B→C→D→W2 + the Drive-model reshape):
+  one hub per user, collections with two-level nesting (one nest action),
+  external resources with canonical URLs + tags, collection-level sharing
+  (link/direct/publish with downward inheritance), top-level ownership
+  transfer, saves, explore, id permalinks + handle resolution
+- Auth via self-hosted [better-auth](https://better-auth.com) (email +
+  password, DB-backed sessions, bearer tokens for API clients, argon2id via
+  `Bun.password`); one personal hub auto-created at sign-up
+- Synchronous export (Markdown/PDF/Word; multi-collection, zipped) and
+  imports (bookmarks-HTML + universal CSV with per-row error reports)
+- `@nslinkhub/types` (wire contracts) and `@nslinkhub/email` (code-email
+  templates); liveness + per-dependency readiness endpoints; `_FILE`
+  deployment-secret contract with zero-config dev
+- Swagger at `/api/docs`; remaining tracks: W3 (web), W4 (extension)
 
 ## Tech Stack
 

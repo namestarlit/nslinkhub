@@ -11,6 +11,18 @@ summary of what changed after completed work has been promoted out of `ref/`.
 
 ### Added
 
+- Developer onboarding walkthrough (`docs/guides/`, the first guide-track
+  doc): six follow-along sessions — make it run, product model, curl
+  walkthrough, failure drills + policy trace, config/verification, W3
+  direction + readiness gate — replacing the read-everything-then-act ref/
+  guide (pigfarm walkthrough-format handoff). The guide pins the commit it
+  was last verified against, and `check:guide-pin` (in `bun run verify`)
+  fails when any file the guide links changes after the pin; clearing it is
+  a sweep + pin bump in a guide-only commit. `docs/exec-plans/` and
+  `CHANGELOG.md` are exempt (the guide points at them by design). README's
+  stale "Implemented So Far" (pre-reshape vocabulary) rewritten while adding
+  the front-door links.
+
 - `docs/SECURITY.md` § "Origins, CORS, and CSRF": records that the absence of
   CORS configuration is deliberate and complete (CORS relaxes the browser's
   Same-Origin Policy; configuring nothing grants no relaxation), why CORS can
