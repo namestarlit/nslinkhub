@@ -44,7 +44,7 @@ This repository is a greenfield NestJS v2 rewrite. The old Flask v1 is retained 
 - Bun (package manager **and** runtime)
 - NestJS
 - PostgreSQL + Prisma (with `@prisma/adapter-pg`)
-- better-auth (sessions, bearer plugin, username plugin)
+- better-auth (sessions, bearer plugin; no username — identity is a hub handle)
 - BullMQ + Redis
 - class-validator/class-transformer
 
@@ -61,18 +61,18 @@ Recommended `.env` values:
 # API port; 3000 belongs to the web app (Next.js dev default).
 PORT=4000
 
-DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5432/nslinkhub
+DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5436/nslinkhub
 
 BETTER_AUTH_SECRET=change-me-to-a-long-random-string
 BETTER_AUTH_URL=http://localhost:4000
 
 # Queue Redis (future email/notification delivery; checked by /status)
-REDIS_URL=redis://127.0.0.1:6379
+REDIS_URL=redis://127.0.0.1:6383
 ```
 
 When `DATABASE_URL` or `REDIS_URL` is unset, the local dev defaults
-(`postgresql://postgres:postgres@127.0.0.1:5432/nslinkhub`,
-`redis://127.0.0.1:6379`) are used.
+(`postgresql://postgres:postgres@127.0.0.1:5436/nslinkhub`,
+`redis://127.0.0.1:6383`) are used.
 
 Deployment secrets use the `_FILE` contract: `DATABASE_URL_FILE`,
 `BETTER_AUTH_SECRET_FILE`, and `REDIS_URL_FILE` point at secret files
@@ -109,9 +109,9 @@ cd apps/api && bunx prisma migrate deploy
 To evolve the schema, edit `apps/api/prisma/schema.prisma` and use
 `bunx prisma migrate dev --create-only`, then review the generated SQL —
 several database objects (the `app_uuid_v7()` function, `set_updated_at`
-triggers, the repository-hierarchy trigger, CHECK constraints, and the partial
-unique index on entries) exist only in migration SQL and must never be dropped
-by an auto-generated diff.
+triggers, the collection-hierarchy trigger, CHECK constraints, and partial
+unique indexes) exist only in migration SQL and must never be dropped by an
+auto-generated diff.
 
 ## Run
 
@@ -133,9 +133,8 @@ bun run email:test     # email template tests
 
 Auth endpoints are served by better-auth under `/api/v1/auth/*`. The main ones:
 
-- `POST /api/v1/auth/sign-up/email` — `{ email, password, name, username }`
+- `POST /api/v1/auth/sign-up/email` — `{ email, password, name }`
 - `POST /api/v1/auth/sign-in/email` — `{ email, password }`
-- `POST /api/v1/auth/sign-in/username` — `{ username, password }`
 - `POST /api/v1/auth/sign-out`
 - `GET  /api/v1/auth/get-session`
 
@@ -152,5 +151,6 @@ When server is running:
 
 ## Notes
 
-- PDF generation is queue-driven and currently stores an output reference placeholder.
+- Exports are synchronous — the response body is the file (zip when several
+  collections are selected); no queue, nothing stored server-side.
 - Import parsers are MVP-level and intended for hardening in next iterations.

@@ -80,7 +80,7 @@ authoritative.
   CHECK constraints, and partial unique indexes exist only in migration SQL
   and must never be dropped by an auto-generated diff.
 - `compose.yml` is local development only. Production topology is
-  `docker.stack.<env>.yml` in the swarm dialect (see the infra direction doc).
+  `docker-stack.<env>.yml` in the swarm dialect (see the infra direction doc).
 - Use Conventional Commit style: `feat: ...`, `fix: ...`, `docs: ...`,
   `chore: ...`, `test: ...`, with `!` and a `BREAKING CHANGE:` footer for
   breaking changes. One commit per completed, reviewed milestone (see

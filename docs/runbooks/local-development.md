@@ -20,8 +20,8 @@ from `apps/api` (that is where `prisma.config.ts` lives). The app reads
 `.env` from `apps/api/.env`.
 
 `.env` is optional locally: without it, the code falls back to the standard
-local defaults (`postgresql://postgres:postgres@127.0.0.1:5432/nslinkhub`,
-Redis on 127.0.0.1:6379, dev better-auth secret). Set `BETTER_AUTH_SECRET` to
+local defaults (`postgresql://postgres:postgres@127.0.0.1:5436/nslinkhub`,
+Redis on 127.0.0.1:6383, dev better-auth secret). Set `BETTER_AUTH_SECRET` to
 a real value for anything beyond local development.
 
 ## Everyday Commands
@@ -66,4 +66,4 @@ is usually enough.)
   (`src/app.setup.ts`); e2e tests boot through the same `configureApp` so
   local behavior matches tests.
 - `compose.yml` is local development only — production topology is
-  `docker.stack.<env>.yml` (see `docs/design-docs/infra-deployment.md`).
+  `docker-stack.<env>.yml` (see `docs/design-docs/infra-deployment.md`).

@@ -16,7 +16,7 @@ frequently for the root `ARCHITECTURE.md`. The **authoritative system design**
   authorization boundary, and the constraints current auth work must respect.
 - `infra-deployment.md`: ns-series deployment — namestarlit VPS, Dokploy
   Stack mode (docker swarm), GHCR images via GitHub Actions, topology-file
-  conventions (`compose.yml`, `docker.stack.<env>.yml`), and the
+  conventions (`compose.yml`, `docker-stack.<env>.yml`), and the
   previews-over-staging environment strategy.
 - `transactional-email.md`: Resend provider behind an application adapter,
   backend-owned React Email templates (`packages/email`), PostgreSQL outbox +

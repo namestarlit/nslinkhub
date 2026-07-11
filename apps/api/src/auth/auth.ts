@@ -10,7 +10,7 @@ import { createPersonalHub } from "../modules/hubs/hub-onboarding";
 // Secrets follow the _FILE deployment contract (readSecret); local defaults
 // keep dev zero-config.
 function databaseUrl(): string {
-  return readSecret("DATABASE_URL") ?? "postgresql://postgres:postgres@127.0.0.1:5432/nslinkhub";
+  return readSecret("DATABASE_URL") ?? "postgresql://postgres:postgres@127.0.0.1:5436/nslinkhub";
 }
 
 // Dedicated client for better-auth (separate from Nest's PrismaService so the

@@ -3,7 +3,8 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { readSecret } from "src/config/secret";
 import { PrismaClient } from "src/generated/prisma/client";
 
-const DEFAULT_DATABASE_URL = "postgresql://postgres:postgres@127.0.0.1:5432/nslinkhub";
+// 5436 = postgres default +4, nslinkhub's stack-wide local port offset.
+const DEFAULT_DATABASE_URL = "postgresql://postgres:postgres@127.0.0.1:5436/nslinkhub";
 
 @Injectable()
 export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {

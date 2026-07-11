@@ -7,7 +7,9 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: nslinkhub
     ports:
-      - '127.0.0.1:5432:5432'
+      # nslinkhub = +4 in the stack-wide local port registry
+      # (/home/ns/Person/stack/docs/local-port-registry.md)
+      - '127.0.0.1:5436:5432'
     volumes:
       - nslinkhub_pgdata:/var/lib/postgresql
     healthcheck:
@@ -20,7 +22,7 @@ services:
     image: redis:7
     container_name: nslinkhub-redis
     ports:
-      - '127.0.0.1:6379:6379'
+      - '127.0.0.1:6383:6379'
     healthcheck:
       test: ['CMD', 'redis-cli', 'ping']
       interval: 5s

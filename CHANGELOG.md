@@ -11,6 +11,19 @@ summary of what changed after completed work has been promoted out of `ref/`.
 
 ### Added
 
+- Stack-wide local conventions adopted (zanlis.dwh handoff): nslinkhub owns
+  the **+4 local port offset** — compose publishes PostgreSQL at
+  `127.0.0.1:5436` and Redis at `127.0.0.1:6383` (in-code dev defaults
+  updated to match; API stays at its project-specific 4000) per
+  `/home/ns/Person/stack/docs/local-port-registry.md`; topology files are
+  named `docker-stack.<env>.yml` (hyphen — docs updated ahead of the first
+  stack file). Along the way: `prisma.config.ts` now resolves
+  `DATABASE_URL` through `readSecret` with the local default, so
+  `bunx prisma migrate deploy` is zero-config on a fresh clone (a stale
+  local `.env` had been masking that it previously required the variable),
+  and README's remaining pre-reshape claims (username plugin/routes, queued
+  PDF note) are gone.
+
 - Verified pushes, enforced locally (pigfarm pre-push handoff): a versioned
   `tooling/git-hooks/pre-push` hook runs `bun run verify` before every push;
   `bun install` wires it via the root `prepare` script
