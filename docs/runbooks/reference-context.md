@@ -10,8 +10,8 @@ its README. See `ref/README.md` for what belongs there.
 - Durable findings are promoted into `docs/`, code comments, tests, tooling,
   or the active ExecPlan — then the temporary material is deleted.
 - Completed ExecPlans must remain understandable after `ref/` is emptied.
-- Notes handed off between sibling projects (e.g. pigfarm ↔ nslinkhub) land
-  in the receiving repository's `ref/` and are promoted or deleted there.
+- Notes handed off between sibling projects land in the receiving repository's
+  `ref/` and are promoted or deleted there.
 
 ## Cleanup
 

@@ -5,9 +5,8 @@ identity direction (`docs/design-docs/identity-sso.md`), this records the shared
 platform the ns series deploys onto so each product builds toward it instead
 of inventing its own operations story.
 
-The deployment model is inherited from the pigfarm design documents
-(`/home/ns/Person/stack/hashikome/pigfarm/docs/design-docs/deployment-vps.md`).
-Patterns only: the ns series is personal work under the namestarlit brand and
+The deployment model is shared across the ns series and recorded here as
+NSLinkHub's own: the ns series is personal work under the namestarlit brand and
 runs on its **own** VPS and Dokploy instance — completely separate
 infrastructure from anything the author's company operates.
 
@@ -37,8 +36,8 @@ single namestarlit VPS managed by **self-hosted Dokploy**:
   only** (relative-path bind mounts don't persist reliably), and
   `--with-registry-auth` on deploys since GHCR images are private. Swarm's
   native secrets (`/run/secrets/<name>`) are exactly the `_FILE` convention.
-- **Topology files per product, one purpose each** (local convention matches
-  pigfarm; stack files are environment-suffixed `docker-stack.<env>.yml`):
+- **Topology files per product, one purpose each** (stack files are
+  environment-suffixed `docker-stack.<env>.yml`):
   - `compose.yml` — local development only (the modern Compose default
     filename). Full compose dialect is fine here: localhost-bound published
     ports, healthchecks, whatever makes `docker compose up -d` pleasant.
@@ -115,7 +114,7 @@ relied on by the app code:
 - File responses (exports) and headers like `X-Request-Id` are readable by
   the web app without exposed-header lists.
 
-## Conventions (inherited, apply to every ns product)
+## Conventions (apply to every ns product)
 
 - Production images are immutable and pinned by SHA tag and digest.
 - Secrets reach services through deployment-secret `_FILE` inputs; secret

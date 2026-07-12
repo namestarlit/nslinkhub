@@ -60,8 +60,8 @@ individual-level impact), so nsauth only ever needs **users, SSO, profile, and
 MFA** — the Authentication + Identity(users) + SSO/federated-login corners. It
 does **not** model **organizations, tenants, or business entities**; the
 Authorization(orgs), Groups, and Service-Accounts pillars are the **company**
-path (hashikome / Zitadel — see `pigfarm/ref/note-from-nslinkhub-iam-direction.md`),
-not the ns path. This is exactly why the ns IdP is Better-Auth (light) and the
+path (a separate company IdP, Zitadel), not the ns path. This is exactly why
+the ns IdP is Better-Auth (light) and the
 company IdP is Zitadel (org-first-class): matching the tool to the realized
 scope, not the theoretical ceiling.
 
@@ -77,7 +77,7 @@ Two consequences:
   The rare signals a product needs from nsauth — account disabled/deleted,
   email changed, identity-wide logout — are a handful of low-frequency HTTP
   callbacks, not an event stream. So the ns series very likely **never needs a
-  message broker** (NATS is a company/pigfarm concern); intra-product async
+  message broker** (NATS is a company concern); intra-product async
   stays on the existing job queue (BullMQ/Redis).
 
 ## Naming (resolved 2026-07-03)
@@ -164,8 +164,7 @@ uses the claims (or its own domain data) to authorize. Fine-grained decisions
 stay in the product; nsauth provides identity and coarse, identity-scoped
 claims.
 
-Rules, consistent with the decisions already adopted from pigfarm
-(`docs/SYSTEM_DESIGN.md`, `pigfarm/docs/design-docs/auth-sessions.md`):
+Rules, consistent with the decisions recorded in `docs/SYSTEM_DESIGN.md`:
 
 1. **Products keep their own immutable userId.** The nsauth subject (`sub`)
    is stored as a one-to-one linked identity on the product user — never as
@@ -200,7 +199,7 @@ Rules, consistent with the decisions already adopted from pigfarm
    disabled?" and "which service accounts can this microservice use?" be
    answerable later without a schema rewrite.
 
-## Implementation Candidates (verify in a spike, pigfarm-style adoption gate)
+## Implementation Candidates (verify in a spike, adoption gate)
 
 better-auth is already the auth dependency on both sides, and covers the
 **authentication + SSO slice** of the IAM:
@@ -219,8 +218,9 @@ nsauth build time; do not pre-build it.
 Before committing, run a focused spike proving: the provider plugin's
 maturity, PKCE + refresh behavior, account-linking flow with existing local
 users, bearer-token behavior for the extension, and that the product-side
-integration preserves the existing NestJS pipeline (the same gate pigfarm
-imposes on auth adoption). The plugin landscape moves — re-verify versions at
+integration preserves the existing NestJS pipeline (the same adoption gate
+this repo imposes on auth changes). The plugin landscape moves — re-verify
+versions at
 implementation time rather than trusting this document.
 
 ## What This Means For NSLinkHub Now

@@ -17,10 +17,8 @@ Related documents:
 - `docs/design-docs/transactional-email.md`, `observability.md` — operational
   direction (Resend, Pino/OTel), built at their triggers.
 - `docs/design-docs/infra-deployment.md` — namestarlit VPS + Dokploy.
-- `docs/exec-plans/completed/drive-model-tenancy.md` — the reshape from the
-  original shared-workspace model to this one, with the decision log.
-- Patterns inherited from the pigfarm design docs (design only; no ownership
-  relationship).
+- `docs/exec-plans/completed/drive-model-tenancy.md` — the decision log behind
+  the Google-Drive individual model defined here.
 
 ## The model in one line
 
