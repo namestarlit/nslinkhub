@@ -102,6 +102,11 @@ summary of what changed after completed work has been promoted out of `ref/`.
   immutable creator is untouched. Guards: self-transfer and recipient-hub slug
   collisions are rejected.
 
+### Changed
+
+- Updated the workspace TypeScript compiler from 5.9.3 to 6.0.3 across the
+  API, shared types, and email packages.
+
 ### Fixed
 
 - Sign-up no longer auto-issues a reserved hub handle (review finding #2). The
