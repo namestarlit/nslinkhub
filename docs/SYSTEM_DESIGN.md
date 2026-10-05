@@ -323,8 +323,9 @@ Remaining:
 - **Foundation adoption gates.** `docs/design-docs/adoption-decisions.md`
   records the 2026-10 comparison and delivery decisions. Local release
   foundations, isolated verification, safe wire/error contracts and W3 design
-  are complete. Review and land the local auth-delivery milestone before
-  resuming web implementation; browser and public-release gates remain open.
+  and the reviewed local auth-delivery milestone are complete. W3 web
+  implementation is next; Docker image acceptance belongs to deployment
+  preparation. Browser and public-release gates remain open.
 - **W3 — Web app.** The three web design documents (`web-product-experience`,
   `web-interface-system`, `web-design-tokens`) are complete. Apply Impeccable
   under those contracts, scaffold `apps/web`, and build vertical slices:

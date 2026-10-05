@@ -19,6 +19,13 @@ delegate, so day-to-day commands run from the root. Prisma CLI commands run
 from `apps/api` (that is where `prisma.config.ts` lives). The app reads
 `.env` from `apps/api/.env`.
 
+Local Compose runs PostgreSQL and Redis only. The API and email worker run
+directly on the host; W3 will add a local Next.js development server. No
+application Docker image is needed for this loop. `bun run verify` includes
+application compilation to catch build errors, but does not build images.
+Image builds and runtime rehearsals belong to
+[deployment preparation](release.md).
+
 `.env` is optional locally: without it, the code falls back to the standard
 local defaults (`postgresql://postgres:postgres@127.0.0.1:5436/nslinkhub`,
 Redis on 127.0.0.1:6383, dev better-auth secret). Set `BETTER_AUTH_SECRET` to

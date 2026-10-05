@@ -163,8 +163,8 @@ with this direction:
    ready/degraded/unavailable; 503 only when postgres is down, so
    orchestration gates on the authoritative store while a Redis-only outage
    reads as degraded). The repo now supplies the API Dockerfile, local/production Swarm topologies
-   and verification/image-release workflows. Web/worker artifacts arrive with
-   their runtimes.
+   and verification/image-release workflows. The email worker shares the API
+   image; web artifacts arrive during deployment preparation after W3.
 3. The existing `compose.yml` remains a **local development** file; the
    production topology is a separate repository-owned
    `docker-stack.prod.yml` consumed by Dokploy.
@@ -175,5 +175,9 @@ with this direction:
 Verification CI and release artifacts now exist. Local image and database
 rehearsals are separate from Swarm/Dokploy/Traefik, off-host restore and shared
 Alloy proof. The manually dispatched image workflow publishes only after its
-verification job; automatic Dokploy promotion remains deferred. No reference
+application verification and image-rehearsal jobs. Push/PR CI runs application
+compilation and real-service tests without building images. Local development
+uses PostgreSQL/Redis containers and host app processes; image acceptance is a
+deployment prerequisite, not a W3 prerequisite (user direction, 2026-10-06).
+Automatic Dokploy promotion remains deferred. No reference
 repository's collector configuration proves namestarlit is operational.

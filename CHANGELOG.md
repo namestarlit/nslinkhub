@@ -9,6 +9,14 @@ summary of what changed after completed work has been promoted out of `ref/`.
 
 ## Unreleased
 
+### Development and release workflow
+
+- Separated routine application verification from Docker image acceptance.
+  Push/PR CI keeps compilation and real-service tests; the manual release
+  workflow now gates image publication on the image build and rehearsal.
+- Closed the reviewed local auth-delivery milestone and made W3 scaffolding
+  next. Fresh image acceptance remains tracked for deployment preparation.
+
 ### Auth delivery
 
 - Removed better-auth's additional production-only HTTP throttle so code

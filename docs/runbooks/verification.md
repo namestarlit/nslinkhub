@@ -73,18 +73,18 @@ This escalation path is the decided design; only its trigger is pending.
   committed.
 - E2E does not require resetting development data. On failure inspect the
   failing suite and service connectivity; the next run gets a fresh database.
-- `.github/workflows/verify.yml` runs this full gate with required PostgreSQL
-  and Redis services, then builds and rehearses the release image. Missing
-  infrastructure is a failure, never a skipped green suite. The first hosted run exposed a container-UID secret-mount bug in the image
-  rehearsal. The fix `cb00a75` passed
-  [hosted verification](https://github.com/namestarlit/nslinkhub/actions/runs/37335644020),
-  including the full repository gate, image build and rehearsal. This proves
-  the reviewed #4 artifact, not hosted acceptance of later changes. The #1
-  contracts milestone is committed; auth delivery has local verification and
-  image-rehearsal evidence in its
-  [auth-delivery plan](../exec-plans/active/prove-auth-delivery-boundary.md).
-- `bun run verify:release-image -- <image>` is the additional Docker release
-  check. See [release preparation](release.md) for its scope and live gates.
+- `.github/workflows/verify.yml` runs this full gate on pushes and pull
+  requests with required PostgreSQL and Redis services. Missing infrastructure
+  is a failure, never a skipped green suite. Application compilation remains
+  part of verification; Docker image builds and rehearsals are separate.
+- `.github/workflows/release.yml` is manually dispatched for deployment
+  preparation. It requires the full gate, then builds and rehearses an image
+  before the publication job can run. Image acceptance does not block W3
+  development. See [release preparation](release.md) for evidence and live gates.
+- `bun run verify:release-image -- <image>` runs that additional Docker release
+  check locally when preparing deployment artifacts. The completed
+  [auth-delivery plan](../exec-plans/completed/prove-auth-delivery-boundary.md)
+  records source verification and the fresh image check deferred to deployment.
 - New behavior with route-shape or authorization consequences gets an e2e
   regression test (`test/routes.e2e.spec.ts` is the pattern: it exists
   because two shadowed routes shipped unnoticed).

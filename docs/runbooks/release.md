@@ -1,18 +1,25 @@
 # Release preparation and operator handoff
 
-Status (2026-10-05): API artifacts passed local verification (67 repository tests plus the
-image/migration/restore/outage/startup/shutdown rehearsal); both Swarm files
-passed configuration validation. See the
-[completed local milestone](../exec-plans/completed/deliver-release-foundations.md). The
-user explicitly deferred live infrastructure. No GHCR publication, Swarm
-deployment, Dokploy promotion, Sentry project, or Alloy rollout is claimed.
-The API image is not an approval to expose the current product publicly:
-auth delivery, browser CSRF, profile credential mutation,
-and account-deletion/retention work remain in the adoption gates.
+Status (2026-10-06): deployment image acceptance is separate from routine
+application verification and W3 development, by user direction. The earlier
+[release-foundations milestone](../exec-plans/completed/deliver-release-foundations.md)
+proved the image/migration/restore/outage/startup/shutdown rehearsal and Swarm
+configuration. Auth delivery subsequently passed 109 source tests and review;
+fresh image acceptance covering the handover-proof and production-throttle
+fixes remains outstanding. Retry that build and rehearsal during deployment
+preparation; earlier image evidence does not cover those fixes.
 
-## Repeatable local checks
+No GHCR publication, Swarm deployment, Dokploy promotion, Sentry project, or
+Alloy rollout is claimed. Browser CSRF, live sender/webhook validation, and an
+account-deletion/retention policy remain public-release gates. Profile credential
+writes and account deletion are disabled; auth delivery is implemented locally.
 
-From the repository root, with Docker available:
+## Deployment preparation checks
+
+Routine development uses `bun run infra:up` and `bun run verify`, which compile
+and test the application without building Docker images. When deployment work
+starts, run the additional image checks from the repository root with Docker
+available:
 
 ```bash
 bun run infra:up
@@ -47,11 +54,16 @@ prove Swarm scheduling, ingress, secrets distribution, or rolling updates.
 
 ## Image and release workflow
 
-`.github/workflows/verify.yml` runs the complete real-service verification
-gate and the image rehearsal. No required integration suite skips because
-services are absent. `.github/workflows/release.yml` is manually dispatched
-on `main`, depends on verification, and publishes the API image to GHCR with
-a full commit SHA tag and build provenance/SBOM. Its summary supplies
+`.github/workflows/verify.yml` runs the complete application verification gate
+on pushes and pull requests, including compilation and real-service tests.
+No required integration suite skips because services are absent. It does not
+build or rehearse Docker images.
+
+`.github/workflows/release.yml` is manually dispatched on `main` when preparing
+deployment artifacts. It runs the reusable verification workflow, then a
+separate `image-check` job builds and rehearses the API/worker image. Only after
+both gates pass does the publication job build and publish to GHCR with a full
+commit SHA tag and build provenance/SBOM. Its summary supplies
 `API_IMAGE=<registry>/<repository>/api:<sha>@sha256:<digest>`. There is no
 deployment webhook yet. The reviewed #4 artifact plus UID-portability fix (`cb00a75`) passed
 [hosted verification](https://github.com/namestarlit/nslinkhub/actions/runs/37335644020).
@@ -146,6 +158,6 @@ Follow one deliberate synthetic sanitized API failure by request ID through
 Sentry issue/trace/log and Alloy/Loki; confirm dependency metrics and alert
 delivery, telemetry-outage behavior, and operator access/retention. Audit data
 currently has no automatic purge; choose the account-deletion and audit
-retention policy before that endpoint is publicly available. Auth events,
-worker/browser spans, authenticated-address challenge budgets and sender proof
-arrive with their own slices. See [adoption decisions](../design-docs/adoption-decisions.md).
+retention policy before that endpoint is publicly available. Auth events and
+shared address/source challenge budgets are implemented. Worker/browser spans
+and live sender proof remain separate acceptance work. See [adoption decisions](../design-docs/adoption-decisions.md).

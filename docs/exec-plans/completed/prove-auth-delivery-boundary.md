@@ -9,10 +9,21 @@ tests can run without web screens; visual browser acceptance remains separate.
 
 ## Progress
 
+- [x] (2026-10-06) Workflow separation verified: workflow YAML and release
+  dependency gates checked; `bun run verify` passed all 109 tests with local
+  service access, plus build, typechecks, lint and repository checks. No Docker
+  image build or hosted workflow was run. Changes await review and commit.
+
+- [x] (2026-10-06) User separated routine application verification from
+  deployment image acceptance and selected W3 next. Auth delivery and review
+  fixes are committed as `ce1c35b`, with guide follow-up `ae63939`; both pushed
+  after the 109-test gate. Close this local milestone and transfer fresh image
+  acceptance to the deployment runbook/debt tracker. No new image pass is claimed.
+
 - [x] (2026-10-06) Final review reported no actionable defects; user requested
-  committing the reviewed changes. The source gate passes 109 tests. Keep this
-  plan active until fresh-image verification completes; landing the reviewed
-  source does not close that outstanding check.
+  committing the reviewed changes. The source gate passes 109 tests. This
+  plan was kept active for fresh-image verification at that stopping point;
+  the subsequent user sequencing decision above transfers that check to deployment.
 
 - [x] (2026-10-06) Reproduced the production-only native OTP throttle in a fresh
   production process: distinct-address issuance returned 429 instead of 200.
@@ -29,11 +40,14 @@ tests can run without web screens; visual browser acceptance remains separate.
   including collision, restart/attempt-limit and legacy-proof regressions.
 - [x] (2026-10-05) Full verification passed 108 tests, including isolated
   database lifecycle checks, build, typechecks, privacy/boundary/doc checks.
-- [ ] Finish the rebuilt compiled-image rehearsal before re-archiving. Both
-  normal and host-network Docker builds stalled in `bun install --frozen-lockfile`
-  after partial dependency resolution; cancelled the owned builds. Public npm
-  registry connectivity succeeded. The previous image rehearsal does not cover
-  this patch; retry the fresh build when dependency installation completes.
+- [x] (2026-10-06) Transferred the unfinished fresh-image rehearsal to
+  deployment preparation by user direction (not a passing image check).
+  Normal and host-network Docker builds had stalled in
+  `bun install --frozen-lockfile` after partial dependency resolution; owned
+  builds were cancelled. Previous image evidence does not cover the latest
+  fixes. Retry and pass before deployment; track in
+  [release preparation](../../runbooks/release.md) and the
+  [debt tracker](../tech-debt-tracker.md).
 
 - [x] (2026-10-05) Patched both delivery review findings with a stable suppression
   secret and signed outbox-reference webhook reconciliation after code expiry.
@@ -120,6 +134,15 @@ tests can run without web screens; visual browser acceptance remains separate.
 
 ## Decision Log
 
+- Decision: Close the reviewed local auth-delivery milestone and start W3.
+  Retain compilation and real-service tests in routine verification; move
+  Docker builds/rehearsals to the manually dispatched release workflow before
+  publication. Preserve fresh image acceptance as deployment debt.
+  Rationale: Local PostgreSQL/Redis containers and host application processes
+  support product development without release images, as in Pigfarm. Earlier
+  image checks remain historical evidence, not proof of the latest fixes.
+  Date/Author: 2026-10-06 / User, recorded by Codex
+
 - Decision: Explicitly disable better-auth's native HTTP rate limiter in every
   environment. Keep the shared PostgreSQL source and identity budgets and native
   per-proof wrong-attempt cap. Production regression uses a fresh child process
@@ -183,6 +206,12 @@ tests can run without web screens; visual browser acceptance remains separate.
 
 ## Outcomes & Retrospective
 
+The local milestone is complete and committed. W3 starts next by the user's
+2026-10-06 sequencing decision. The following review outcomes retain their
+original evidence; the fresh image check they mention now belongs to deployment
+preparation and does not keep this plan active. Source verification remains
+required for every milestone; image publication remains gated by a rehearsal.
+
 Production throttle review correction: the native HTTP limiter is deliberately
 disabled; shared source/identity budgets and native per-proof attempts remain
 enforced. A fresh production process reproduced the fourth-request rejection
@@ -221,7 +250,7 @@ and fresh-database schema parity passed; fresh image acceptance for the handover
 namespace patch remains outstanding as described above. Web account
 screens, real sender/domain validation and webhook secret provisioning are
 separate acceptance work. No live message was sent. The reviewed source is
-approved for landing; the outstanding fresh-image check keeps this plan active.
+committed; fresh image acceptance is deferred to deployment preparation.
 
 ## Context And Orientation
 
@@ -248,7 +277,8 @@ until verified ownership/retention rules exist.
 ## Concrete Steps
 
 From the repository root run `bun run check`, `bun run verify`, and
-`git diff --check`. Build with
+`git diff --check` for routine application verification. During deployment
+preparation, separately build with
 `docker build -f apps/api/Dockerfile -t nslinkhub-auth-local .` and run
 `bun run verify:release-image -- nslinkhub-auth-local`. The image rehearsal
 uses disposable containers, synthetic secrets/recipients and capture delivery;
@@ -277,6 +307,10 @@ expired and terminal intents erase credential-bearing payloads.
 
 ## Artifacts And Notes
 
+Workflow-separation verification: `/tmp/workflow-separation-verify-local.log`
+(109 passing tests). The sandbox-only attempt failed to open a local listener;
+the rerun with local service access passed.
+
 Baseline: reviewed W3 design `6d27cbe`, guide-pin commit `a8802c5`. Durable
 contract: `docs/design-docs/auth-delivery-integration.md`. Tests include the
 seven native spike cases plus production-wrapper and worker integration suites.
@@ -293,8 +327,8 @@ instead of 200), `/tmp/auth-budget-after.log` (ten passing wrapper tests), and
 
 Earlier disposable local logs: `/tmp/password-removal-verify.log`, `/tmp/password-removal-image-build.log`,
 `/tmp/password-removal-image-verify.log`. No live email was sent. The guide's pin remains
-`6d27cbe` until the reviewed milestone commit exists, then gets its normal
-separate guide-only follow-up.
+`ce1c35b`, updated in the separate guide-only commit `ae63939`. Sweep and
+repin again after the workflow-separation change is reviewed and committed.
 
 ## Interfaces And Dependencies
 

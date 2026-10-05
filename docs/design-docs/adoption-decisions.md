@@ -14,6 +14,16 @@ release foundation is recorded in
 a separate operator acceptance step; the email worker now has local acceptance,
 while browser acceptance awaits `apps/web`.
 
+**User sequencing update (2026-10-06):** the reviewed auth-delivery backend is
+committed (`ce1c35b`, guide pin follow-up `ae63939`); start W3 next. Routine
+verification retains application compilation and real-service tests. Local
+PostgreSQL/Redis run in containers while app processes run on the host, with
+Next.js joining in W3. Move Docker image builds/rehearsals to deployment
+preparation and the manual release workflow; they do not gate web scaffolding.
+The latest auth fixes still need fresh image acceptance before deployment.
+This separation follows the inspected Pigfarm development/verification setup,
+without adopting its product or infrastructure topology.
+
 ## Local #4 implementation status (2026-10-05)
 
 Implemented API LogTape/Sentry privacy/correlation, transactional hub-scoped
@@ -62,9 +72,9 @@ user approved email-code-only authentication, removing password fallback; TOTP a
 recovery codes follow separately. Delivery is implemented and tested locally,
 including auth audit, encrypted outbox, worker recovery, independent suppression
 keys and signed receipt reconciliation after code expiry. The
-[auth-delivery plan](../exec-plans/active/prove-auth-delivery-boundary.md)
-records verification and review corrections. Review and land this milestone
-before web scaffolding; live acceptance and web account screens remain outstanding.
+[completed auth-delivery plan](../exec-plans/completed/prove-auth-delivery-boundary.md)
+records verification and review corrections. This milestone is reviewed and
+committed; live acceptance and web account screens remain outstanding.
 
 ## Gate #2 design status (2026-10-05)
 

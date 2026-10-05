@@ -313,10 +313,14 @@ for the codes-only decision and the transaction-scoped integration that closes
 native delivery and email-change gaps. Profile credential writes and account
 deletion are disabled; password authentication has been removed.
 The reviewed backend auth-delivery implementation is committed and its source
-verification gate passes. Complete the outstanding fresh-image verification in
-the [active auth-delivery plan](../exec-plans/active/prove-auth-delivery-boundary.md)
-before resuming web scaffolding. Apply Impeccable to interface work under
-repository guidance, then prove the account journey through the web origin.
+verification gate passes; see the
+[completed auth-delivery plan](../exec-plans/completed/prove-auth-delivery-boundary.md).
+W3 scaffolding is next. Local PostgreSQL/Redis run in containers; the API,
+worker and future Next.js dev server run on the host. Keep application builds
+and tests in `bun run verify`; fresh Docker image acceptance belongs to
+[deployment preparation](../runbooks/release.md), not the W3 readiness gate.
+Apply Impeccable to interface work under repository guidance, then prove the
+account journey through the web origin.
 
 ---
 
