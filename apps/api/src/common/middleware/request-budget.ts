@@ -1,5 +1,6 @@
 import { createHmac } from "node:crypto";
 import { isIP } from "node:net";
+import { type ApiError, apiErrors } from "@nslinkhub/types";
 import type { RequestHandler } from "express";
 import { readSecret } from "../../config/secret";
 import type { PrismaService } from "../../database/prisma.service";
@@ -65,21 +66,21 @@ export function requestBudget(
       response.status(429).json({
         error: {
           code: "too_many_requests",
-          message: "Too many requests",
+          message: apiErrors.too_many_requests.message,
           requestId: (request as RequestWithId).requestId,
           details: {},
         },
-      });
+      } satisfies ApiError);
     } catch {
       // A failed shared budget store must not silently remove abuse protection.
       response.status(503).json({
         error: {
           code: "service_unavailable",
-          message: "Service temporarily unavailable",
+          message: apiErrors.service_unavailable.message,
           requestId: (request as RequestWithId).requestId,
           details: {},
         },
-      });
+      } satisfies ApiError);
     }
   };
 }

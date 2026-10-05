@@ -1,8 +1,5 @@
-export type ApiMeta = Record<string, unknown>;
+import type { ApiSuccess } from "@nslinkhub/types";
 
-export function apiOk<T>(data: T, meta?: ApiMeta) {
-  return {
-    data,
-    ...(meta ? { meta } : {}),
-  };
+export function apiOk<T, M = undefined>(data: T, meta?: M): ApiSuccess<T, M> {
+  return { data, ...(meta ? { meta } : {}) };
 }

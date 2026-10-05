@@ -7,7 +7,7 @@ passed configuration validation. See the
 user explicitly deferred live infrastructure. No GHCR publication, Swarm
 deployment, Dokploy promotion, Sentry project, or Alloy rollout is claimed.
 The API image is not an approval to expose the current product publicly:
-auth delivery, browser CSRF, safe 4xx contracts, profile credential mutation,
+auth delivery, browser CSRF, profile credential mutation,
 and account-deletion/retention work remain in the adoption gates.
 
 ## Repeatable local checks
@@ -52,7 +52,9 @@ services are absent. `.github/workflows/release.yml` is manually dispatched
 on `main`, depends on verification, and publishes the API image to GHCR with
 a full commit SHA tag and build provenance/SBOM. Its summary supplies
 `API_IMAGE=<registry>/<repository>/api:<sha>@sha256:<digest>`. There is no
-deployment webhook yet. CI execution itself is unverified until pushed.
+deployment webhook yet. The reviewed #4 artifact plus UID-portability fix (`cb00a75`) passed
+[hosted verification](https://github.com/namestarlit/nslinkhub/actions/runs/37335644020).
+GHCR publication and live rollout remain unexecuted.
 
 The Dockerfile pins Bun 1.3.14 by digest, installs the frozen lockfile and
 compiles in the build stage. The runtime retains the pinned Prisma CLI so

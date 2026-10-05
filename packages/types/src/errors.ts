@@ -1,0 +1,81 @@
+import type { DependencyStatus } from "./status.js";
+
+// Safe fallback text is part of the API protocol. Clients branch on codes and
+// own presentation/localization; never parse server exception messages.
+export const apiErrors = {
+  bad_request: { status: 400, message: "Invalid request" },
+  unauthorized: { status: 401, message: "Authentication required" },
+  forbidden: { status: 403, message: "Forbidden" },
+  not_found: { status: 404, message: "Not found" },
+  method_not_allowed: { status: 405, message: "Method not allowed" },
+  request_timeout: { status: 408, message: "Request timed out" },
+  conflict: { status: 409, message: "Request conflicts with current state" },
+  payload_too_large: { status: 413, message: "Payload too large" },
+  unsupported_media_type: { status: 415, message: "Unsupported media type" },
+  too_many_requests: { status: 429, message: "Too many requests" },
+  internal_error: { status: 500, message: "Internal server error" },
+  service_unavailable: { status: 503, message: "Service temporarily unavailable" },
+  dependencies_unavailable: { status: 503, message: "Required dependencies are unavailable" },
+  validation_failed: { status: 400, message: "Validation failed" },
+  invalid_cursor: { status: 400, message: "Invalid cursor" },
+  version_conflict: { status: 409, message: "Version mismatch" },
+  slug_conflict: { status: 409, message: "Collection slug already exists" },
+  handle_invalid: { status: 400, message: "Invalid handle" },
+  handle_reserved: { status: 400, message: "Handle is reserved" },
+  handle_unavailable: { status: 400, message: "Handle already taken" },
+  email_conflict: { status: 409, message: "Email already exists" },
+  duplicate_resource: { status: 409, message: "Link already exists in this collection" },
+  position_conflict: { status: 409, message: "Position is already used in this collection" },
+  invalid_reorder: { status: 400, message: "Invalid resource order" },
+  invalid_nesting: { status: 400, message: "Invalid collection nesting" },
+  invalid_transfer: { status: 400, message: "Invalid ownership transfer" },
+  transfer_requires_editor: { status: 400, message: "Recipient must already be an editor" },
+  collection_not_published: { status: 400, message: "Only published collections can be saved" },
+  invalid_import: { status: 400, message: "Invalid import" },
+  hub_unavailable: { status: 400, message: "No hub available" },
+} as const;
+
+export type ApiErrorCode = keyof typeof apiErrors;
+export function isApiErrorCode(value: unknown): value is ApiErrorCode {
+  return typeof value === "string" && Object.hasOwn(apiErrors, value);
+}
+// Forward-compatible fallback for a client encountering a newer server code.
+export function apiErrorDefinition(code: unknown): { status: number; message: string } {
+  return isApiErrorCode(code) ? apiErrors[code] : { status: 500, message: "Request failed" };
+}
+
+export type ValidationRule =
+  | "required"
+  | "string"
+  | "integer"
+  | "boolean"
+  | "array"
+  | "email"
+  | "url"
+  | "uuid"
+  | "minimum"
+  | "maximum"
+  | "min_length"
+  | "max_length"
+  | "format"
+  | "choice"
+  | "min_items"
+  | "max_items"
+  | "unique_items"
+  | "nested"
+  | "unknown_field"
+  | "invalid";
+export interface ValidationIssue {
+  /** DTO-declared path; * denotes an array element and $ an unspecified field. */
+  field: string;
+  rule: ValidationRule;
+}
+export type EmptyDetails = Record<string, never>;
+export type ApiErrorDetails<C extends ApiErrorCode> = C extends "validation_failed"
+  ? { issues: ValidationIssue[] }
+  : C extends "dependencies_unavailable"
+    ? { dependencies: DependencyStatus }
+    : EmptyDetails;
+export type ApiErrorPayload = {
+  [C in ApiErrorCode]: { code: C; message: string; requestId: string; details: ApiErrorDetails<C> };
+}[ApiErrorCode];

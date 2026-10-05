@@ -1,8 +1,9 @@
-import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import { Injectable, NotFoundException } from "@nestjs/common";
 import { ResourceKind } from "src/common/enums/resource-kind.enum";
 import { AuthUser } from "src/common/interfaces/auth-user.interface";
 import { canonicalizeUrl } from "src/common/utils/url.util";
 import { PrismaService } from "src/database/prisma.service";
+import { appError } from "../../common/errors/app-exception";
 import { CollectionPolicyService } from "../hubs/collection-policy.service";
 import { HubsService } from "../hubs/hubs.service";
 import { ImportTargetDto } from "./dto/import-target.dto";
@@ -24,7 +25,7 @@ export class ImportsService {
     const text = file.buffer.toString("utf8");
     const lines = text.split(/\r?\n/).filter((line) => line.trim().length > 0);
     if (lines.length === 0) {
-      throw new BadRequestException("CSV file is empty");
+      throw appError("invalid_import");
     }
 
     const headers = lines[0].split(",").map((header) => header.trim().toLowerCase());
@@ -32,7 +33,7 @@ export class ImportsService {
     const titleIdx = headers.indexOf("title");
 
     if (urlIdx < 0) {
-      throw new BadRequestException("CSV must contain url column");
+      throw appError("invalid_import");
     }
 
     const rows = lines.slice(1);
@@ -137,14 +138,14 @@ export class ImportsService {
 
   private ensureValidFile(file: unknown): asserts file is { buffer: Buffer; size: number } {
     if (!file) {
-      throw new BadRequestException("File is required");
+      throw appError("invalid_import");
     }
     const candidate = file as { buffer?: Buffer; size?: number };
     if (!candidate.buffer || typeof candidate.size !== "number") {
-      throw new BadRequestException("Invalid upload payload");
+      throw appError("invalid_import");
     }
     if (candidate.size > MAX_IMPORT_SIZE_BYTES) {
-      throw new BadRequestException("File exceeds 10MB limit");
+      throw appError("payload_too_large");
     }
   }
 
@@ -162,17 +163,15 @@ export class ImportsService {
     }
 
     if (!dto.createCollection) {
-      throw new BadRequestException("Provide targetCollectionId or set createCollection=true");
+      throw appError("invalid_import");
     }
     if (!dto.collectionTitle || !dto.collectionSlug) {
-      throw new BadRequestException(
-        "collectionTitle and collectionSlug are required when createCollection=true",
-      );
+      throw appError("invalid_import");
     }
 
     const hubId = await this.hubs.getUserHubId(user.userId);
     if (!hubId) {
-      throw new BadRequestException("No hub available for this user");
+      throw appError("hub_unavailable");
     }
 
     return this.prisma.collection.create({

@@ -15,7 +15,7 @@
     "test": "bun ../../tooling/verify-api-tests.ts unit",
     "test:watch": "bun test --watch src",
     "test:cov": "bun test --coverage src",
-    "test:e2e": "bun ../../tooling/verify-api-tests.ts e2e"
+    "test:e2e": "bun ../../tooling/verify-test-isolation.ts && bun ../../tooling/verify-api-tests.ts e2e"
   },
   "dependencies": {
     "@logtape/logtape": "2.3.0",

@@ -31,6 +31,19 @@ summary of what changed after completed work has been promoted out of `ref/`.
 
 ### Added
 
+- Completed local adoption gate #1: shared typed error catalog, trusted
+  application exceptions, status-safe framework mapping and bounded DTO
+  field/rule issues. Validation details now use `issues` instead of `messages`;
+  actionable domain conflicts have stable codes rather than generic messages.
+- Explicit ISO-string mappers checked against shared wire types, plus real
+  HTTP contracts for W3 reads, sharing privacy, dormant saves, audit, readiness,
+  malformed input and hidden/missing 404 equivalence.
+- Local Markdown-link/anchor enforcement and concurrent disposable-database
+  lifecycle checks in the full verification gate. Cleanup now waits for DB
+  creation and child shutdown before dropping only its owned database.
+  Preservation checks use an owned sentinel so unrelated runs cleaning up
+  their databases cannot cause false failures.
+
 - Local release foundations (#4 first): telemetry-first API startup, pinned
   LogTape/Sentry logging, isolated request traces/metrics, SDK privacy hooks,
   sanitized unexpected failures and bounded shutdown. Real local SDK-envelope

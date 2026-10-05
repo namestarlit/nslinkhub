@@ -39,17 +39,75 @@ camelCase everywhere; hold the line.
 See `docs/runbooks/verification.md` and the Phase A exec-plan for the
 originating decisions.
 
-## Before Web Contract Consumption
+## Typed errors and safe details
 
-The foundation gate in `adoption-decisions.md` adds a typed error catalog,
-safe exception mapping, and checks connecting response mappers and HTTP
-serialization to `@nslinkhub/types`. These are planned, not implemented.
-Keep the current envelope (including `details`), camelCase keys, ISO-string
-timestamps, and existence-hiding `not_found` behavior. Clients branch on
-stable codes and own user-facing copy, never parse an exception message.
+`packages/types/src/errors.ts` owns the product API's error catalog, status and
+safe fallback text. `ApiError.error` is a discriminated union: narrowing its
+`code` narrows `details`. Clients branch on codes and own user-facing copy;
+`apiErrorDefinition(unknownCode)` provides a safe fallback for newer servers.
+Never render arbitrary remote exception text as trusted content.
 
-Retain Nest DTOs/class-validator and Swagger for this gate. A wholesale Zod
-or generated-client migration is deferred; the immediate requirement is
-mechanically checked wire contracts. Validation errors should expose bounded
-field/rule identifiers, never submitted values; arbitrary 5xx messages and
-details must not reach clients.
+Application services throw the backend-only `appError(code, details?)`.
+`AllExceptionsFilter` recognizes that instance; ordinary Nest/framework
+exceptions are mapped by HTTP status, and their messages, codes, objects and
+stacks are discarded. A payload that merely claims `dependencies_unavailable`
+or `validation_failed` receives no privileged treatment. Unexpected failures
+are sanitized and captured once by the telemetry boundary. Hidden and absent
+collections both return the identical safe `not_found` shape (apart from the
+request ID). SQL errors never expose driver messages or database metadata.
+
+Useful actionable codes include:
+
+| Code | Meaning for a client |
+| --- | --- |
+| `validation_failed` | Highlight declared fields using `details.issues` |
+| `invalid_cursor` | Discard the cursor and reload the first page |
+| `version_conflict` | Reload current state before retrying the edit |
+| `slug_conflict`, `handle_unavailable`, `email_conflict` | Choose another value |
+| `handle_invalid`, `handle_reserved` | Correct the requested handle |
+| `duplicate_resource`, `position_conflict` | Resolve the existing resource/order |
+| `invalid_reorder`, `invalid_nesting`, `invalid_transfer` | Correct the operation |
+| `transfer_requires_editor` | Grant the recipient editor access first |
+| `collection_not_published` | Saving requires publication |
+| `too_many_requests` | Respect Retry-After before another attempt |
+| `service_unavailable`, `dependencies_unavailable` | Show a retryable unavailable state |
+
+Other failures use safe generic status codes such as `bad_request`,
+`unauthorized`, `forbidden`, `not_found`, `conflict`, and `internal_error`.
+The catalog is authoritative; do not duplicate message-to-code parsing.
+
+Validation now returns `details: { issues: [{ field, rule }] }`, replacing
+`details.messages`. Field paths come only from class-validator DTO metadata;
+`*` denotes an array item and `$` an unspecified/unknown field. A submitted
+unknown property name is never reflected. Rules are a bounded union, not
+constraint messages. At most 32 distinct issues and eight nested levels are
+reported; neither submitted values nor validation targets leave the server.
+UUID/JSON parser failures use a safe generic `bad_request`.
+
+The only other nonempty details variant is readiness:
+`dependencies_unavailable` includes the existing `{ dependencies: { postgres,
+redis_queue } }` shape, with only `ready`/`unavailable` values. `redis_queue`
+is a preserved pre-existing wire-key exception to the general casing rule.
+All remaining codes carry `{}`.
+
+The raw `/api/v1/auth/*` handler retains better-auth's own response protocol;
+it runs ahead of Nest's filter. The shared endpoint budget can still reject a
+request before that handler using the product error envelope. The W3 auth
+adapter must normalize these protocols deliberately, without changing raw
+handler/body-parser ordering.
+
+## Wire-contract verification
+
+Profile, collection, resource, share, shared/saved, hub-page, audit and status
+mappers compile against `@nslinkhub/types`. Dates become ISO strings explicitly
+at the serialization boundary. Persisted role/source/kind strings are validated
+against their wire unions rather than hidden behind type assertions. Responses
+are selected field-by-field; adding a database column cannot silently expose it.
+
+`apps/api/test/wire-contracts.e2e.spec.ts` checks actual JSON keys, nullability,
+timestamp strings, omitted optional resource URLs, pagination and ETags through
+`configureApp`. Its expected shapes are themselves checked against shared types.
+It covers private/missing 404 equivalence, direct-versus-link-share email
+privacy, dormant saves, readiness states and malicious validation/error inputs.
+Expand these checks as new slices ship. Nest DTOs and Swagger stay in place;
+a Zod or generated-client migration still requires its own evidence and plan.

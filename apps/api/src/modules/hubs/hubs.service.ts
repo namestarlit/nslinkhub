@@ -1,12 +1,8 @@
-import {
-  BadRequestException,
-  ForbiddenException,
-  Injectable,
-  NotFoundException,
-} from "@nestjs/common";
+import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { AuthUser } from "src/common/interfaces/auth-user.interface";
 import { PrismaService } from "src/database/prisma.service";
 import { recordAudit } from "../../common/audit";
+import { appError } from "../../common/errors/app-exception";
 import { hasValidHandleFormat, isReservedHandle } from "./handle";
 
 // Hub authority for the individual (Google-Drive) model: each user owns exactly
@@ -50,12 +46,10 @@ export class HubsService {
   async updateHandle(userId: string, rawHandle: string) {
     const handle = rawHandle.trim().toLowerCase();
     if (!hasValidHandleFormat(handle)) {
-      throw new BadRequestException(
-        "Handle must be 3-60 chars, lowercase letters, digits, hyphens",
-      );
+      throw appError("handle_invalid");
     }
     if (isReservedHandle(handle)) {
-      throw new BadRequestException("Handle is reserved");
+      throw appError("handle_reserved");
     }
 
     const hub = await this.prisma.hub.findUnique({
@@ -72,7 +66,7 @@ export class HubsService {
         select: { id: true },
       });
       if (taken) {
-        throw new BadRequestException("Handle already taken");
+        throw appError("handle_unavailable");
       }
       await this.prisma.$transaction(async (tx) => {
         await tx.hub.update({ where: { id: hub.id, ownerUserId: userId }, data: { handle } });

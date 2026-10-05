@@ -25,13 +25,15 @@
     "build": "bun run api:build",
     "check:boundaries": "bun tooling/check-client-boundaries.ts",
     "check:guide-pin": "bun tooling/check-guide-pin.ts",
-    "verify": "bun run check:boundaries && bun run check:telemetry && bun run check:guide-pin && bun run types:typecheck && bun run email:typecheck && bun run format:check && bun run lint && bun run email:test && bun run --cwd apps/api verify",
+    "verify": "bun run check:boundaries && bun run check:telemetry && bun run check:docs && bun run check:guide-pin && bun run types:typecheck && bun run email:typecheck && bun run format:check && bun run lint && bun run tooling:test && bun run email:test && bun run --cwd apps/api verify",
     "check": "biome check --write package.json biome.json apps packages tooling",
     "format": "biome format --write package.json biome.json apps packages tooling",
     "format:check": "biome format package.json biome.json apps packages tooling",
     "lint": "biome lint package.json biome.json apps packages tooling",
     "check:telemetry": "bun tooling/check-telemetry.ts",
-    "verify:release-image": "bun tooling/verify-release-image.ts"
+    "verify:release-image": "bun tooling/verify-release-image.ts",
+    "check:docs": "bun tooling/check-docs.ts",
+    "tooling:test": "bun test ./tooling/check-docs.test.ts"
   },
   "devDependencies": {
     "@biomejs/biome": "2.4.16"

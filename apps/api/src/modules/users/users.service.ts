@@ -1,7 +1,9 @@
-import { ConflictException, Injectable, NotFoundException } from "@nestjs/common";
+import { Injectable, NotFoundException } from "@nestjs/common";
+import type { Profile } from "@nslinkhub/types";
 import { AuthUser } from "src/common/interfaces/auth-user.interface";
 import { PrismaService } from "src/database/prisma.service";
 import { User } from "src/generated/prisma/client";
+import { appError } from "../../common/errors/app-exception";
 import { HubsService } from "../hubs/hubs.service";
 import { UpdateUserDto } from "./dto/update-user.dto";
 
@@ -42,7 +44,7 @@ export class UsersService {
         select: { id: true },
       });
       if (exists) {
-        throw new ConflictException("Email already exists");
+        throw appError("email_conflict");
       }
       data.email = normalized;
     }
@@ -74,7 +76,7 @@ export class UsersService {
     return { id: actor.userId, deleted: true };
   }
 
-  private async toProfile(user: User) {
+  private async toProfile(user: User): Promise<Profile> {
     const hub = await this.prisma.hub.findUnique({
       where: { ownerUserId: user.id },
       select: { id: true, handle: true },
@@ -87,8 +89,8 @@ export class UsersService {
       email: user.email,
       bio: user.bio,
       image: user.image,
-      createdAt: user.createdAt,
-      updatedAt: user.updatedAt,
+      createdAt: user.createdAt.toISOString(),
+      updatedAt: user.updatedAt.toISOString(),
     };
   }
 }

@@ -1,29 +1,60 @@
-import { ArgumentsHost, Catch, ExceptionFilter, HttpException, HttpStatus } from "@nestjs/common";
+import { ArgumentsHost, Catch, ExceptionFilter, HttpException } from "@nestjs/common";
+import {
+  type ApiError,
+  type ApiErrorCode,
+  type ApiErrorDetails,
+  apiErrors,
+} from "@nslinkhub/types";
 import type { Response } from "express";
+import { AppException } from "../errors/app-exception";
 import type { RequestWithId } from "../middleware/request-id";
 import { requestRoute } from "../observability/http-telemetry";
 import { captureFailure } from "../observability/telemetry";
 
-interface ErrorEnvelope {
-  error: {
-    code: string;
-    message: string;
-    requestId: string;
-    details: Record<string, unknown>;
-  };
-}
-
-const STATUS_CODES: Record<number, string> = {
-  [HttpStatus.BAD_REQUEST]: "bad_request",
-  [HttpStatus.UNAUTHORIZED]: "unauthorized",
-  [HttpStatus.FORBIDDEN]: "forbidden",
-  [HttpStatus.NOT_FOUND]: "not_found",
-  [HttpStatus.CONFLICT]: "conflict",
-  [HttpStatus.PAYLOAD_TOO_LARGE]: "payload_too_large",
-  [HttpStatus.UNSUPPORTED_MEDIA_TYPE]: "unsupported_media_type",
-  [HttpStatus.TOO_MANY_REQUESTS]: "too_many_requests",
-  [HttpStatus.INTERNAL_SERVER_ERROR]: "internal_error",
+const statusCodes: Record<number, ApiErrorCode> = {
+  400: "bad_request",
+  401: "unauthorized",
+  403: "forbidden",
+  404: "not_found",
+  405: "method_not_allowed",
+  408: "request_timeout",
+  409: "conflict",
+  413: "payload_too_large",
+  415: "unsupported_media_type",
+  429: "too_many_requests",
+  503: "service_unavailable",
 };
+
+export function errorResponse(
+  exception: unknown,
+  requestId: string,
+): { status: number; body: ApiError; unexpected: boolean } {
+  const trusted = exception instanceof AppException;
+  const status = exception instanceof HttpException ? exception.getStatus() : 500;
+  const code = trusted
+    ? exception.code
+    : (statusCodes[status] ?? (status >= 500 ? "internal_error" : "bad_request"));
+  let details: ApiErrorDetails<ApiErrorCode> = {};
+  if (trusted && code === "dependencies_unavailable" && "dependencies" in exception.details) {
+    const deps = exception.details.dependencies;
+    details = {
+      dependencies: {
+        postgres: deps.postgres === "ready" ? "ready" : "unavailable",
+        redis_queue: deps.redis_queue === "ready" ? "ready" : "unavailable",
+      },
+    };
+  } else if (trusted && code === "validation_failed" && "issues" in exception.details) {
+    details = {
+      issues: exception.details.issues.slice(0, 32).map(({ field, rule }) => ({ field, rule })),
+    };
+  }
+  // Bodies/messages on ordinary HttpExceptions (including lookalike domain
+  // payloads) and arbitrary thrown objects are never forwarded.
+  const body = {
+    error: { code, message: apiErrors[code].message, requestId, details },
+  } as ApiError;
+  return { status: apiErrors[code].status, body, unexpected: !trusted && status >= 500 };
+}
 
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
@@ -32,67 +63,13 @@ export class AllExceptionsFilter implements ExceptionFilter {
     const response = ctx.getResponse<Response>();
     const request = ctx.getRequest<RequestWithId>();
     const requestId = request.requestId ?? "req_unknown";
-
-    let status = HttpStatus.INTERNAL_SERVER_ERROR;
-    let message = "Internal server error";
-    let code: string | undefined;
-    const details: Record<string, unknown> = {};
-
-    if (exception instanceof HttpException) {
-      status = exception.getStatus();
-      const body = exception.getResponse();
-
-      if (typeof body === "string") {
-        message = body;
-      } else if (typeof body === "object" && body !== null) {
-        const shaped = body as {
-          message?: string | string[];
-          code?: string;
-          details?: Record<string, unknown>;
-        };
-
-        if (Array.isArray(shaped.message)) {
-          // ValidationPipe emits one message per failed constraint.
-          message = "Validation failed";
-          code = "validation_failed";
-          details.messages = shaped.message;
-        } else if (typeof shaped.message === "string") {
-          message = shaped.message;
-        }
-
-        // Domain exceptions may carry an explicit stable code.
-        if (typeof shaped.code === "string") {
-          code = shaped.code;
-        }
-        if (shaped.details && typeof shaped.details === "object") {
-          Object.assign(details, shaped.details);
-        }
-      }
-    } else {
-      // Unknown failures are never reflected to the caller.
-    }
-
-    const expectedReadiness = status === 503 && code === "dependencies_unavailable";
-    if (status >= 500 && !expectedReadiness) {
+    const result = errorResponse(exception, requestId);
+    if (result.unexpected)
       captureFailure(exception, {
         "request.id": requestId,
         "http.route": requestRoute(request),
-        "http.status_code": status,
+        "http.status_code": result.status,
       });
-      message = "Internal server error";
-      code = "internal_error";
-      for (const key of Object.keys(details)) delete details[key];
-    }
-
-    const envelope: ErrorEnvelope = {
-      error: {
-        code: code ?? STATUS_CODES[status] ?? "error",
-        message,
-        requestId,
-        details,
-      },
-    };
-
-    response.status(status).json(envelope);
+    response.status(result.status).json(result.body);
   }
 }

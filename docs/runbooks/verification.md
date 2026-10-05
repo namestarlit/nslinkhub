@@ -6,18 +6,29 @@ The canonical verification gate:
 bun run verify
 ```
 
-It runs client and telemetry boundary checks, the guide-pin check, shared
-wire/email typechecks, Biome format/lint, email tests, then the API build (including explicit Prisma generation),
-typecheck, source unit suites and real-service e2e suites. Test discovery names
-source files explicitly and excludes generated/compiled copies.
+It runs client/telemetry boundary checks, local documentation links, the
+guide-pin check, shared typechecks, Biome format/lint, tooling/email tests,
+then API generation/build, typecheck, source unit tests and real-service e2e.
+Test discovery names source files explicitly and excludes generated/compiled
+copies. `check:docs` checks local inline/reference links and heading anchors
+in current Markdown documents; completed plans are historical snapshots and
+are excluded. External links are not fetched.
 
-`tooling/verify-api-tests.ts` creates a fresh random PostgreSQL database for
-each e2e run, applies every migration, runs suites serially, and drops only
-that database on success, failure or handled interruption. It clears request
-budgets only inside that disposable database between suites. It refuses
-production configuration and non-loopback test-admin hosts. A killed process
-that cannot run cleanup (SIGKILL or host failure) can leave a `test_*` database;
-inspect ownership/running processes before manually removing any abandoned one.
+The e2e stage first runs `tooling/verify-test-isolation.ts`: a sentinel database
+is created before four concurrent child processes prove distinct databases,
+success/failure/SIGTERM cleanup, and preservation of a surviving run and the
+sentinel. Only these owned fixtures are asserted; unrelated concurrent runs
+may clean up their own databases during the check. Production
+and non-loopback admin configuration are refused. No required service check
+silently skips when PostgreSQL is missing.
+
+`tooling/verify-api-tests.ts` then uses `tooling/test-database.ts` to create a
+fresh random PostgreSQL database, apply every migration, run suites serially,
+and drop only that database. It clears request budgets inside the disposable
+DB between suites. On interruption, setup must settle before cleanup decides
+ownership, and any running suite is terminated before dropping the DB. SIGKILL
+or host failure can still leave a `test_*` database; inspect ownership/running
+processes before manually removing an abandoned one.
 
 Defaults use the local +4 ports. Override only through test-specific
 `TEST_DATABASE_ADMIN_URL` (a loopback PostgreSQL role with CREATEDB) and
@@ -64,8 +75,11 @@ This escalation path is the decided design; only its trigger is pending.
   failing suite and service connectivity; the next run gets a fresh database.
 - `.github/workflows/verify.yml` runs this full gate with required PostgreSQL
   and Redis services, then builds and rehearses the release image. Missing
-  infrastructure is a failure, never a skipped green suite. Hosted execution
-  is pending the first push; local results do not claim CI has run.
+  infrastructure is a failure, never a skipped green suite. The first hosted run exposed a container-UID secret-mount bug in the image
+  rehearsal. The fix `cb00a75` passed
+  [hosted verification](https://github.com/namestarlit/nslinkhub/actions/runs/37335644020),
+  including the full repository gate, image build and rehearsal. This proves
+  the reviewed #4 artifact; the new #1 diff remains local until review.
 - `bun run verify:release-image -- <image>` is the additional Docker release
   check. See [release preparation](release.md) for its scope and live gates.
 - New behavior with route-shape or authorization consequences gets an e2e

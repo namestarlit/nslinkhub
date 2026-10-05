@@ -1,3 +1,5 @@
+import type { ApiErrorPayload } from "./errors.js";
+
 // The API response envelope. Every endpoint returns exactly one of these
 // (see docs/design-docs/conventions.md). Timestamps in payloads are ISO 8601
 // strings — the JSON wire format, not the backend's in-memory Date.
@@ -19,12 +21,7 @@ export interface ApiSuccess<T, M = undefined> {
 }
 
 export interface ApiError {
-  error: {
-    code: string;
-    message: string;
-    requestId: string;
-    details: Record<string, unknown>;
-  };
+  error: ApiErrorPayload;
 }
 
 export type ApiResponse<T, M = undefined> = ApiSuccess<T, M> | ApiError;

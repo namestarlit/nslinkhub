@@ -86,6 +86,11 @@ Recorded so a future security review doesn't read the absence as an oversight:
   checks on imports).
 - Import parsers must fail per-row with clear errors rather than corrupting
   state.
+- Product HTTP errors use a shared catalog and an explicit trusted exception
+  boundary. Arbitrary framework messages/details are discarded; validation
+  exposes only declared DTO field paths and bounded rule identifiers. Unknown
+  input field names, submitted values and SQL errors are never reflected in
+  error envelopes. Raw better-auth keeps its own protocol; see conventions.
 
 ## Auditability
 

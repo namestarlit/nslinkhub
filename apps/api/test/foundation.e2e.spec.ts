@@ -88,7 +88,7 @@ describe("Foundation conventions (e2e)", () => {
     expect(body.error.details).toEqual({});
   });
 
-  it("maps DTO validation failures to validation_failed with messages", async () => {
+  it("maps DTO validation failures to validation_failed with safe field/rule identifiers", async () => {
     const res = await request(app.getHttpServer())
       .post("/api/v1/collections")
       .set("Authorization", `Bearer ${bearer}`)
@@ -96,10 +96,10 @@ describe("Foundation conventions (e2e)", () => {
       .expect(400);
 
     const body = res.body as {
-      error: { code: string; details: { messages?: string[] } };
+      error: { code: string; details: { issues?: Array<{ field: string; rule: string }> } };
     };
     expect(body.error.code).toBe("validation_failed");
-    expect(Array.isArray(body.error.details.messages)).toBe(true);
+    expect(Array.isArray(body.error.details.issues)).toBe(true);
   });
 
   it("walks resources with cursor pagination, each item exactly once", async () => {
@@ -134,7 +134,7 @@ describe("Foundation conventions (e2e)", () => {
     const res = await request(app.getHttpServer())
       .get(`/api/v1/collections/${collectionId}/resources?cursor=%%%garbage`)
       .expect(400);
-    expect((res.body as { error: { code: string } }).error.code).toBe("bad_request");
+    expect((res.body as { error: { code: string } }).error.code).toBe("invalid_cursor");
   });
 
   it("paginates the explore listing by cursor", async () => {

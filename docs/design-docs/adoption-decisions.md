@@ -22,19 +22,31 @@ and production Swarm files, verification/image-release workflows and the
 pulled forward from #1 to verify #4 safely; no jobs exist yet, so queue
 namespaces remain a prerequisite of the worker slice.
 
-By user direction, live infrastructure comes later. Swarm scheduling, actual
-GitHub Actions/GHCR execution, Dokploy/TLS, off-host restore and shared Alloy/
+By user direction, live infrastructure comes later. Swarm scheduling, GHCR publication, Dokploy/TLS, off-host restore and shared Alloy/
 Sentry operation are outstanding proof, not implied by local tests. Browser
 and worker telemetry also wait for those runtimes. Gate 4 as a public-release
-gate remains open; its local foundation milestone can finish independently.
+gate remains open. The local foundation milestone is complete, and the
+reviewed #4 artifact plus CI portability fix passed hosted verification
+(`cb00a75`; evidence in the release runbook).
 
 Review discovered pre-existing profile email/password writes outside
 better-auth and a profile DELETE endpoint, despite earlier documentation
 suggesting deletion was unexposed. Gate 3 must correct credential ownership,
 session revocation and deletion/retention before public availability.
 
-Next: remaining #1 safe typed 4xx errors, wire-contract checks and documentation
-link enforcement; then #2 W3 design/shell/read journeys and #3 auth delivery.
+## Local #1 implementation status (2026-10-05)
+
+The shared discriminated error catalog, trusted application exceptions, safe
+framework/DTO mapping and explicit wire mappers are implemented. HTTP tests
+cover W3 reads, serialization/nullability, sharing privacy, hidden-resource
+404s, actionable conflicts and malicious error inputs. Verification includes
+local Markdown links and concurrent disposable-database success/failure/SIGTERM
+cleanup. Redis remains ping-only; per-run queue namespaces are still mandatory
+when gate #3 introduces jobs. See [the completed foundation-contracts plan](../exec-plans/completed/finish-foundation-contracts.md).
+
+Next after milestone review: #2 W3 design/shell/read journeys, then #3 auth
+delivery. Raw better-auth protocol normalization, browser cookie/CSRF/cache
+behavior and profile credential/deletion corrections remain in those slices.
 
 ## Baseline and evidence
 
@@ -70,8 +82,9 @@ Two reference claims need qualification:
 
 ## Comparison and decisions
 
-Evidence IDs resolve to concrete source paths below. Timing refers to the
-ordered gates in the next section.
+Evidence IDs resolve to concrete source paths below. Gap descriptions in this
+table refer to the pinned comparison baseline; implementation status above owns
+the current state. Timing refers to the acceptance gates in the next section.
 
 | Area | Reference evidence and local gap | Decision and timing |
 | --- | --- | --- |
@@ -109,8 +122,9 @@ interface work under repository guidance, not to adopting farm-product screens.
 
 ### Gate 1 — foundation before web implementation
 
-Create a separate ExecPlan for test isolation, safe typed errors, and wire
-contract verification. Complete it before `apps/web` consumes those contracts.
+Completed locally in `docs/exec-plans/completed/finish-foundation-contracts.md`,
+ready for milestone review before `apps/web` consumes the contracts. Redis
+queue namespaces are still required when the first worker creates queue data.
 
 Acceptance:
 

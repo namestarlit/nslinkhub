@@ -1,16 +1,8 @@
 import { Injectable } from "@nestjs/common";
+import type { DependencyStatus, Health, Readiness, SystemStatus } from "@nslinkhub/types";
 import { PrismaService } from "src/database/prisma.service";
 import { emitEvent } from "../../common/observability/telemetry";
 import { RedisQueueReadinessService } from "./redis-queue-readiness.service";
-
-type Dependency = "postgres" | "redis_queue";
-type DependencyStatus = Record<Dependency, "ready" | "unavailable">;
-export type SystemStatus = "ready" | "degraded" | "unavailable";
-
-export interface Readiness {
-  status: SystemStatus;
-  dependencies: DependencyStatus;
-}
 
 @Injectable()
 export class HealthService {
@@ -21,7 +13,7 @@ export class HealthService {
   ) {}
 
   // Liveness: the process is up and serving. No dependency checks.
-  health() {
+  health(): Health {
     return { status: "ok" };
   }
 

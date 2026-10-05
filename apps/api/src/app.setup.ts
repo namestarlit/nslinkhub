@@ -3,6 +3,7 @@ import { toNodeHandler } from "better-auth/node";
 import type { Express } from "express";
 import { json, urlencoded } from "express";
 import { auth } from "./auth/auth";
+import { validationException } from "./common/errors/validation";
 import { AllExceptionsFilter } from "./common/filters/all-exceptions.filter";
 import { requestBudget, trustedProxies } from "./common/middleware/request-budget";
 import { requestIdMiddleware } from "./common/middleware/request-id";
@@ -30,6 +31,8 @@ export function configureApp(app: INestApplication): void {
       whitelist: true,
       transform: true,
       forbidNonWhitelisted: true,
+      validationError: { target: true, value: false },
+      exceptionFactory: validationException,
     }),
   );
 

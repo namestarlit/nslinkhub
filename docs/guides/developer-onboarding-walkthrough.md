@@ -44,9 +44,9 @@ bun run verify           # the canonical gate — must be green
 ```
 
 While it runs, skim what it does in
-[verification.md](../runbooks/verification.md) (an 11-step chain: boundaries,
-this guide's own freshness pin, typechecks, format/lint, email tests, build,
-unit, e2e).
+[verification.md](../runbooks/verification.md) (boundaries, local documentation links,
+this guide's freshness pin, typechecks, format/lint, tooling/email tests,
+build, unit tests, isolated database lifecycle checks and e2e).
 
 ```bash
 bun run dev              # infra (idempotent) + API watch on :4000
@@ -278,8 +278,8 @@ Read:
 3. [index.md](../design-docs/index.md) — the three `web-*` design documents
    the W3 design pass must produce (listed as Planned).
 4. [adoption-decisions.md](../design-docs/adoption-decisions.md) — the
-   foundation comparison and gates: isolated verification and safe contracts
-   before web implementation; auth delivery with the code-first journey;
+   foundation comparison and gates: isolated verification and safe typed
+   contracts now implemented before web work; auth delivery with the code-first journey;
    observability and deployment acceptance before public release.
 
 The W3 session-starter itself lives in this machine's git-ignored
@@ -301,7 +301,7 @@ durable, it only sequences it.
       and the separate public-release gates.
 - [ ] `bun run verify` is green on your machine right now.
 
-Next action after review of the adoption decisions: the W3 design pass — three
+Next action after review of the completed foundation milestone: the W3 design pass — three
 `web-*` docs, moved from Planned to Current. Complete the foundation gate before
 `apps/web` scaffolding; apply Impeccable to interface work under repository
 guidance. Auth-delivery implementation belongs with the account journey.
@@ -337,7 +337,7 @@ orchestrator (see `package.json` for the full set):
 | `bun run infra:up` / `infra:down` | local PostgreSQL + Redis |
 | `bun run api:dev` / `api:test` | single-service loop / API tests |
 | `bun run email:test` | email template tests |
-| `bun run verify` | the canonical 11-step gate |
+| `bun run verify` | the canonical full verification gate |
 
 Cleanup after the walkthrough:
 
@@ -347,4 +347,5 @@ bun run infra:down                         # stop local services
 ```
 
 The walkthrough account and collections live only in the disposable dev
-database; reset it any time (Session 5).
+database. For intentional cleanup use the local-development runbook;
+verification never requires resetting that data.

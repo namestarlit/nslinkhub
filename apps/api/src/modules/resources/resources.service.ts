@@ -1,9 +1,5 @@
-import {
-  BadRequestException,
-  ConflictException,
-  Injectable,
-  NotFoundException,
-} from "@nestjs/common";
+import { Injectable, NotFoundException } from "@nestjs/common";
+import type { Resource as WireResource } from "@nslinkhub/types";
 import { CursorQueryDto } from "src/common/dto/cursor-query.dto";
 import { ResourceKind } from "src/common/enums/resource-kind.enum";
 import { AuthUser } from "src/common/interfaces/auth-user.interface";
@@ -12,6 +8,8 @@ import { normalizeTags } from "src/common/utils/tags.util";
 import { canonicalizeUrl } from "src/common/utils/url.util";
 import { PrismaService } from "src/database/prisma.service";
 import { Collection, Resource } from "src/generated/prisma/client";
+import { appError } from "../../common/errors/app-exception";
+import { wireToken } from "../../common/utils/wire-token";
 import { CollectionPolicyService } from "../hubs/collection-policy.service";
 import { CreateExternalResourceDto } from "./dto/create-external-resource.dto";
 import { ReorderResourcesDto } from "./dto/reorder-resources.dto";
@@ -34,7 +32,7 @@ export class ResourcesService {
       select: { id: true },
     });
     if (duplicate) {
-      throw new ConflictException("Link already exists in this collection");
+      throw appError("duplicate_resource");
     }
 
     const saved = await this.prisma.resource.create({
@@ -61,8 +59,15 @@ export class ResourcesService {
 
     const limit = query.limit ?? 20;
     const cursor = query.cursor ? decodeCursor<{ p: number }>(query.cursor) : null;
-    if (query.cursor && (cursor === null || typeof cursor.p !== "number")) {
-      throw new BadRequestException("Invalid cursor");
+    if (
+      query.cursor &&
+      (cursor === null ||
+        typeof cursor.p !== "number" ||
+        !Number.isInteger(cursor.p) ||
+        cursor.p < 0 ||
+        cursor.p > 2147483647)
+    ) {
+      throw appError("invalid_cursor");
     }
 
     const rows = await this.prisma.resource.findMany({
@@ -95,7 +100,7 @@ export class ResourcesService {
     }
 
     if (Number(resource.version) !== dto.version) {
-      throw new ConflictException("Version mismatch");
+      throw appError("version_conflict");
     }
 
     let position = resource.position;
@@ -149,26 +154,26 @@ export class ResourcesService {
       where: { collectionId },
     });
     if (resources.length !== dto.items.length) {
-      throw new BadRequestException("Reorder payload must include all resources");
+      throw appError("invalid_reorder");
     }
 
     const resourceIdSet = new Set(resources.map((r) => r.id));
     const payloadIdSet = new Set(dto.items.map((item) => item.resourceId));
 
     if (resourceIdSet.size !== payloadIdSet.size) {
-      throw new BadRequestException("Duplicate resource IDs in reorder payload");
+      throw appError("invalid_reorder");
     }
 
     for (const payloadId of payloadIdSet) {
       if (!resourceIdSet.has(payloadId)) {
-        throw new BadRequestException("Unknown resource ID in reorder payload");
+        throw appError("invalid_reorder");
       }
     }
 
     const positions = dto.items.map((item) => item.position).sort((a, b) => a - b);
     for (let i = 0; i < positions.length; i += 1) {
       if (positions[i] !== i) {
-        throw new BadRequestException("Positions must be contiguous from 0..n-1");
+        throw appError("invalid_reorder");
       }
     }
 
@@ -176,10 +181,10 @@ export class ResourcesService {
     for (const item of dto.items) {
       const resource = byId.get(item.resourceId);
       if (!resource) {
-        throw new BadRequestException("Unknown resource ID in reorder payload");
+        throw appError("invalid_reorder");
       }
       if (Number(resource.version) !== item.version) {
-        throw new ConflictException("Version mismatch");
+        throw appError("version_conflict");
       }
     }
 
@@ -251,23 +256,23 @@ export class ResourcesService {
       select: { id: true },
     });
     if (existing && existing.id !== ignoreResourceId) {
-      throw new ConflictException("Position is already used in this collection");
+      throw appError("position_conflict");
     }
   }
 
-  private toPublicResource(resource: Resource) {
+  private toPublicResource(resource: Resource): WireResource {
     return {
       id: resource.id,
       collectionId: resource.collectionId,
-      kind: resource.kind,
+      kind: wireToken(resource.kind, ["external_link", "collection_link"]),
       url: resource.url ?? undefined,
       linkedCollectionId: resource.linkedCollectionId,
       titleOverride: resource.titleOverride,
       tags: resource.tags,
       position: resource.position,
       version: Number(resource.version),
-      createdAt: resource.createdAt,
-      updatedAt: resource.updatedAt,
+      createdAt: resource.createdAt.toISOString(),
+      updatedAt: resource.updatedAt.toISOString(),
     };
   }
 }

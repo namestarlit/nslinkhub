@@ -1,6 +1,7 @@
-import { Controller, Get, ServiceUnavailableException } from "@nestjs/common";
+import { Controller, Get } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
 import { apiOk } from "src/common/utils/response.util";
+import { appError } from "../../common/errors/app-exception";
 import { HealthService } from "./health.service";
 
 @ApiTags("system")
@@ -20,11 +21,7 @@ export class HealthController {
   async status() {
     const readiness = await this.healthService.readiness();
     if (readiness.status === "unavailable") {
-      throw new ServiceUnavailableException({
-        code: "dependencies_unavailable",
-        message: "Required dependencies are unavailable",
-        details: { dependencies: readiness.dependencies },
-      });
+      throw appError("dependencies_unavailable", { dependencies: readiness.dependencies });
     }
     return apiOk(readiness);
   }
