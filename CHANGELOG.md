@@ -49,6 +49,11 @@ summary of what changed after completed work has been promoted out of `ref/`.
 
 ### Fixed
 
+- Release-image rehearsal now mounts synthetic secret files individually,
+  preserving the private host directory while allowing a different container
+  UID to read them. Fixes the first hosted CI run's migration-step EACCES;
+  added a UID-65534 read check to prevent recurrence.
+
 - Production startup now executes the actual compiled `dist/src/entrypoint.js`
   with compiled alias resolution; builds explicitly generate Prisma from schema.
   Link enable reads token state under its transaction lock so a stale request

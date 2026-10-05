@@ -77,7 +77,25 @@ try {
   networkCreated = true;
   await docker(["volume", "create", volume]);
   volumeCreated = true;
-  const secretMount = ["--mount", `type=bind,source=${secrets},target=/run/secrets,readonly`];
+  // Keep the host directory private (mkdtemp's 0700), but mount individual
+  // synthetic files. Container UID 1000 must not need to traverse the host
+  // runner's directory: GitHub's runner UID differs from the local user's.
+  const secretMount = ["postgres_password", "database_url", "auth_secret"].flatMap((name) => [
+    "--mount",
+    `type=bind,source=${join(secrets, name)},target=/run/secrets/${name},readonly`,
+  ]);
+  await docker([
+    "run",
+    "--rm",
+    "--user",
+    "65534:65534",
+    ...secretMount,
+    "--entrypoint",
+    "bun",
+    image,
+    "-e",
+    "if((await Bun.file('/run/secrets/auth_secret').text()).length!==64)process.exit(1)",
+  ]);
   await start(postgres, [
     "--network-alias",
     "postgres",
