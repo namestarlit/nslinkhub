@@ -12,7 +12,7 @@ answer in your own words before continuing. Reading the whole file in one go
 is the failure mode this structure exists to prevent. Every file is a
 clickable link.
 
-**Pin:** verified against commit `6d27cbe`. This is enforced, not honor
+**Pin:** verified against commit `ce1c35b`. This is enforced, not honor
 system: `check:guide-pin` (part of `bun run verify`) fails when any file this
 guide links changes after the pinned commit. To clear it, reread the affected
 sessions, fix any drift, and move the pin to the latest commit — in a
@@ -312,10 +312,11 @@ browser proof. Read the [pinned auth integration evidence](../design-docs/auth-d
 for the codes-only decision and the transaction-scoped integration that closes
 native delivery and email-change gaps. Profile credential writes and account
 deletion are disabled; password authentication has been removed.
-The backend auth-delivery milestone is implemented and locally verified;
-review and land it before resuming web scaffolding. Apply Impeccable to
-interface work under repository guidance, then prove the account journey
-through the web origin.
+The reviewed backend auth-delivery implementation is committed and its source
+verification gate passes. Complete the outstanding fresh-image verification in
+the [active auth-delivery plan](../exec-plans/active/prove-auth-delivery-boundary.md)
+before resuming web scaffolding. Apply Impeccable to interface work under
+repository guidance, then prove the account journey through the web origin.
 
 ---
 
