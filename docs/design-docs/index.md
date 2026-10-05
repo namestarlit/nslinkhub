@@ -28,10 +28,13 @@ frequently for the root `ARCHITECTURE.md`. The **authoritative system design**
   shared Alloy collection of stdout/dependency metrics, the PII allowlist and
   pseudonymous-reference rules, and the request-id foundation already in place.
 
-## Planned Documents (produced by Track W3's design pass)
+- [web-product-experience.md](web-product-experience.md): first reading
+  journeys, recency discovery, unavailable collections, later account flows
+  and dormant-save presentation.
+- [web-interface-system.md](web-interface-system.md): layouts, components,
+  states, accessibility, responsive behavior and browser/API boundaries.
+- [web-design-tokens.md](web-design-tokens.md): canonical Tailwind theme
+  variables, light palette, typography, spacing and contrast evidence.
 
-- `web-product-experience.md`: web users, jobs, product feeling, hierarchy,
-  and first journeys.
-- `web-interface-system.md`: visual tokens, layouts, components, states,
-  accessibility, and responsiveness.
-- `web-design-tokens.md`: canonical Tailwind theme token contract.
+The W3 documents define implementation contracts. The web scaffold and browser
+verification remain the next milestone of adoption gate #2.

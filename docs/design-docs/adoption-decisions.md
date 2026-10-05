@@ -44,9 +44,22 @@ local Markdown links and concurrent disposable-database success/failure/SIGTERM
 cleanup. Redis remains ping-only; per-run queue namespaces are still mandatory
 when gate #3 introduces jobs. See [the completed foundation-contracts plan](../exec-plans/completed/finish-foundation-contracts.md).
 
-Next after milestone review: #2 W3 design/shell/read journeys, then #3 auth
-delivery. Raw better-auth protocol normalization, browser cookie/CSRF/cache
+The reviewed milestone and isolation-check correction are committed as
+`fb32eb9`, with guide pin `bf111f1`, and pushed after the full verification gate.
+
+Next: #2 W3 design/shell/read journeys, then #3 auth delivery.
+Raw better-auth protocol normalization, browser cookie/CSRF/cache
 behavior and profile credential/deletion corrections remain in those slices.
+
+## Gate #2 design status (2026-10-05)
+
+The three W3 design documents now define the
+[experience](web-product-experience.md), [interface](web-interface-system.md)
+and [tokens](web-design-tokens.md). They cover public reading first, actual
+API fields, unavailable states, cookie/cache/CSRF boundaries and later account
+flows. The design milestone does not claim that the web app or its browser
+acceptance exists. Scaffolding and the first read journeys are next; gate #2
+remains open until its implementation checks pass.
 
 ## Baseline and evidence
 
@@ -122,8 +135,8 @@ interface work under repository guidance, not to adopting farm-product screens.
 
 ### Gate 1 — foundation before web implementation
 
-Completed locally in `docs/exec-plans/completed/finish-foundation-contracts.md`,
-ready for milestone review before `apps/web` consumes the contracts. Redis
+Completed and committed in `docs/exec-plans/completed/finish-foundation-contracts.md`,
+available for `apps/web` to consume. Redis
 queue namespaces are still required when the first worker creates queue data.
 
 Acceptance:

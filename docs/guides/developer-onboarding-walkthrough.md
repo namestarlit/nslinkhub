@@ -275,8 +275,8 @@ Read:
    exist yet. Then open
    [code-email.tsx](../../packages/email/src/code-email.tsx) — the shared
    base all three templates render through.
-3. [index.md](../design-docs/index.md) — the three `web-*` design documents
-   the W3 design pass must produce (listed as Planned).
+3. [index.md](../design-docs/index.md) — the three current `web-*` design
+   documents: experience, interface system and canonical theme tokens.
 4. [adoption-decisions.md](../design-docs/adoption-decisions.md) — the
    foundation comparison and gates: isolated verification and safe typed
    contracts now implemented before web work; auth delivery with the code-first journey;
@@ -301,10 +301,11 @@ durable, it only sequences it.
       and the separate public-release gates.
 - [ ] `bun run verify` is green on your machine right now.
 
-Next action after review of the completed foundation milestone: the W3 design pass — three
-`web-*` docs, moved from Planned to Current. Complete the foundation gate before
-`apps/web` scaffolding; apply Impeccable to interface work under repository
-guidance. Auth-delivery implementation belongs with the account journey.
+The foundation milestone is committed; the three W3 design documents now
+define the first reading journeys and browser boundaries. Next is `apps/web`
+scaffolding and implementation of adoption gate #2, with real browser proof.
+Apply Impeccable to interface work under repository guidance. Auth-delivery
+implementation belongs with the account journey.
 
 ---
 

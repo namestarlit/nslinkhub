@@ -200,8 +200,10 @@ Web        Full surface: explore, hubs, collections, sharing, saves, account.
 Extension  Constrained capture companion (popup, context menu, shortcut).
 ```
 
-The web app's product experience, interface system, and design tokens are
-defined in a dedicated design pass before web implementation (Track W3).
+The web app's [product experience](docs/design-docs/web-product-experience.md),
+[interface system](docs/design-docs/web-interface-system.md), and
+[design tokens](docs/design-docs/web-design-tokens.md) define the Track W3
+implementation contract. These designs precede the web scaffold.
 
 ## 6. Acceptance Criteria (durable behaviors)
 
@@ -258,10 +260,16 @@ defined in a dedicated design pass before web implementation (Track W3).
   deliberately excludes. NSLinkHub curates and references; it does not author
   or host. The line is "rich description," and it stops there.
 
-## 8. Open Product Decisions
+## 8. W3 Presentation Decisions
 
-Both resolve during the W3 web design pass, with real surfaces in hand:
+- Explore ships the existing recency order in a readable list, with explicit
+  cursor continuation. No popularity score, recommendations or single-option
+  sort selector; richer ranking remains Phase E.
+- Dormant saves keep their place with the saved-list title, saved date and
+  “Currently unavailable” label. Opening/exporting is disabled, previews are
+  suppressed, and removal remains available. Republish restores opening.
+  This presentation does not create a historical snapshot or authorize a
+  read of unavailable contents.
 
-- Explore curation/ranking beyond recency (recency-only ships first; richer
-  ranking is a Phase E item).
-- The exact presentation of dormant saves on the saved surface.
+The [web experience](docs/design-docs/web-product-experience.md) owns the
+detailed states; browser verification follows with the corresponding journey.

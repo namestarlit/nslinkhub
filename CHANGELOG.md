@@ -31,6 +31,11 @@ summary of what changed after completed work has been promoted out of `ref/`.
 
 ### Added
 
+- W3 design milestone for adoption gate #2: product experience, interface
+  system and canonical Tailwind token documents, including verified palette
+  contrast, read-only journeys, browser boundary requirements, recency-first
+  discovery and dormant-save presentation. Web implementation remains next.
+
 - Completed local adoption gate #1: shared typed error catalog, trusted
   application exceptions, status-safe framework mapping and bounded DTO
   field/rule issues. Validation details now use `issues` instead of `messages`;
