@@ -15,13 +15,11 @@
 
 ## Jobs And Queues
 
-- Current state: nothing queues. Exports are synchronous (programmatic
-  renderers, file in the response); BullMQ/Redis stay in the stack for the
-  future email/notification path.
-- Target state (W3 auth-delivery gate): PostgreSQL transactional
-  outbox relayed to BullMQ, with queue consumers in separate worker
-  processes. PostgreSQL stays authoritative; Redis dispatches and is never
-  the source of truth.
+- Email uses an encrypted PostgreSQL transactional outbox relayed to BullMQ,
+  with delivery in a separate worker process. PostgreSQL stays authoritative;
+  Redis dispatches opaque outbox IDs and is never the source of truth.
+- Exports are synchronous (programmatic renderers, file in the response) and
+  do not queue. Other notification workflows remain separate product work.
 - Queue Redis (when production-shaped) runs with AOF persistence and
   `noeviction`, and is never reused as a cache.
 - The email slice includes leases, bounded retries, crash recovery, terminal
@@ -53,17 +51,20 @@
   more than a day using `SKIP LOCKED`; maintenance failure emits a sanitized
   event and retries on the next interval. No overlapping maintenance per
   process. Monitor backlog before raising limits or public traffic.
-- Audit records currently have no automatic expiry. Account deletion and
-  long-term retention require an explicit policy before public exposure.
+- Auth audit records expire after 90 days; delivery metadata expires after
+  30 days. Collection audit has no automatic expiry. Account deletion and
+  collection-audit retention require an explicit policy before public exposure;
+  account deletion is disabled until a verified workflow and that policy exist.
 
 ## Observability and release verification
 
 - LogTape console/Sentry logs and one manual incoming span carry isolated
   server-generated request IDs; unexpected exceptions are sanitized and
   correlated once. Telemetry sink/collector failure does not fail requests.
-- Application shutdown has a five-second bound including at most two seconds
-  of telemetry flushing. Startup uses the same entrypoint for source and
-  compiled output; image checks exercise the compiled aliases and secret files.
+- API shutdown has a five-second bound including at most two seconds of
+  telemetry flushing; the email worker has a ten-second shutdown bound.
+  API startup uses the same entrypoint for source and compiled output;
+  image checks exercise compiled API/worker startup and secret files.
 - The [release runbook](runbooks/release.md) separates disposable local
   migration/backup/restore and outage proof from outstanding live Swarm,
   off-host restore, routing and collector checks.

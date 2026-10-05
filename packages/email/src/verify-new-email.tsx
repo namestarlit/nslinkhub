@@ -3,7 +3,7 @@ import {
   type CodeEmailBaseInput,
   type RenderedEmail,
   renderCodeEmail,
-} from "./code-email";
+} from "./code-email.js";
 
 // Step two of the account-email change: sent to the NEW address after the
 // current address confirmed. Verifying completes the change; all sessions are
@@ -20,7 +20,6 @@ export async function renderNewEmailVerification(
   return renderCodeEmail("Verify your new nslinkhub email", input, {
     preview: "Verify your new nslinkhub email",
     lead: "Here's your verification code to verify this address as the new email for your nslinkhub account:",
-    actionLabel: "Verify email",
     note: "If you didn't expect this, you can ignore this email and nothing will change.",
   });
 }

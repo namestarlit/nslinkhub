@@ -2,16 +2,17 @@
 
 Decision date: 2026-10-05. This document owns the adoption sequence and gates;
 focused designs own the resulting contracts. **Decided does not mean built.**
-The comparison itself was documentation-only; the local #4 implementation
-status is recorded below. Product scope remains unchanged.
+The comparison itself was documentation-only; current implementation status
+is recorded below. Product scope remains unchanged.
 
 **Execution order updated 2026-10-05:** the user selected public-release
-foundations first (#4), followed by #1–3. The gate numbers below retain their
-meaning as acceptance groups, not chronological order. The local implementation is
-recorded in `docs/exec-plans/completed/deliver-release-foundations.md`; pull forward
-prerequisites only when needed to verify #4 safely. Live rollout remains a
-separate operator acceptance step, and browser/worker-specific checks wait
-until those runtimes exist.
+foundations first (#4), then contracts (#1), W3 design (#2), and auth delivery
+(#3) before web implementation/browser acceptance (#2). The gate numbers below
+retain their meaning as acceptance groups, not chronological order. The local
+release foundation is recorded in
+`docs/exec-plans/completed/deliver-release-foundations.md`. Live rollout remains
+a separate operator acceptance step; the email worker now has local acceptance,
+while browser acceptance awaits `apps/web`.
 
 ## Local #4 implementation status (2026-10-05)
 
@@ -19,20 +20,21 @@ Implemented API LogTape/Sentry privacy/correlation, transactional hub-scoped
 collection audit, shared source request budgets, a compiled API image, local
 and production Swarm files, verification/image-release workflows and the
 [release runbook](../runbooks/release.md). Isolated e2e databases and CI were
-pulled forward from #1 to verify #4 safely; no jobs exist yet, so queue
-namespaces remain a prerequisite of the worker slice.
+pulled forward from #1 to verify #4 safely. Gate #3 subsequently added email
+jobs with isolated per-run queue namespaces and cleanup.
 
 By user direction, live infrastructure comes later. Swarm scheduling, GHCR publication, Dokploy/TLS, off-host restore and shared Alloy/
 Sentry operation are outstanding proof, not implied by local tests. Browser
-and worker telemetry also wait for those runtimes. Gate 4 as a public-release
+instrumentation and worker metrics/tracing remain outstanding. Gate 4 as a public-release
 gate remains open. The local foundation milestone is complete, and the
 reviewed #4 artifact plus CI portability fix passed hosted verification
 (`cb00a75`; evidence in the release runbook).
 
-Review discovered pre-existing profile email/password writes outside
-better-auth and a profile DELETE endpoint, despite earlier documentation
-suggesting deletion was unexposed. Gate 3 must correct credential ownership,
-session revocation and deletion/retention before public availability.
+Review discovered pre-existing profile credential writes and account deletion
+outside better-auth. Gate #3's boundary milestone removed those paths;
+password authentication has now been removed by explicit user decision.
+Verified email handover revokes sessions; a policy for re-enabling deletion
+remains a pre-release requirement.
 
 ## Local #1 implementation status (2026-10-05)
 
@@ -41,15 +43,28 @@ framework/DTO mapping and explicit wire mappers are implemented. HTTP tests
 cover W3 reads, serialization/nullability, sharing privacy, hidden-resource
 404s, actionable conflicts and malicious error inputs. Verification includes
 local Markdown links and concurrent disposable-database success/failure/SIGTERM
-cleanup. Redis remains ping-only; per-run queue namespaces are still mandatory
-when gate #3 introduces jobs. See [the completed foundation-contracts plan](../exec-plans/completed/finish-foundation-contracts.md).
+cleanup. Gate #3 extends that isolation to email queue namespaces. See
+[the completed foundation-contracts plan](../exec-plans/completed/finish-foundation-contracts.md).
 
 The reviewed milestone and isolation-check correction are committed as
 `fb32eb9`, with guide pin `bf111f1`, and pushed after the full verification gate.
 
-Next: #2 W3 design/shell/read journeys, then #3 auth delivery.
-Raw better-auth protocol normalization, browser cookie/CSRF/cache
-behavior and profile credential/deletion corrections remain in those slices.
+The auth wrapper added in #3 owns its public code/email-change protocol;
+browser cookie/CSRF/cache acceptance remains in #2. The sequencing update below
+owns the next implementation step.
+
+**User sequencing update (2026-10-05):** after the reviewed W3 design milestone
+(`6d27cbe`, guide pin `a8802c5`), proceed with #3 auth delivery before the web
+scaffold. Gate #2's implementation/browser checks remain outstanding. The
+initial [auth integration evidence](auth-delivery-integration.md) records the
+pinned library gaps and the implemented transaction-scoped integration. The
+user approved email-code-only authentication, removing password fallback; TOTP and
+recovery codes follow separately. Delivery is implemented and tested locally,
+including auth audit, encrypted outbox, worker recovery, independent suppression
+keys and signed receipt reconciliation after code expiry. The
+[auth-delivery plan](../exec-plans/active/prove-auth-delivery-boundary.md)
+records verification and review corrections. Review and land this milestone
+before web scaffolding; live acceptance and web account screens remain outstanding.
 
 ## Gate #2 design status (2026-10-05)
 
@@ -58,8 +73,8 @@ The three W3 design documents now define the
 and [tokens](web-design-tokens.md). They cover public reading first, actual
 API fields, unavailable states, cookie/cache/CSRF boundaries and later account
 flows. The design milestone does not claim that the web app or its browser
-acceptance exists. Scaffolding and the first read journeys are next; gate #2
-remains open until its implementation checks pass.
+acceptance exists. Scaffolding and the first read journeys follow the selected
+auth work; gate #2 remains open until its implementation checks pass.
 
 ## Baseline and evidence
 
@@ -108,7 +123,7 @@ the current state. Timing refers to the acceptance gates in the next section.
 | Contract drift | R3 proposes Zod; local DTOs, mappers, Swagger, and `packages/types` can drift | Keep class-validator/Nest compilation. Add wire-contract checks for W3 reads in gate 1 and expand per slice. Defer a Zod/OpenAPI-generator migration until drift evidence warrants its own plan. |
 | Configuration | R4 has typed runtime entry points and a config boundary check; local `packages/config` only contains TypeScript configuration | Adopt runtime-specific typed config when the web or worker creates the second runtime (gate 2). Preserve local defaults, `_FILE` precedence, and server-only secrets. No wholesale env-var rename or dependency upgrade. |
 | Auth composition | R5 injects configuration, persistence, and delivery into a factory; local auth creates a separate Prisma client at module load | Adopt explicit auth dependencies with the auth-delivery slice, maintaining raw-handler ordering, `resolveSessionUser`, and app-owned onboarding. Avoid copying Pigfarm's large authority/plugin graph. |
-| Sign-in product | R5 is closed-registration, code-only, no passwords or sign-in links; local product requires self-service sign-up, code plus direct link, password alternative | Retain NSLinkHub's product contract. Adopt tested challenge expiry, replay prevention, enumeration resistance, and issue/verify budgets through better-auth's boundary in gate 3. |
+| Sign-in product | R5 is closed-registration, code-only, no passwords or sign-in links; local product requires self-service sign-up and email codes only (password removal approved 2026-10-05) | Retain NSLinkHub's product contract. Adopt tested challenge expiry, replay prevention, enumeration resistance, and issue/verify budgets through better-auth's boundary in gate 3. |
 | Email change and sessions | R5 uses purpose/session-bound proof and factor-specific revocation; local double-verification exists only as a design/templates | Implement current-address confirmation, new-address verification, then revoke **all** sessions in gate 3. Do not copy Pigfarm's keep-current-session factor-change policy. |
 | Async delivery | R6 has transactional outbox, queue adapter, worker, leases, terminal failures, and maintenance; local BullMQ is unused | Adopt the small provider/queue seams and failure tests in gate 3. Email is the first consumer; synchronous exports stay synchronous. No general domain-event framework yet. |
 | Email credential retention | R6 removes credential-bearing render inputs after terminal outcomes and sweeps abandoned intents | Adopt explicit retention and cleanup with delivery. A hashed auth challenge does not protect a plaintext copy in an email intent. Include provider-success/DB-failure recovery and do not promise exactly-once external sends. |
@@ -136,8 +151,8 @@ interface work under repository guidance, not to adopting farm-product screens.
 ### Gate 1 — foundation before web implementation
 
 Completed and committed in `docs/exec-plans/completed/finish-foundation-contracts.md`,
-available for `apps/web` to consume. Redis
-queue namespaces are still required when the first worker creates queue data.
+available for `apps/web` to consume. The auth-delivery worker now uses isolated
+queue namespaces in its tests.
 
 Acceptance:
 
@@ -182,18 +197,17 @@ revocation. Decide and enforce the existing profile DELETE endpoint’s retentio
 contract before public exposure. Then implement one vertical slice: better-auth
 integration, durable email delivery,
 local capture sender, rate limits, security audit, sign-in and account-email
-change, and their web states. Password remains an explicit alternative. Local
-password-only development may precede this slice; it is not acceptance of the
-code-first product journey. Do not postpone delivery until after all of W3.
+change, and their web states. Password authentication is not part of the
+product. Do not postpone delivery until after all of W3.
 
-First run a pinned better-auth integration spike. Prove that code and direct
-link resolve one expiring challenge with atomic one-time consumption; replay,
-resend, expiry, concurrent completion, and mail-link prefetch cannot create
-unintended sessions. A GET of the link must not itself consume proof; use a
-deliberate confirmation followed by POST. Preserve cross-device completion.
-If the library cannot support the contract within its ownership boundary,
-record the blocker and seek a product decision rather than inventing a second
-credential system or silently removing links/passwords.
+The pinned better-auth spike exposed native transaction and handover gaps.
+The user approved replacing direct authentication links with codes only on
+2026-10-05, then explicitly removed password authentication after review. The integration now scopes library proof,
+credential writes, session changes and durable delivery to the same database
+transaction. Preserve replay/resend/expiry/concurrency protection and cross-device
+sign-in. Optional TOTP/recovery codes follow separately. See
+[the integration contract](auth-delivery-integration.md) for the implementation
+and failure evidence. Web states and browser acceptance still belong to gate #2.
 
 Delivery acceptance includes atomic business-intent persistence (and a proven
 recovery path wherever a library callback cannot share its transaction), Redis

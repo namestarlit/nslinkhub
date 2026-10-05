@@ -2,10 +2,13 @@
 
 ## Direction
 
-Implementation status: three templates exist; provider delivery, outbox,
-worker, auth-code wiring, and webhooks do not. The auth-delivery gate in
-`adoption-decisions.md` is part of the W3 account journey, before code-first
-sign-in or email-change screens ship. It is not deferred until after W3.
+Implementation status: codes-only templates, transaction-scoped auth,
+encrypted PostgreSQL outbox, BullMQ relay/worker, capture and Resend providers,
+and signed webhooks are implemented locally. The user approved removing direct
+authentication links on 2026-10-05. See the
+[integration contract](auth-delivery-integration.md) for endpoints, evidence and
+retention. Web account screens, live sender/domain validation and live webhook
+configuration remain separate acceptance work; no live sending is claimed.
 
 Use Resend as the initial transactional-email provider. It fits the
 namestarlit-VPS deployment model because the application only needs an HTTPS
@@ -13,13 +16,14 @@ API, signed webhooks, and restricted deployment secret files — no outbound SMT
 infrastructure to operate. Keep provider-specific code behind an application
 adapter so switching providers does not change domain workflows.
 
-Initial messages:
+Implemented messages:
 
 - sign-in code (continue-with-email);
 - account-email change (confirmation to the current address, then
-  verification to the new address — the handover flow);
-- email verification;
-- password reset;
+  verification to the new address — the handover flow).
+
+Other message kinds require their own product workflow and template work:
+
 - collection-share notification (a collection was shared directly with an
   account);
 - pending collection share to an unregistered email (Phase E — activated on
@@ -32,36 +36,36 @@ Do not use the transactional channel for marketing.
 ## Authentication Boundary
 
 better-auth owns credentials, sessions, and verification primitives (see
-`AGENTS.md`). The product does **not** re-implement verification, OTP, or reset
-flows. better-auth **mints** the verification token, reset token, or OTP and
-decides the flow; the application-owned outbox + Resend adapter only **deliver**
-the message better-auth asked for.
+`AGENTS.md`). The product does **not** re-implement verification or OTP
+primitives. better-auth **mints**, hashes and consumes the OTP; the application
+binds the email-change workflow to its purpose, initiating session and target
+address. The outbox + Resend adapter deliver the library-issued code.
 
-Concretely, better-auth's `sendVerificationEmail` / `sendResetPassword` (and any
-OTP send hook, if enabled) callbacks receive the opaque token or URL from
+Concretely, better-auth's OTP send callbacks receive the code from
 better-auth and enqueue an application email-outbox intent. They never call the
 Resend SDK directly and never construct their own tokens. When the ns-series
-identity provider (nsauth) exists, verification and reset delivery may move
+identity provider (nsauth) exists, verification delivery may move
 behind the SSO boundary (`docs/design-docs/identity-sso.md`); this adapter is
 the seam that makes that migration a delivery-path change, not a workflow
 change.
 
 ## Application Boundary
 
-Expose a provider-neutral interface owned by the API:
+The API owns the provider-neutral interface in `src/email/provider.ts`:
 
 ```ts
-interface TransactionalEmailProvider {
-  send(message: TransactionalEmailMessage): Promise<SendEmailResult>;
+interface EmailProvider {
+  send(key: string, payload: DeliveryPayload, reference: string): Promise<string>;
 }
 ```
 
-Business modules (hubs, collections, auth hooks) enqueue an email intent. They
-do not call the Resend SDK directly. Application-owned React Email templates and
-rendering live in a backend-owned `packages/email`. The email worker loads
-authoritative intent state from PostgreSQL, selects an approved typed template,
-renders both HTML and plain text, and passes the rendered message to the
-provider adapter.
+Auth callbacks enqueue email intent; they do not call Resend directly.
+Application-owned React Email templates and rendering live in a backend-owned
+`packages/email`. Enqueue selects the approved template, renders HTML and plain
+text, then encrypts the recipient and rendered message in the auth transaction.
+The worker loads authoritative intent state from PostgreSQL, decrypts that
+immutable payload and passes it to the provider adapter. Retries preserve the
+same payload and idempotency key. Sharing notifications are not yet wired.
 
 Providers do not own templates. Do not pass React components directly to the
 Resend adapter or upload the authoritative templates into Resend. This keeps
@@ -92,21 +96,19 @@ Use:
 
 The local/test sender must not print verification links, reset links, OTPs,
 recipient addresses, or rendered email bodies to ordinary application logs.
-Expose captured messages only through test assertions or a deliberately
-restricted local-development inspection path. (This is the replacement for the
-current logged no-op intent recorded in the tech-debt tracker.)
+The implemented capture sender exposes messages only through bounded in-memory
+test assertions, with no HTTP or ordinary-log inspection path.
 
 ## Delivery Workflow
 
 Use a PostgreSQL outbox so API requests do not depend on synchronous email
 delivery:
 
-1. complete the business transaction (e.g. create the share row);
-2. append an email-outbox record in the same database transaction where
-   appropriate;
-3. let the outbox relay publish a minimal BullMQ email job;
-4. let the email worker fetch authoritative delivery state from PostgreSQL;
-5. render the approved React Email template into HTML and plain text;
+1. process the auth mutation through better-auth in the request transaction;
+2. render the approved React Email template into HTML and plain text;
+3. encrypt and append email intent in that same transaction, then commit;
+4. let the outbox relay publish a BullMQ job containing only the outbox ID;
+5. let the worker claim authoritative delivery state and decrypt the payload;
 6. send the rendered message through the environment-selected provider with an
    idempotency key;
 7. record the provider message ID and send result;
@@ -129,7 +131,7 @@ another purpose-limited opaque reference.
 `packages/email` is backend-owned and provider-neutral. All code-bearing
 messages render through one shared base (`code-email.tsx`) so the layout and
 warning language never drift between purposes, and **every code email carries
-both the code and a direct action link — either completes the flow**. Built
+the code only, with no direct authentication link**. Built
 templates (typed inputs, validated before render, HTML + plain text, subject
 never carries the code):
 
@@ -142,13 +144,12 @@ never carries the code):
 - **new-email verification** (`renderNewEmailVerification`) — to the **new**
   address; completing it applies the change and revokes all sessions.
 
-Still to build (auth-delivery slice): password reset; collection-share
-notification.
+Collection-share notification remains separate sharing work. Password reset
+is not a product feature; sign-in uses mailbox codes.
 
 **Visual direction (decided):** Substack-style minimal transactional layout —
 the lowercase `nslinkhub` wordmark (text, no image logo), one large
-letter-spaced code, a short validity line, one action button with a plain-text
-link fallback, one bold "do not share" warning, then a muted footer with the
+letter-spaced code, a short validity line, one bold "do not share" warning, then a muted footer with the
 support route. Neutral near-black palette until product brand tokens exist;
 the web Tailwind theme (Track W3) remains not an email rendering contract.
 
@@ -163,14 +164,14 @@ Every approved template:
   subject, preview, body copy, actions, and expiry units;
 - includes a configured HTTPS support route for unexpected-message recovery;
 - includes viewport metadata and conservative narrow-client adaptations;
-- validates HTTPS action and support URLs, expiry bounds, product-name bounds,
+- validates HTTPS support URLs, expiry bounds, product-name bounds,
   and purpose-specific values before rendering.
 
 Import only the focused React Email components and renderer used at runtime. Do
 not depend on the preview/CLI package from production rendering code.
 
 Tests must prove that each approved template renders both formats, includes its
-required opaque action or code and support route, uses localized language
+required code and support route, uses localized language
 metadata and copy, handles singular expiry units, retains meaningful-text WCAG
 AA contrast, and does not emit missing placeholder values. Delivery integration
 tests remain responsible for proving that sensitive content stays out of
@@ -209,15 +210,14 @@ success; where better-auth and the outbox cannot share a transaction, document
 and test the recovery path. Preserve `resolveSessionUser`, app-owned hub
 onboarding, and the raw auth handler before body parsers.
 
-The product keeps codes plus direct links and password fallback. Before wiring
-templates, prove on pinned dependencies that the code and link complete the
-same expiring, one-time challenge, including resend invalidation, concurrent
-completion, cross-device use, and replay rejection. Opening a link only presents
-confirmation; deliberate POST consumes proof so mail prefetch cannot sign in.
-Keep low-entropy verification codes keyed-hashed through the supported auth
-integration, apply issue/verify budgets, and avoid account-enumerating responses.
-If this cannot be achieved within better-auth's ownership boundary, record the
-blocker before changing product behavior or building custom credential storage.
+The user approved email-code-only authentication on 2026-10-05, explicitly removing
+password authentication. The transaction-scoped integration proves one-time consumption,
+resend invalidation, concurrent completion, cross-device sign-in and replay
+rejection on the pinned dependency. GET never consumes proof. Eight-digit
+verification codes are keyed-hashed through the supported auth integration;
+shared issue/verify budgets and non-enumerating issuance responses apply.
+See the [integration contract](auth-delivery-integration.md) for endpoints,
+transaction semantics, retention, failure recovery and local acceptance.
 
 Email change confirms the current address, verifies the new one, and revokes
 all sessions. Its proof cannot be replaced by a normal sign-in code. Security
@@ -277,7 +277,8 @@ Minimize provider-visible data:
 - use templates with the smallest necessary variable set;
 - do not put personal or sensitive data in subjects;
 - link users back to the authenticated application for sensitive details;
-- do not include raw IDs in tags, idempotency keys, or URLs;
+- do not include user, hub, collection or resource IDs in provider tags or
+  idempotency keys; the opaque outbox UUID is a delivery-only correlation tag;
 - do not emit recipient addresses, subjects, template variables, or webhook
   payloads into external telemetry.
 
@@ -295,11 +296,18 @@ retention and access boundary before enabling code delivery.
 
 ## Secrets
 
-Store `RESEND_API_KEY`, `RESEND_WEBHOOK_SECRET`, and sending-domain
+Store `RESEND_API_KEY`, `RESEND_WEBHOOK_SECRET`, `EMAIL_SUPPRESSION_SECRET`, and sending-domain
 configuration. Provide credentials to the API or email worker through the
 deployment's restricted `_FILE` secret contract
 (`docs/design-docs/infra-deployment.md`). Do not bake them into images, source
 control, or external telemetry.
+
+`EMAIL_SUPPRESSION_SECRET` is a stable, independent HMAC key of at least 32
+characters, required in production. Preserve it across auth-secret rotation
+and database restore; changing it requires an explicit suppression rekey/import.
+Credential expiry erases render inputs but retains the outbox delivery reference
+for signed provider-event correlation during the 30-day metadata lifecycle.
+See [auth delivery](auth-delivery-integration.md) for the implemented contract.
 
 ## Alternatives
 

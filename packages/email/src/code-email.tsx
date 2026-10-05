@@ -1,31 +1,12 @@
-import {
-  Body,
-  Button,
-  Container,
-  Head,
-  Hr,
-  Html,
-  Preview,
-  render,
-  Section,
-  Text,
-} from "@react-email/components";
+import { Body, Container, Head, Hr, Html, Preview, render, Text } from "@react-email/components";
 
-// Shared base for every code-bearing email (sign-in, email-change
-// confirmation, new-email verification). One layout, decided visual
-// direction: Substack-style minimal — lowercase nslinkhub text wordmark, one
-// large letter-spaced code, validity line, one action button with a
-// plain-link fallback (every code email carries BOTH the code and a direct
-// verify link; either completes the flow), bold do-not-share warning, muted
-// support footer. Neutral near-black palette until W3 brand tokens exist.
+// Codes-only authentication mail. Navigation links never carry proof.
 
 export interface CodeEmailBaseInput {
   /** Supported locales; copy ships English-first. */
   locale: "en";
   /** The one-time code better-auth minted. */
   code: string;
-  /** Opaque, expiring direct action URL (https) — completes the same flow as the code. */
-  actionUrl: string;
   /** Support route for unexpected-message recovery (https). */
   supportUrl: string;
   /** Validity window better-auth decided, in minutes (1–60). */
@@ -49,10 +30,7 @@ export function assertValidBaseInput(input: CodeEmailBaseInput): string[] {
   if (!CODE_RE.test(input.code)) {
     errors.push("code must be 4-10 digits");
   }
-  for (const [name, url] of [
-    ["actionUrl", input.actionUrl],
-    ["supportUrl", input.supportUrl],
-  ] as const) {
+  for (const [name, url] of [["supportUrl", input.supportUrl]] as const) {
     if (!/^https:\/\//.test(url)) {
       errors.push(`${name} must be an https:// URL`);
     }
@@ -89,18 +67,6 @@ const styles = {
     margin: "24px 0 0",
   },
   validity: { fontSize: "16px", lineHeight: "24px", color: "#1a1a1a", margin: "24px 0 0" },
-  button: {
-    backgroundColor: "#111827",
-    borderRadius: "6px",
-    color: "#ffffff",
-    display: "inline-block",
-    fontSize: "15px",
-    fontWeight: 600,
-    padding: "12px 24px",
-    textDecoration: "none",
-    marginTop: "24px",
-  },
-  linkFallback: { fontSize: "13px", lineHeight: "20px", color: "#6b7280", margin: "16px 0 0" },
   note: { fontSize: "14px", lineHeight: "21px", color: "#6b7280", margin: "24px 0 0" },
   warning: { fontSize: "15px", lineHeight: "23px", fontWeight: 700, margin: "32px 0 0" },
   hr: { borderColor: "#e5e7eb", margin: "40px 0 16px" },
@@ -118,8 +84,6 @@ export interface CodeEmailCopy {
   preview: string;
   /** The sentence introducing the code. */
   lead: string;
-  /** Action button label. */
-  actionLabel: string;
   /** Optional muted reassurance line, e.g. "ignore this and nothing changes". */
   note?: string;
 }
@@ -135,16 +99,8 @@ export function CodeEmail({ input, copy }: { input: CodeEmailBaseInput; copy: Co
           <Text style={styles.lead}>{copy.lead}</Text>
           <Text style={styles.code}>{input.code}</Text>
           <Text style={styles.validity}>
-            This code is only valid for the next {expiryPhrase(input.expiresInMinutes)}. If the code
-            does not work, you can use this link instead:
-          </Text>
-          <Section>
-            <Button href={input.actionUrl} style={styles.button}>
-              {copy.actionLabel}
-            </Button>
-          </Section>
-          <Text style={styles.linkFallback}>
-            Or paste this link into your browser: {input.actionUrl}
+            This code is only valid for the next {expiryPhrase(input.expiresInMinutes)}. Enter it in
+            the app to continue.
           </Text>
           {copy.note ? <Text style={styles.note}>{copy.note}</Text> : null}
           <Text style={styles.warning}>

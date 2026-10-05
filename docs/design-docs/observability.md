@@ -4,7 +4,7 @@
 
 Use one application telemetry pipeline:
 
-- LogTape is the structured logging API for NestJS and future workers.
+- LogTape is the structured logging API for NestJS and the email worker.
 - Sentry owns application errors, traces, and correlated structured logs.
 - The same allowlisted, redacted record reaches console and Sentry log sinks.
 - Shared Grafana Alloy infrastructure collects container stdout for Loki and
@@ -37,12 +37,16 @@ produce one completion event per incoming request, including aborted requests.
 Unexpected failures create one sanitized issue; expected failures do not.
 Request count/duration metrics use bounded method, route, status and outcome
 labels. Health transitions emit aggregate state only. Shutdown flush is bounded
-at two seconds within a five-second application shutdown deadline.
+at two seconds within a five-second API shutdown deadline.
 
 `telemetry.spec.ts` captures real SDK envelopes on loopback, verifies concurrent
 request/trace isolation and correlation, and injects arbitrary sensitive values
 and a failing sink. `bun run check:telemetry` guards application logging/SDK
 imports. No remote project or shared collector has been verified.
+
+The email worker initializes the shared telemetry pipeline and emits allowlisted
+startup/shutdown events; its shutdown deadline is ten seconds. Per-job tracing,
+worker metrics and browser instrumentation remain outstanding.
 
 The rest of this document includes future browser/worker/domain instrumentation.
 The API currently emits no domain pseudonyms or audit references; do not invent

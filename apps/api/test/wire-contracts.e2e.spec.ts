@@ -17,6 +17,7 @@ import request from "supertest";
 import { AppModule } from "../src/app.module";
 import { configureApp } from "../src/app.setup";
 import { HealthService } from "../src/modules/health/health.service";
+import { signInWithCode } from "./fixtures/sign-in";
 
 type Shape<T> = { [K in keyof Required<T>]: (value: unknown) => boolean };
 const string = (v: unknown) => typeof v === "string";
@@ -142,10 +143,7 @@ describe("W3 serialized contracts and safe HTTP errors", () => {
     await app.init();
     async function signup(label: string) {
       const email = `${label}-${suffix}@example.com`;
-      const res = await request(app.getHttpServer())
-        .post("/api/v1/auth/sign-up/email")
-        .send({ email, name: label, password: "Password123!" })
-        .expect(200);
+      const res = await signInWithCode(app.getHttpServer(), { email, name: label });
       return { token: res.headers["set-auth-token"] as string, email };
     }
     owner = (await signup("contract-owner")).token;

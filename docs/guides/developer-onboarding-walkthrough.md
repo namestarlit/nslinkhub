@@ -113,10 +113,15 @@ Read, in this order:
 Goal: every core capability exercised by hand. API running (`bun run dev`).
 
 ```bash
-# Sign up; the bearer token arrives in the set-auth-token response header
-curl -si localhost:4000/api/v1/auth/sign-up/email \
+# Request a code. For real mail, configure Resend and run the email worker
+# (see local-development.md); this intentionally sends to your own mailbox.
+curl -si localhost:4000/api/v1/auth/code/send \
   -H 'content-type: application/json' \
-  -d '{"email":"me@example.com","password":"Password123!","name":"Paul"}' \
+  -d '{"email":"me@example.com"}'
+# Enter the received code; first verification creates the account and hub.
+curl -si localhost:4000/api/v1/auth/code/verify \
+  -H 'content-type: application/json' \
+  -d '{"email":"me@example.com","code":"<received-code>","name":"Paul"}' \
   | grep -i set-auth-token
 export T="<token>"
 
@@ -249,7 +254,7 @@ E2E now creates, migrates and drops a disposable database per run. Run
 connectivity rather than resetting development data. Read
 [verification.md](../runbooks/verification.md) for test-specific configuration
 and [release.md](../runbooks/release.md) for the separate image rehearsal.
-The new audit/budget migration must also be applied to your development DB
+The release-foundation and auth-delivery migrations must also be applied to your development DB
 before starting the updated API: `(cd apps/api && bunx prisma migrate deploy)`.
 
 **Checkpoint 5**:
@@ -271,8 +276,8 @@ Read:
    and § Identity and handles (code-first sign-in; the four-step
    double-verified email change).
 2. [transactional-email.md](../design-docs/transactional-email.md) — the
-   built template trio and the delivery machinery that deliberately does not
-   exist yet. Then open
+   built template trio, encrypted outbox, separate worker and locally verified
+   delivery path; distinguish these from live provider acceptance. Then open
    [code-email.tsx](../../packages/email/src/code-email.tsx) — the shared
    base all three templates render through.
 3. [index.md](../design-docs/index.md) — the three current `web-*` design
@@ -294,18 +299,23 @@ durable, it only sequences it.
       emit.
 - [ ] You can explain why the web app will have no CORS config and no
       `.env` for the API origin in dev (rewrites) or prod (path routing).
-- [ ] You can distinguish today's password-only backend from the code-first
-      account journey's delivery gate, and explain why Impeccable may restyle
+- [ ] You can distinguish locally verified code delivery from the account
+      journey's browser and live-provider acceptance, and explain why Impeccable may restyle
       but not reorder that journey.
 - [ ] You can name the foundation checks required before web implementation
       and the separate public-release gates.
 - [ ] `bun run verify` is green on your machine right now.
 
-The foundation milestone is committed; the three W3 design documents now
-define the first reading journeys and browser boundaries. Next is `apps/web`
-scaffolding and implementation of adoption gate #2, with real browser proof.
-Apply Impeccable to interface work under repository guidance. Auth-delivery
-implementation belongs with the account journey.
+The foundation and W3 design milestones are committed. By user direction,
+gate #3 auth delivery precedes the remaining `apps/web` scaffold and gate #2
+browser proof. Read the [pinned auth integration evidence](../design-docs/auth-delivery-integration.md)
+for the codes-only decision and the transaction-scoped integration that closes
+native delivery and email-change gaps. Profile credential writes and account
+deletion are disabled; password authentication has been removed.
+The backend auth-delivery milestone is implemented and locally verified;
+review and land it before resuming web scaffolding. Apply Impeccable to
+interface work under repository guidance, then prove the account journey
+through the web origin.
 
 ---
 

@@ -5,6 +5,7 @@ import request from "supertest";
 import { App } from "supertest/types";
 import { AppModule } from "../src/app.module";
 import { configureApp } from "../src/app.setup";
+import { signInWithCode } from "./fixtures/sign-in";
 
 // Phase C: per-collection sharing (Drive model), publication, and saves.
 describe("Sharing, publication, and saves (e2e)", () => {
@@ -17,10 +18,7 @@ describe("Sharing, publication, and saves (e2e)", () => {
   const collabEmail = `col_${sfx}@example.com`;
 
   const signUp = async (name: string, email: string) => {
-    const res = await request(app.getHttpServer())
-      .post("/api/v1/auth/sign-up/email")
-      .send({ email, password: "Password123!", name })
-      .expect(200);
+    const res = await signInWithCode(app.getHttpServer(), { email, name });
     return res.headers["set-auth-token"];
   };
 

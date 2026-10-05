@@ -1,4 +1,4 @@
-import { IsEmail, IsOptional, IsString, Matches, MaxLength, MinLength } from "class-validator";
+import { IsOptional, IsString, Matches, MaxLength, MinLength } from "class-validator";
 
 export class UpdateUserDto {
   // Free-form display name (not a username; no handle-convention semantics).
@@ -16,17 +16,6 @@ export class UpdateUserDto {
   @MinLength(3)
   @MaxLength(60)
   handle?: string;
-
-  @IsOptional()
-  @IsEmail()
-  @MaxLength(255)
-  email?: string;
-
-  @IsOptional()
-  @IsString()
-  @MinLength(8)
-  @MaxLength(128)
-  password?: string;
 
   @IsOptional()
   @IsString()

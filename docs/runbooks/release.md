@@ -35,9 +35,10 @@ is covered by API unit tests. This restore is local, not off-host proof.
 `docker-stack.local.yml` is the separate Swarm rehearsal artifact. Validate
 its dialect with `API_IMAGE` and `LOCAL_SECRETS_DIR` set using
 `docker stack config -c docker-stack.local.yml`. On an explicitly selected
-disposable Swarm host, create synthetic `postgres_password`, `database_url`
-and `auth_secret` files (database URL uses host `postgres`, database
-`rehearsal`). Deploy with `API_REPLICAS=0`, run the migration as a one-shot
+disposable Swarm host, create synthetic `postgres_password`, `database_url`,
+`auth_secret` and `email_suppression` files. Use independent random auth and
+suppression secrets of at least 32 characters; the database URL uses host
+`postgres`, database `rehearsal`. Deploy with `API_REPLICAS=0`, run the migration as a one-shot
 service on `<stack>_local` using secret `<stack>_database_url`, check its exit
 code, then redeploy with `API_REPLICAS=1`. Probe through the attachable overlay
 network; no host ports are exposed. Remove that stack and its owned volumes
@@ -76,7 +77,10 @@ The operator supplies non-secret references for:
   `TLS_RESOLVER`, `TRUSTED_PROXY_CIDRS`, `API_IMAGE`, and full `RELEASE_SHA`.
   Allow only the actual proxy addresses; never trust all forwarded headers.
 - External Swarm secret names `DATABASE_URL_SECRET`, `AUTH_SECRET`,
-  `REDIS_URL_SECRET`, `SENTRY_DSN_SECRET`. Their contents stay out of Git/chat.
+  `REDIS_URL_SECRET`, `SENTRY_DSN_SECRET`, `RESEND_API_KEY_SECRET`,
+  `RESEND_WEBHOOK_SECRET_NAME`, and `EMAIL_SUPPRESSION_SECRET_NAME`.
+  Keep the suppression secret stable across auth-secret rotation and restore;
+  replacement needs reviewed suppression rekey/import. Contents stay out of Git/chat.
   The stack exposes them only through `/run/secrets/*` and `_FILE` inputs.
 - A PostgreSQL 18 product database and dedicated Redis with AOF and
   `noeviction`, reachable only over the private backend network. The product

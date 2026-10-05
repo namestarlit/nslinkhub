@@ -4,6 +4,10 @@ import type * as Sentry from "@sentry/bun";
 export const eventNames = new Set([
   "http.request",
   "auth.diagnostic",
+  "email.delivery_failed",
+  "email.relay_failed",
+  "email.worker_started",
+  "email.worker_stopped",
   "budget.maintenance_failed",
   "health.transition",
   "application.started",

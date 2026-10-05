@@ -2,6 +2,7 @@ import { describe, expect, it } from "bun:test";
 import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { emailConfig } from "../email/config";
 import { validateEnv } from "./env.validation";
 
 function secretFile(content: string): string {
@@ -39,10 +40,45 @@ describe("validateEnv", () => {
         NODE_ENV: "production",
         DATABASE_URL_FILE: secretFile("postgresql://x/y\n"),
         BETTER_AUTH_SECRET_FILE: secretFile("a-sufficiently-long-secret\n"),
+        EMAIL_SUPPORT_URL: "https://example.com/support",
+        QUEUE_NAMESPACE: "test-config",
+        EMAIL_SUPPRESSION_SECRET_FILE: secretFile(
+          "synthetic-stable-suppression-key-32-characters\n",
+        ),
       }),
     ).not.toThrow();
     // No NODE_ENV (dev/test): nothing is required.
     expect(() => validateEnv({})).not.toThrow();
+  });
+
+  it("requires an independent stable suppression secret in production and honors _FILE", () => {
+    const env = {
+      NODE_ENV: "production",
+      EMAIL_SUPPORT_URL: "https://example.com/support",
+      QUEUE_NAMESPACE: "test",
+    };
+    expect(() => emailConfig(env)).toThrow(/EMAIL_SUPPRESSION_SECRET/);
+    expect(() => emailConfig({ ...env, EMAIL_SUPPRESSION_SECRET: "short" })).toThrow(
+      /EMAIL_SUPPRESSION_SECRET/,
+    );
+    expect(() =>
+      emailConfig({ ...env, EMAIL_SUPPRESSION_SECRET: emailConfig({}).suppressionSecret }),
+    ).toThrow(/EMAIL_SUPPRESSION_SECRET/);
+    const stable = "synthetic-stable-suppression-key-32-characters";
+    const configured = {
+      ...env,
+      EMAIL_SUPPRESSION_SECRET: "ignored",
+      EMAIL_SUPPRESSION_SECRET_FILE: secretFile(stable),
+    };
+    expect(emailConfig({ ...configured, BETTER_AUTH_SECRET: "before" }).suppressionSecret).toBe(
+      stable,
+    );
+    expect(emailConfig({ ...configured, BETTER_AUTH_SECRET: "after" }).suppressionSecret).toBe(
+      stable,
+    );
+    expect(emailConfig({ BETTER_AUTH_SECRET: "before" }).suppressionSecret).toBe(
+      emailConfig({ BETTER_AUTH_SECRET: "after" }).suppressionSecret,
+    );
   });
 
   // The production path: secrets arriving via _FILE get the same checks.

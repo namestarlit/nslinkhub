@@ -111,7 +111,7 @@ before showing sign-in; no redirect loop or background repeated retries.
 
 | Journey | Presentation contract and release condition |
 | --- | --- |
-| Sign-in | Email first, then emailed code; direct link offers deliberate confirmation before POST. Password is an explicit alternative. Gate #3 must prove real delivery before this is advertised. |
+| Sign-in | Email first, then emailed code submitted by POST; no direct authentication link. No password signup, sign-in or recovery screens. Gate #3 must prove real delivery before this is advertised. |
 | Own hub | Collections, shared with you and saved collections are separate destinations; one personal hub, no switcher. |
 | Dormant saves | Keep the saved row in place with “Currently unavailable”. Disable opening/exporting while dormant; allow removal. Restore opening on republish. Do not fetch or preview unavailable contents. |
 | Capture/edit | Inline forms and an ordered resource list; backend validates and authorizes. A 409 preserves the unsent draft, fetches current state and asks for a deliberate retry. |
@@ -125,8 +125,10 @@ Dormant-save rows retain the title supplied by the saved-list contract, with
 muted text, saved date and unavailable label. This is not a historical snapshot.
 Tags and descriptive previews are suppressed while unavailable. Removing a
 save uses an explicit action and refreshes the list; no new retention policy
-is implied by this presentation. Account deletion and credential corrections
-remain gate #3 prerequisites.
+is implied by this presentation. Gate #3 has closed the profile credential-write
+bypass and implemented verified email handover locally. Account deletion stays
+unavailable pending its verified ownership and retention workflow; browser
+acceptance for account journeys remains outstanding.
 
 ## Reading acceptance
 

@@ -5,6 +5,7 @@ import request from "supertest";
 import { App } from "supertest/types";
 import { AppModule } from "../src/app.module";
 import { configureApp } from "../src/app.setup";
+import { signInWithCode } from "./fixtures/sign-in";
 
 // Regression tests for route shadowing: a catch-all GET ':owner/:slug' under
 // the collection routes used to swallow GET ':id/resources' and
@@ -32,14 +33,10 @@ describe("Collection routes (e2e)", () => {
 
     const server = app.getHttpServer();
 
-    const signUp = await request(server)
-      .post("/api/v1/auth/sign-up/email")
-      .send({
-        email: `${username}@example.com`,
-        password: "Password123!",
-        name: username,
-      })
-      .expect(200);
+    const signUp = await signInWithCode(server, {
+      email: `${username}@example.com`,
+      name: username,
+    });
     bearer = signUp.headers["set-auth-token"];
     expect(bearer).toBeTruthy();
 

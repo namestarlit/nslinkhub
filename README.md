@@ -29,9 +29,7 @@ This repository is a greenfield NestJS v2 rewrite. The old Flask v1 is retained 
   external resources with canonical URLs + tags, collection-level sharing
   (link/direct/publish with downward inheritance), top-level ownership
   transfer, saves, explore, id permalinks + handle resolution
-- Auth via self-hosted [better-auth](https://better-auth.com) (email +
-  password, DB-backed sessions, bearer tokens for API clients, argon2id via
-  `Bun.password`); one personal hub auto-created at sign-up
+- Auth via self-hosted [better-auth](https://better-auth.com) (email codes, DB-backed sessions, bearer tokens for API clients); one personal hub auto-created at sign-up
 - Synchronous export (Markdown/PDF/Word; multi-collection, zipped) and
   imports (bookmarks-HTML + universal CSV with per-row error reports)
 - `@nslinkhub/types` (wire contracts) and `@nslinkhub/email` (code-email
@@ -66,7 +64,7 @@ DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5436/nslinkhub
 BETTER_AUTH_SECRET=change-me-to-a-long-random-string
 BETTER_AUTH_URL=http://localhost:4000
 
-# Queue Redis (future email/notification delivery; checked by /status)
+# Queue Redis (email delivery; checked by /status)
 REDIS_URL=redis://127.0.0.1:6383
 ```
 
@@ -133,8 +131,8 @@ bun run email:test     # email template tests
 
 Auth endpoints are served by better-auth under `/api/v1/auth/*`. The main ones:
 
-- `POST /api/v1/auth/sign-up/email` — `{ email, password, name }`
-- `POST /api/v1/auth/sign-in/email` — `{ email, password }`
+- `POST /api/v1/auth/code/send` — `{ email }` (request a code)
+- `POST /api/v1/auth/code/verify` — `{ email, code, name? }` (sign in or create a verified account; optional name applies only at creation)
 - `POST /api/v1/auth/sign-out`
 - `GET  /api/v1/auth/get-session`
 
@@ -142,6 +140,10 @@ Browser clients get an HttpOnly session cookie. API clients read the session
 token from the `set-auth-token` response header on sign-in and send it as
 `Authorization: Bearer <token>` (better-auth bearer plugin). Sessions are
 DB-backed and refresh themselves server-side.
+
+Code delivery requires the separate email worker. See
+[local email setup](docs/runbooks/local-development.md#email-delivery) for
+capture/Resend configuration and `bun run --cwd apps/api email:worker`.
 
 ## API Docs
 

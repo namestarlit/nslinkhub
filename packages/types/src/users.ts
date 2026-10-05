@@ -18,12 +18,5 @@ export interface Profile {
 export interface UpdateProfileRequest {
   displayName?: string;
   handle?: string;
-  email?: string;
-  password?: string;
   bio?: string;
-}
-
-export interface DeleteProfileResult {
-  id: string;
-  deleted: boolean;
 }

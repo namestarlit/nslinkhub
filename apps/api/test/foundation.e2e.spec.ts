@@ -5,6 +5,7 @@ import request from "supertest";
 import { App } from "supertest/types";
 import { AppModule } from "../src/app.module";
 import { configureApp } from "../src/app.setup";
+import { signInWithCode } from "./fixtures/sign-in";
 
 // Phase A foundation conventions: error envelope, request IDs, cursor
 // pagination (docs/exec-plans — foundation-conventions-phase-a).
@@ -29,14 +30,10 @@ describe("Foundation conventions (e2e)", () => {
 
     const server = app.getHttpServer();
 
-    const signUp = await request(server)
-      .post("/api/v1/auth/sign-up/email")
-      .send({
-        email: `${username}@example.com`,
-        password: "Password123!",
-        name: username,
-      })
-      .expect(200);
+    const signUp = await signInWithCode(server, {
+      email: `${username}@example.com`,
+      name: username,
+    });
     bearer = signUp.headers["set-auth-token"];
 
     const collection = await request(server)

@@ -5,6 +5,7 @@ import request from "supertest";
 import { App } from "supertest/types";
 import { AppModule } from "../src/app.module";
 import { configureApp } from "../src/app.setup";
+import { signInWithCode } from "./fixtures/sign-in";
 
 // Locks the import response contract: camelCase keys, partial-failure counts.
 describe("Imports (e2e)", () => {
@@ -23,14 +24,10 @@ describe("Imports (e2e)", () => {
     configureApp(app);
     await app.init();
 
-    const signUp = await request(app.getHttpServer())
-      .post("/api/v1/auth/sign-up/email")
-      .send({
-        email: `imp_${sfx}@example.com`,
-        password: "Password123!",
-        name: `imp_${sfx}`,
-      })
-      .expect(200);
+    const signUp = await signInWithCode(app.getHttpServer(), {
+      email: `imp_${sfx}@example.com`,
+      name: `imp_${sfx}`,
+    });
     bearer = signUp.headers["set-auth-token"];
 
     const collection = await request(app.getHttpServer())

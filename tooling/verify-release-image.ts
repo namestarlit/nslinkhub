@@ -15,6 +15,7 @@ const volume = `${prefix}-database`;
 const postgres = `${prefix}-postgres`;
 const redis = `${prefix}-redis`;
 const api = `${prefix}-api`;
+const worker = `${prefix}-worker`;
 let active: ReturnType<typeof Bun.spawn> | undefined;
 
 async function docker(args: string[], input?: Uint8Array, allowFailure = false): Promise<string> {
@@ -80,7 +81,15 @@ try {
   // Keep the host directory private (mkdtemp's 0700), but mount individual
   // synthetic files. Container UID 1000 must not need to traverse the host
   // runner's directory: GitHub's runner UID differs from the local user's.
-  const secretMount = ["postgres_password", "database_url", "auth_secret"].flatMap((name) => [
+  await writeFile(join(secrets, "email_suppression"), randomBytes(32).toString("hex"), {
+    mode: 0o644,
+  });
+  const secretMount = [
+    "postgres_password",
+    "database_url",
+    "auth_secret",
+    "email_suppression",
+  ].flatMap((name) => [
     "--mount",
     `type=bind,source=${join(secrets, name)},target=/run/secrets/${name},readonly`,
   ]);
@@ -156,9 +165,17 @@ try {
     "-e",
     "BETTER_AUTH_SECRET_FILE=/run/secrets/auth_secret",
     "-e",
+    "EMAIL_SUPPRESSION_SECRET_FILE=/run/secrets/email_suppression",
+    "-e",
     "REDIS_URL=redis://redis:6379",
     "-e",
     "BETTER_AUTH_URL=http://api:4000",
+    "-e",
+    "EMAIL_PROVIDER=capture",
+    "-e",
+    "EMAIL_SUPPORT_URL=https://example.com/support",
+    "-e",
+    "QUEUE_NAMESPACE=release-rehearsal",
     image,
   ]);
   let ready = false;
@@ -178,8 +195,73 @@ try {
   await probe("/api/v1/health", 200, '"status":"ok"');
   console.log("Image boot, compiled imports, secret files and readiness passed.");
 
-  const fixture = `const root='http://api:4000/api/v1';const r=await fetch(root+'/auth/sign-up/email',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({email:'restore@example.com',name:'Restore',password:'SyntheticPassword123!'})});if(!r.ok)process.exit(1);const t=r.headers.get('set-auth-token');const c=await fetch(root+'/collections',{method:'POST',headers:{'content-type':'application/json',authorization:'Bearer '+t},body:JSON.stringify({slug:'restore-check',title:'Restore check',published:true})});if(!c.ok)process.exit(1);`;
-  await docker(["run", "--rm", "--network", network, "--entrypoint", "bun", image, "-e", fixture]);
+  // Exercise real issuance/consumption before starting capture delivery. Read
+  // only this synthetic fixture's encrypted intent inside the disposable API
+  // container; never replace a library challenge or print its secret/code.
+  const fixture = `
+    const {PrismaClient}=await import('./dist/src/generated/prisma/client.js');
+    const {PrismaPg}=await import('@prisma/adapter-pg');
+    const {readSecret}=await import('./dist/src/config/secret.js');
+    const {emailKey,unseal}=await import('./dist/src/email/outbox.js');
+    const db=new PrismaClient({adapter:new PrismaPg({connectionString:readSecret('DATABASE_URL')})});
+    const root='http://api:4000/api/v1';const email='restore@example.com';
+    const sent=await fetch(root+'/auth/code/send',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({email})});if(!sent.ok)process.exit(1);
+    const secret=readSecret('BETTER_AUTH_SECRET');
+    const intent=await db.emailOutbox.findFirstOrThrow({where:{recipientKey:emailKey(readSecret('EMAIL_SUPPRESSION_SECRET'),'recipient',email),state:'pending'}});
+    const code=unseal(intent.payload,secret).text.match(/\\b\\d{8}\\b/)[0];
+    const r=await fetch(root+'/auth/code/verify',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({email,code,name:'Restore'})});if(!r.ok)process.exit(1);
+    const t=r.headers.get('set-auth-token');
+    const c=await fetch(root+'/collections',{method:'POST',headers:{'content-type':'application/json',authorization:'Bearer '+t},body:JSON.stringify({slug:'restore-check',title:'Restore check',published:true})});if(!c.ok)process.exit(1);
+    await db.$disconnect();`;
+  await docker(["exec", api, "bun", "-e", fixture]);
+  await start(worker, [
+    "--read-only",
+    "--tmpfs",
+    "/tmp",
+    "--no-healthcheck",
+    ...secretMount,
+    "-e",
+    "DATABASE_URL_FILE=/run/secrets/database_url",
+    "-e",
+    "BETTER_AUTH_SECRET_FILE=/run/secrets/auth_secret",
+    "-e",
+    "EMAIL_SUPPRESSION_SECRET_FILE=/run/secrets/email_suppression",
+    "-e",
+    "REDIS_URL=redis://redis:6379",
+    "-e",
+    "EMAIL_PROVIDER=capture",
+    "-e",
+    "EMAIL_SUPPORT_URL=https://example.com/support",
+    "-e",
+    "QUEUE_NAMESPACE=release-rehearsal",
+    image,
+    "bun",
+    "--tsconfig-override",
+    "tsconfig.runtime.json",
+    "dist/src/email/worker.js",
+  ]);
+  let delivered = false;
+  for (let i = 0; i < 20; i++) {
+    const count = await docker([
+      "exec",
+      postgres,
+      "psql",
+      "-U",
+      "postgres",
+      "-d",
+      "rehearsal",
+      "-Atc",
+      "SELECT count(*) FROM email_outbox WHERE state='sent' AND payload IS NULL",
+    ]);
+    if (count.trim() === "1") {
+      delivered = true;
+      break;
+    }
+    await Bun.sleep(500);
+  }
+  if (!delivered) throw new Error("Compiled email worker did not capture delivery");
+  console.log("Compiled code issuance, queued capture delivery and credential cleanup passed.");
+
   const dump = Bun.spawn(
     [
       "docker",
@@ -230,6 +312,9 @@ try {
   await docker(["stop", redis]);
   await probe("/api/v1/status", 200, '"status":"degraded"');
   await probe("/api/v1/health", 200, '"status":"ok"');
+  await docker(["stop", "--time", "12", worker]);
+  if ((await docker(["inspect", "--format", "{{.State.ExitCode}}", worker])).trim() !== "0")
+    throw new Error("Worker did not shut down gracefully during Redis outage");
   await docker(["stop", postgres]);
   await probe("/api/v1/status", 503, "dependencies_unavailable");
   await probe("/api/v1/health", 200, '"status":"ok"');

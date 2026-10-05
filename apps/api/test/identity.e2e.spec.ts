@@ -5,6 +5,7 @@ import request from "supertest";
 import { App } from "supertest/types";
 import { AppModule } from "../src/app.module";
 import { configureApp } from "../src/app.setup";
+import { signInWithCode } from "./fixtures/sign-in";
 
 // The Google-Drive identity model: one hub per user, a derived unique handle
 // (the mutable public identity) and a free-form display name; no username.
@@ -13,10 +14,7 @@ describe("Identity & profile (e2e)", () => {
   const sfx = Date.now().toString(36);
 
   const signUp = async (name: string, email: string) => {
-    const res = await request(app.getHttpServer())
-      .post("/api/v1/auth/sign-up/email")
-      .send({ email, password: "Password123!", name })
-      .expect(200);
+    const res = await signInWithCode(app.getHttpServer(), { email, name });
     return res.headers["set-auth-token"];
   };
 
@@ -76,5 +74,68 @@ describe("Identity & profile (e2e)", () => {
       .set("Authorization", `Bearer ${bearer}`)
       .send({ handle: "api" })
       .expect(400);
+  });
+
+  it("rejects profile credential writes without changing credentials or profile fields", async () => {
+    const email = `credentials-${sfx}@example.com`;
+    const bearer = await signUp("Credential owner", email);
+    for (const fields of [
+      { email: `replacement-${sfx}@example.com` },
+      { password: "ChangedPassword123!" },
+      { email: `replacement-${sfx}@example.com`, password: "ChangedPassword123!" },
+    ]) {
+      const response = await request(app.getHttpServer())
+        .patch("/api/v1/profile")
+        .set("Authorization", `Bearer ${bearer}`)
+        .send({ ...fields, displayName: "Must not change" })
+        .expect(400);
+      expect(response.body.error.code).toBe("validation_failed");
+    }
+    expect((await profile(bearer)).data.displayName).toBe("Credential owner");
+    const again = await signInWithCode(app.getHttpServer(), { email });
+    expect((await profile(again.headers["set-auth-token"])).data).toEqual(
+      (await profile(bearer)).data,
+    );
+  });
+
+  it("keeps account deletion unavailable and preserves the account and its hub", async () => {
+    const bearer = await signUp("Retained owner", `retained-${sfx}@example.com`);
+    const before = await profile(bearer);
+    await request(app.getHttpServer())
+      .delete("/api/v1/profile")
+      .set("Authorization", `Bearer ${bearer}`)
+      .expect(404);
+    await request(app.getHttpServer())
+      .post("/api/v1/auth/delete-user")
+      .set("Authorization", `Bearer ${bearer}`)
+      .send({ password: "Password123!" })
+      .expect(404);
+    expect(await profile(bearer)).toEqual(before);
+  });
+
+  it("keeps password signup, login, enrollment, change and reset unavailable", async () => {
+    const email = `no-password-${sfx}@example.com`;
+    const bearer = await signUp("Code owner", email);
+    for (const path of [
+      "sign-up/email",
+      "sign-in/email",
+      "set-password",
+      "change-password",
+      "request-password-reset",
+      "reset-password",
+      "forget-password",
+    ]) {
+      await request(app.getHttpServer())
+        .post(`/api/v1/auth/${path}`)
+        .set("Authorization", `Bearer ${bearer}`)
+        .send({
+          email,
+          password: "UnusedPassword123!",
+          newPassword: "UnusedPassword123!",
+          currentPassword: "UnusedPassword123!",
+        })
+        .expect(404);
+    }
+    await profile(bearer);
   });
 });

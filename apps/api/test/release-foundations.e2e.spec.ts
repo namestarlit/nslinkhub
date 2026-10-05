@@ -14,6 +14,7 @@ import {
 import { requestIdMiddleware } from "../src/common/middleware/request-id";
 import { RequestBudgetMaintenance } from "../src/common/request-budget-maintenance";
 import { PrismaService } from "../src/database/prisma.service";
+import { signInWithCode } from "./fixtures/sign-in";
 
 describe("release foundations over real HTTP and PostgreSQL", () => {
   let app: INestApplication;
@@ -31,10 +32,7 @@ describe("release foundations over real HTTP and PostgreSQL", () => {
     const suffix = crypto.randomUUID();
     async function signup(label: string) {
       const email = `${label}-${suffix}@example.com`;
-      const response = await request(app.getHttpServer())
-        .post("/api/v1/auth/sign-up/email")
-        .send({ email, name: label, password: "Password123!" })
-        .expect(200);
+      const response = await signInWithCode(app.getHttpServer(), { email, name: label });
       return { email, token: response.headers["set-auth-token"] as string };
     }
     owner = (await signup("audit-owner")).token;

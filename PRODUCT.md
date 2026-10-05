@@ -138,7 +138,7 @@ always optional; keep tags flat (no hierarchies or governance).
   the previous owner keeps it as an editor in their shared/, and the immutable
   **creator** is unchanged (owner is mutable, creator is not). Handing over an
   entire account/hub is instead done by changing the account email (with
-  verification; planned with the email/MFA work), not a separate transfer model
+  verification; implemented locally in the auth-delivery backend), not a separate transfer model
   — a hub is 1:1 with its account.
 
 ### Publish and discover
@@ -174,23 +174,24 @@ always optional; keep tags flat (no hierarchies or governance).
 
 ### Account
 
-- Email + password via self-hosted better-auth (cookie sessions for browsers,
+- Email codes via self-hosted better-auth (cookie sessions for browsers,
   bearer tokens for API clients and the extension). No username: identity is a
   free-form **display name** plus a unique, mutable **hub handle**. Profile
   self-service lives at `/api/v1/profile`. Later: "Continue with namestarlit"
   SSO (`docs/design-docs/identity-sso.md`).
-- **Sign-in code is the primary path** (ships with the email-delivery slice):
-  continue with email → enter the emailed code; the email also carries a
-  direct sign-in link, and either completes the flow. Password sign-in
-  remains the explicit alternative, not the default — the product starts
-  passwordless-first rather than migrating to it later. The W3 design pass
+- **Email code is the sign-up and sign-in path** (ships with the email-delivery slice):
+  continue with email → enter the emailed code. Authentication emails carry
+  codes only, without direct sign-in links or password authentication. The W3 design pass
   shapes the presentation; the flow itself is decided
   (`docs/SYSTEM_DESIGN.md` § Identity and handles).
 - **Account handover = verified email change**, double-verified: confirm from
-  the **current** address (which sees the target address; ignoring it changes
-  nothing), then verify the **new** address; on completion all sessions are
+  the **current** address by code (which sees the target address; ignoring it changes
+  nothing), then verify the **new** address by code; on completion all sessions are
   revoked and the account signs in with the new email
   (`docs/SYSTEM_DESIGN.md` § Identity and handles).
+
+Optional authenticator-app TOTP and recovery codes are a separate follow-up
+from core email-code delivery.
 
 ## 5. Product Surfaces
 

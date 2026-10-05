@@ -27,7 +27,7 @@
   scrub query strings from logs/telemetry and prevent referrer leakage on the
   web. Auth verification challenges are expiring and purpose-bound; consuming
   proof requires POST, never a state-changing GET. Do not conflate share-link
-  reads with the future one-time auth challenge lifecycle.
+  reads with the one-time auth challenge lifecycle.
 - Share-link rotation and disabling take effect immediately, including for
   link-derived shared/ access.
 - Application secrets reach services through deployment-secret `_FILE`
@@ -35,7 +35,7 @@
 
 ## Authentication Boundary
 
-- Self-hosted better-auth owns credentials (argon2id via `Bun.password`),
+- Self-hosted better-auth owns verification proofs,
   sessions, and verification primitives. The product owns identity,
   authorization, and workflows.
 - Session resolution goes through `resolveSessionUser`
@@ -107,13 +107,19 @@ records `audit.read`. Transfers write source/recipient events, and historical
 rows stay with their original hub. Audit identifiers deliberately have no
 cascading foreign keys: deleting a collection cannot erase its history.
 
-There is no audit purge or public account-deletion retention policy yet. The
-existing profile DELETE route and direct email/password mutation in
-`UsersService.updateMe` predate this boundary: correct those paths through
-better-auth and a decided deletion/retention contract before public exposure.
+There is no audit purge or public account-deletion retention policy yet.
+Account deletion is disabled: the profile DELETE route is removed and
+better-auth delete-user stays explicitly disabled. Profile writes no longer
+accept email/password. Password authentication is disabled in better-auth and
+its public signup, login, enrollment, change and reset routes are unavailable.
+Email handover revokes every session; the former owner has no password path
+back into the account. Re-enabling deletion requires
+verified proof and a reviewed retention policy. See
+[auth integration](design-docs/auth-delivery-integration.md).
 Auth security outcomes, double-verified email changes and all-session
-revocation belong to gate 3; coarse endpoint throttles do not replace
-challenge issuance/verification controls. See `adoption-decisions.md`.
+revocation are transaction-bound. Shared identity budgets complement source
+throttles; codes expire after five minutes with three wrong attempts allowed.
+Auth audits retain 90 days; collection audit/deletion policy remains separate.
 
 ## Abuse protection
 

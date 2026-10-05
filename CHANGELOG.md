@@ -9,7 +9,42 @@ summary of what changed after completed work has been promoted out of `ref/`.
 
 ## Unreleased
 
+### Auth delivery
+
+- Removed better-auth's additional production-only HTTP throttle so code
+  issuance and resends follow the documented shared PostgreSQL budgets. Added
+  production-process HTTP coverage proving both identity and source limits
+  still apply; per-proof wrong-attempt protection remains enabled.
+
+- Fixed cross-workflow email-change proof collisions by namespacing library
+  verification and outbox identifiers with an unambiguous account/session/address
+  tuple. Restarting handover invalidates both prior proofs and pending mail;
+  legacy unscoped proofs cannot authorize a handover. Added collision, restart,
+  attempt-limit and legacy-proof regressions.
+
+- Preserved recipient suppression across auth-secret rotation with an independent
+  stable suppression secret. Signed Resend delivery references reconcile lost
+  receipts and bounce/complaint suppression even after expired codes are erased.
+
+- Added codes-only sign-in and two-step account-email change through better-auth,
+  with keyed proof storage, shared abuse budgets, purpose/session/target binding,
+  transactional hub onboarding and all-session revocation after handover.
+- Added encrypted PostgreSQL email intent, an isolated BullMQ relay/worker,
+  capture and Resend providers, retries/claims, signed idempotent webhooks,
+  suppression and credential/metadata cleanup. Production topology uses the
+  same immutable image for a separate worker; no live delivery is claimed.
+- Removed direct authentication links from email templates and product contracts;
+  removed password signup, sign-in, enrollment, change and reset by explicit
+  pre-deployment product decision. Optional TOTP/recovery codes are a separate milestone.
+- Removed profile credential writes and disabled account deletion pending its
+  verified retention workflow. Email handover revokes all sessions, with no password route back in.
+
 ### Documentation
+
+- Reconciled auth-delivery status across system design, onboarding, reliability
+  and adoption guidance. Documented the additive migration chain, current email
+  queue and audit retention, and separated local backend completion from
+  outstanding browser and live-provider acceptance.
 
 - Recorded a pinned comparison with Pigfarm (`f0bab0a`) and the remaining
   foundation adoption decisions in `docs/design-docs/adoption-decisions.md`.
@@ -20,7 +55,7 @@ summary of what changed after completed work has been promoted out of `ref/`.
 - Updated the observability direction to LogTape + Sentry application
   telemetry with shared Alloy collecting stdout and dependency metrics;
   the comparison was documentation-only; implementation follows below.
-  Retained NSLinkHub's password alternative, code-plus-link emails, individual
+  Retained NSLinkHub's individual
   hubs, stable URL scheme, and synchronous exports rather than adopting
   Pigfarm-specific product behavior.
 - Reconciled the security document's stale membership rules with the built
@@ -30,6 +65,16 @@ summary of what changed after completed work has been promoted out of `ref/`.
   guide-only follow-up after the reviewed documentation commit exists.
 
 ### Added
+
+- Pinned better-auth delivery spike with synthetic capture, recording OTP
+  replay/expiry/resend behavior and native code/link, email-change/session and
+  delivery-callback incompatibilities, subsequently addressed by the codes-only
+  transaction-scoped integration above.
+- Explicit auth composition factory for persistence, configuration and
+  delivery plugins. Profile writes no longer accept email/password; password
+  authentication is disabled. Account
+  deletion is disabled pending verified proof and retention. Test processes
+  force capture delivery regardless of local Resend settings.
 
 - W3 design milestone for adoption gate #2: product experience, interface
   system and canonical Tailwind token documents, including verified palette

@@ -1,7 +1,7 @@
-export type { CodeEmailBaseInput, RenderedEmail } from "./code-email";
-export type { EmailChangeConfirmationInput } from "./email-change-confirm";
-export { renderEmailChangeConfirmation } from "./email-change-confirm";
-export type { LoginCodeEmailInput } from "./login-code";
-export { renderLoginCode } from "./login-code";
-export type { NewEmailVerificationInput } from "./verify-new-email";
-export { renderNewEmailVerification } from "./verify-new-email";
+export type { CodeEmailBaseInput, RenderedEmail } from "./code-email.js";
+export type { EmailChangeConfirmationInput } from "./email-change-confirm.js";
+export { renderEmailChangeConfirmation } from "./email-change-confirm.js";
+export type { LoginCodeEmailInput } from "./login-code.js";
+export { renderLoginCode } from "./login-code.js";
+export type { NewEmailVerificationInput } from "./verify-new-email.js";
+export { renderNewEmailVerification } from "./verify-new-email.js";

@@ -1,14 +1,16 @@
 import { INestApplication, ValidationPipe } from "@nestjs/common";
 import { toNodeHandler } from "better-auth/node";
 import type { Express } from "express";
-import { json, urlencoded } from "express";
+import { json, raw, urlencoded } from "express";
 import { auth } from "./auth/auth";
 import { validationException } from "./common/errors/validation";
 import { AllExceptionsFilter } from "./common/filters/all-exceptions.filter";
 import { requestBudget, trustedProxies } from "./common/middleware/request-budget";
 import { requestIdMiddleware } from "./common/middleware/request-id";
 import { httpTelemetry } from "./common/observability/http-telemetry";
+import { readSecret } from "./config/secret";
 import { PrismaService } from "./database/prisma.service";
+import { resendWebhook } from "./email/webhook";
 
 // Shared between main.ts and the e2e tests so both run the same HTTP stack.
 // Requires the app to be created with `bodyParser: false`: the better-auth
@@ -22,6 +24,12 @@ export function configureApp(app: INestApplication): void {
   expressApp.use(httpTelemetry);
   expressApp.use(requestBudget(app.get(PrismaService)));
   expressApp.all("/api/v1/auth/{*any}", toNodeHandler(auth));
+
+  expressApp.post(
+    "/api/v1/webhooks/resend",
+    raw({ type: "application/json", limit: "64kb" }),
+    resendWebhook(app.get(PrismaService), readSecret("RESEND_WEBHOOK_SECRET")),
+  );
 
   app.use(json({ limit: "1mb" }));
   app.use(urlencoded({ extended: true }));

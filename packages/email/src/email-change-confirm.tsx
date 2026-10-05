@@ -3,7 +3,7 @@ import {
   type CodeEmailBaseInput,
   type RenderedEmail,
   renderCodeEmail,
-} from "./code-email";
+} from "./code-email.js";
 
 // Step one of the account-email change (the account/hub handover mechanism):
 // sent to the CURRENT address to confirm the change intent. Shows the target
@@ -29,7 +29,6 @@ export async function renderEmailChangeConfirmation(
   return renderCodeEmail("Confirm your nslinkhub email change", input, {
     preview: "Confirm your nslinkhub email change",
     lead: `You asked to change your nslinkhub account email to ${input.newEmail}. Here's your verification code to confirm this change:`,
-    actionLabel: "Confirm change",
     note: "If you didn't request this change, you can ignore this email — nothing changes without this confirmation.",
   });
 }

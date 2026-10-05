@@ -3,7 +3,6 @@ import type { Profile } from "@nslinkhub/types";
 import { AuthUser } from "src/common/interfaces/auth-user.interface";
 import { PrismaService } from "src/database/prisma.service";
 import { User } from "src/generated/prisma/client";
-import { appError } from "../../common/errors/app-exception";
 import { HubsService } from "../hubs/hubs.service";
 import { UpdateUserDto } from "./dto/update-user.dto";
 
@@ -31,31 +30,10 @@ export class UsersService {
       throw new NotFoundException("User not found");
     }
 
-    const data: { name?: string; email?: string; bio?: string | null } = {};
+    const data: { name?: string; bio?: string | null } = {};
 
     if (dto.displayName && dto.displayName !== user.name) {
       data.name = dto.displayName;
-    }
-
-    if (dto.email && dto.email.toLowerCase() !== user.email) {
-      const normalized = dto.email.toLowerCase();
-      const exists = await this.prisma.user.findUnique({
-        where: { email: normalized },
-        select: { id: true },
-      });
-      if (exists) {
-        throw appError("email_conflict");
-      }
-      data.email = normalized;
-    }
-
-    if (dto.password) {
-      // Password lives on the better-auth credential account row.
-      const passwordHash = await Bun.password.hash(dto.password, "argon2id");
-      await this.prisma.account.updateMany({
-        where: { userId: user.id, providerId: "credential" },
-        data: { password: passwordHash },
-      });
     }
 
     if (dto.bio !== undefined) {
@@ -69,11 +47,6 @@ export class UsersService {
 
     const saved = await this.prisma.user.update({ where: { id: user.id }, data });
     return this.toProfile(saved);
-  }
-
-  async deleteMe(actor: AuthUser) {
-    await this.prisma.user.delete({ where: { id: actor.userId } });
-    return { id: actor.userId, deleted: true };
   }
 
   private async toProfile(user: User): Promise<Profile> {

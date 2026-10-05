@@ -5,6 +5,7 @@ import request from "supertest";
 import { App } from "supertest/types";
 import { AppModule } from "../src/app.module";
 import { configureApp } from "../src/app.setup";
+import { signInWithCode } from "./fixtures/sign-in";
 
 // Drive-style collection ownership transfer: only the owner can transfer, only
 // to an existing editor; the collection moves into the recipient's hub and the
@@ -15,10 +16,7 @@ describe("Collection transfer (e2e)", () => {
 
   const signUp = async (label: string) => {
     const email = `${label}_${sfx}@example.com`;
-    const res = await request(app.getHttpServer())
-      .post("/api/v1/auth/sign-up/email")
-      .send({ email, password: "Password123!", name: `${label} ${sfx}` })
-      .expect(200);
+    const res = await signInWithCode(app.getHttpServer(), { email, name: `${label} ${sfx}` });
     const bearer = res.headers["set-auth-token"];
     const profile = await request(app.getHttpServer())
       .get("/api/v1/profile")

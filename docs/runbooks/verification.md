@@ -33,8 +33,8 @@ processes before manually removing an abandoned one.
 Defaults use the local +4 ports. Override only through test-specific
 `TEST_DATABASE_ADMIN_URL` (a loopback PostgreSQL role with CREATEDB) and
 `TEST_REDIS_URL`. Development `DATABASE_URL` and `_FILE` inputs never select
-the test database. Redis currently only receives readiness pings: there are no
-jobs or queue keys. Add per-run queue namespaces before the worker is built.
+the test database. Email tests use a random per-run queue namespace and remove only their own
+queue keys. Tests force the capture provider regardless of local Resend settings.
 Remote telemetry is disabled by the runner; SDK tests use a local listener.
 
 Formatting and linting are Biome (`biome.json`). `useImportType` is disabled
@@ -79,7 +79,10 @@ This escalation path is the decided design; only its trigger is pending.
   rehearsal. The fix `cb00a75` passed
   [hosted verification](https://github.com/namestarlit/nslinkhub/actions/runs/37335644020),
   including the full repository gate, image build and rehearsal. This proves
-  the reviewed #4 artifact; the new #1 diff remains local until review.
+  the reviewed #4 artifact, not hosted acceptance of later changes. The #1
+  contracts milestone is committed; auth delivery has local verification and
+  image-rehearsal evidence in its
+  [auth-delivery plan](../exec-plans/active/prove-auth-delivery-boundary.md).
 - `bun run verify:release-image -- <image>` is the additional Docker release
   check. See [release preparation](release.md) for its scope and live gates.
 - New behavior with route-shape or authorization consequences gets an e2e

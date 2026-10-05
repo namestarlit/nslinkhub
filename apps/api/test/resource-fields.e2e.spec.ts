@@ -5,6 +5,7 @@ import request from "supertest";
 import { App } from "supertest/types";
 import { AppModule } from "../src/app.module";
 import { configureApp } from "../src/app.setup";
+import { signInWithCode } from "./fixtures/sign-in";
 
 // Locks the de-normalized shape: a resource stores its own url, and tags are a
 // normalized string array on the resource/collection (no shared tables).
@@ -18,10 +19,10 @@ describe("Resource + tag fields (e2e)", () => {
     app = moduleFixture.createNestApplication<INestApplication<App>>({ bodyParser: false });
     configureApp(app);
     await app.init();
-    const signUp = await request(app.getHttpServer())
-      .post("/api/v1/auth/sign-up/email")
-      .send({ email: `rf_${sfx}@example.com`, password: "Password123!", name: `rf ${sfx}` })
-      .expect(200);
+    const signUp = await signInWithCode(app.getHttpServer(), {
+      email: `rf_${sfx}@example.com`,
+      name: `rf ${sfx}`,
+    });
     bearer = signUp.headers["set-auth-token"];
   });
 

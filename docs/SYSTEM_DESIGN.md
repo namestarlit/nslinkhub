@@ -14,8 +14,8 @@ Related documents:
 - `docs/design-docs/identity-sso.md` — ns-series identity (nsauth, "Continue
   with namestarlit"), deliberately bounded to users + SSO (no orgs).
 - `docs/design-docs/conventions.md` — API/persistence casing and envelope.
-- `docs/design-docs/transactional-email.md`, `observability.md` — operational
-  direction (Resend, LogTape/Sentry + shared Alloy), built at their triggers.
+- `docs/design-docs/transactional-email.md`, `observability.md` — local email
+  delivery and telemetry foundations, with separate live rollout requirements.
 - `docs/design-docs/infra-deployment.md` — namestarlit VPS + Dokploy.
 - `docs/exec-plans/completed/drive-model-tenancy.md` — the decision log behind
   the Google-Drive individual model defined here.
@@ -73,8 +73,7 @@ only; a hub is never a space others "join".
 Conventions in place and unchanged: Bun toolchain + runtime; Prisma as the
 backend-only persistence boundary behind a Nest `PrismaService`; PostgreSQL 18
 with `app_uuid_v7()` defaults; `timestamptz` UTC; camelCase API / snake_case
-DB; global `ValidationPipe`; self-hosted better-auth with `Bun.password`
-argon2id; Biome; `bun test`; committed `bun.lock`.
+DB; global `ValidationPipe`; self-hosted better-auth with email codes; Biome; `bun test`; committed `bun.lock`.
 
 ## Domain model
 
@@ -113,26 +112,26 @@ CollectionSave  — (collectionId, userId, savedAt). A social-style bookmark of 
   login credential and not unique.
 - **Login direction: code-first, from the get-go.** The primary sign-in is
   Substack-style passwordless — continue with email → enter the emailed code
-  (the email carries both the code and a direct sign-in link; either
-  completes). Email + password remains the explicit alternative ("sign in
-  with your password"), never the headline; there is no username and never
-  was one to migrate away from. "Continue with namestarlit" SSO joins as a
-  third door later without reshaping this. The **flow** is decided here; the
+  (email codes only; no direct authentication links or passwords). There is no
+  username. "Continue with namestarlit" SSO can join later without reshaping
+  this. The **flow** is decided here; the
   **presentation** (screens, segmented code boxes, copy) is shaped by the W3
   Impeccable design pass — Impeccable may restyle it, not reorder it.
-  Code-first ships with the auth-delivery slice; until then password sign-in
-  is what exists.
+  Code delivery now has a local backend implementation; web presentation and
+  live provider acceptance remain separate. Optional TOTP/recovery codes follow
+  the core delivery milestone.
 - **Account/hub handover** is done by **changing the account email**, not a
   transfer model — a hub is 1:1 with its account, so handing over the account
-  hands over the hub. The decided flow is double-verified (lands with the
-  auth-delivery slice):
+  hands over the hub. The locally implemented flow is double-verified:
   1. the signed-in owner sets the new email;
   2. a **confirmation** goes to the **current** address, naming the target
-     address — nothing changes unless it is confirmed (code or direct link);
+     address — nothing changes unless it is confirmed (email code);
   3. on confirmation, a **verification** goes to the **new** address;
   4. on verification the change applies, **all sessions are revoked**, and the
      account signs in with the new email.
-  Templates for both steps exist in `packages/email`.
+  Templates for both steps exist in `packages/email`; the backend workflow is
+  documented in `docs/design-docs/auth-delivery-integration.md`. Web screens and
+  live provider acceptance remain outstanding.
 - **nsauth SSO** is bounded to users + SSO + profile (no orgs); see
   `identity-sso.md`. Products keep their own userId authoritative and their own
   authorization; the IdP never decides who may edit a collection.
@@ -276,8 +275,8 @@ External-link resources stay as references and are not inlined.
 All three renderers are programmatic (markdown string-building, `pdfkit`,
 `docx`) — milliseconds even for large collections — so no format needs a job
 queue, no artifacts are stored server-side, and there is nothing to retain or
-clean up. BullMQ/Redis remain in the stack solely as the async backbone for
-future email/notification delivery.
+clean up. BullMQ/Redis dispatch email delivery from the PostgreSQL outbox to a
+separate worker; exports do not use that queue.
 
 ## Workspace and client surfaces
 
@@ -312,31 +311,35 @@ dedupe or publication rules; bearer-token auth in session-scoped storage.
 The backend model above is **built and verified** (one hub per user, Drive
 sharing with downward inheritance, collection transfer, two-level nesting,
 same-hub collection-links, minimal resources, tag pruning). Shared contracts
-(`@nslinkhub/types`) and the client boundary check are in place. Nothing is
-deployed, so schema changes reshape `prisma/migrations/0_init` rather than
-stacking migrations.
+(`@nslinkhub/types`) and the client boundary check are in place. Codes-only auth,
+verified email handover, auth audit, encrypted email outbox, BullMQ worker,
+capture/Resend adapters and signed webhooks are implemented and verified locally.
+No live deployment or provider acceptance is claimed. Release foundations and
+auth delivery use additive migrations after `0_init`; follow
+`docs/runbooks/migrations.md` for schema changes.
 
 Remaining:
 
 - **Foundation adoption gates.** `docs/design-docs/adoption-decisions.md`
-  records the 2026-10 comparison and delivery decisions. W3 design follows
-  review of those decisions; isolated verification and safe wire/error
-  contracts precede web implementation. Auth delivery belongs with the first
-  code-first account journey, not after all web work.
-- **W3 — Web app.** Opens with an impeccable design/product pass producing the
-  three web design documents (`web-product-experience`, `web-interface-system`,
-  `web-design-tokens`), then scaffolds `apps/web` and builds vertical slices:
+  records the 2026-10 comparison and delivery decisions. Local release
+  foundations, isolated verification, safe wire/error contracts and W3 design
+  are complete. Review and land the local auth-delivery milestone before
+  resuming web implementation; browser and public-release gates remain open.
+- **W3 — Web app.** The three web design documents (`web-product-experience`,
+  `web-interface-system`, `web-design-tokens`) are complete. Apply Impeccable
+  under those contracts, scaffold `apps/web`, and build vertical slices:
   explore, sign-in, the hub page, collection list/detail (guides), resource
   capture, sharing + transfer management, shared/ and saved/. Cookie sessions.
 - **W4 — Browser extension.** `apps/extension` (MV3) capture companion.
-- **Phase E — tracked, not blocking W3 design.** Release prerequisites remain
+- **Phase E — tracked alongside W3.** Release prerequisites remain
   mandatory before public exposure, separately from deferred product features.
   - nsauth SSO once it exists (users + SSO; see `identity-sso.md`).
-  - API collection audit and LogTape/Sentry foundations are implemented
-    locally; auth-security audit, browser/worker instrumentation and live
-    collector/deployment proof remain before public release. Transactional outbox + worker split and Resend delivery
-    move into the W3 auth-delivery slice; they are prerequisites for code-first
-    sign-in and verified email change, not optional later polish.
+  - Collection/auth audit and API LogTape/Sentry foundations are implemented
+    locally. Browser instrumentation, worker metrics/tracing and live
+    collector/deployment proof remain before public release. Auth delivery has
+    local API/worker acceptance; web account journeys and live sender/domain
+    and webhook validation remain outstanding. Account deletion stays disabled
+    pending its verified ownership and retention workflow.
   - `/@handle` vanity route resolving to `hubId` (direct hub navigation).
   - Explore discovery by **tags + text** (search) beyond the initial recency
     list; full-text search across collections/resources.

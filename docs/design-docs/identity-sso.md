@@ -30,7 +30,7 @@ The four IAM pillars, and what ships when:
 ```txt
 IAM (nsauth)
 ├── Authentication            ── FIRST SLICE
-│   ├── Login (email+password today; namestarlit account)
+│   ├── Login (email codes today; namestarlit account)
 │   ├── MFA                   ── foundation now, enable later
 │   └── SSO / OIDC            ── FIRST SLICE (the button)
 ├── Authorization             ── foundation now, mostly later
@@ -207,7 +207,7 @@ better-auth is already the auth dependency on both sides, and covers the
 - IdP side: better-auth **OIDC Provider plugin** (nsauth issues authorization
   codes / ID tokens; consent screen = the per-product opt-in).
 - Product side: better-auth **generic OAuth / SSO plugins** register nsauth
-  as a provider next to the existing email+password.
+  as a provider next to the existing email-code sign-in.
 
 better-auth is likely sufficient for AuthN, SSO, MFA, and basic identity. The
 richer IAM pillars — groups, service accounts, cross-product roles, a policy
@@ -234,7 +234,7 @@ or IAM yet — but a few cheap constraints keep the door open:
 2. Keep the product userId authoritative everywhere (already decision 1 of
    the hub plan) so a linked nsauth `sub` slots in as just another mutable
    attribute of the user row.
-3. Treat NSLinkHub's local email+password as a first-class citizen that later
+3. Treat NSLinkHub's local email-code sign-in as a first-class citizen that later
    *coexists* with the SSO button — do not weld flows to the assumption that
    local credentials are the only path (e.g. keep sign-up onboarding —
    personal hub creation — in an app-owned service callable from any auth

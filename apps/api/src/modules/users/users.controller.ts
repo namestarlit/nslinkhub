@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Patch, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Patch, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { CurrentUser } from "src/common/decorators/current-user.decorator";
 import { AuthGuard } from "src/common/guards/auth.guard";
@@ -24,10 +24,5 @@ export class UsersController {
   @Patch()
   async updateMe(@CurrentUser() user: AuthUser, @Body() dto: UpdateUserDto) {
     return apiOk(await this.usersService.updateMe(user, dto));
-  }
-
-  @Delete()
-  async deleteMe(@CurrentUser() user: AuthUser) {
-    return apiOk(await this.usersService.deleteMe(user));
   }
 }

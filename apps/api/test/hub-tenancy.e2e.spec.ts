@@ -5,6 +5,7 @@ import request from "supertest";
 import { App } from "supertest/types";
 import { AppModule } from "../src/app.module";
 import { configureApp } from "../src/app.setup";
+import { signInWithCode } from "./fixtures/sign-in";
 
 // Phase B: hubs own collections; sign-up creates a personal hub; publication
 // (published boolean) + link sharing replace the visibility triad.
@@ -24,14 +25,10 @@ describe("Hub tenancy (e2e)", () => {
     configureApp(app);
     await app.init();
 
-    const signUp = await request(app.getHttpServer())
-      .post("/api/v1/auth/sign-up/email")
-      .send({
-        email: `${owner}@example.com`,
-        password: "Password123!",
-        name: owner,
-      })
-      .expect(200);
+    const signUp = await signInWithCode(app.getHttpServer(), {
+      email: `${owner}@example.com`,
+      name: owner,
+    });
     ownerBearer = signUp.headers["set-auth-token"];
   });
 

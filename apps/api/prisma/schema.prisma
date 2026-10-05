@@ -205,3 +205,58 @@ model RequestBudget {
   @@index([expiresAt], map: "idx_request_budgets_expires")
   @@map("request_budgets")
 }
+
+// Workflow binding only: better-auth Verification owns all proof material.
+model EmailChangeIntent {
+  userId String @id @map("user_id") @db.Uuid
+  sessionId String @map("session_id") @db.Uuid
+  currentEmail String @map("current_email")
+  newEmail String @map("new_email")
+  phase String @db.VarChar(16)
+  expiresAt DateTime @map("expires_at") @db.Timestamptz(6)
+  @@index([expiresAt])
+  @@map("email_change_intents")
+}
+
+model EmailOutbox {
+  id String @id @default(dbgenerated("app_uuid_v7()")) @db.Uuid
+  challengeKey String @map("challenge_key") @db.VarChar(64)
+  recipientKey String @map("recipient_key") @db.VarChar(64)
+  payload String?
+  state String @default("pending") @db.VarChar(16)
+  attempts Int @default(0)
+  availableAt DateTime @default(now()) @map("available_at") @db.Timestamptz(6)
+  expiresAt DateTime @map("expires_at") @db.Timestamptz(6)
+  leaseUntil DateTime? @map("lease_until") @db.Timestamptz(6)
+  leaseToken String? @map("lease_token") @db.Uuid
+  providerId String? @unique @map("provider_id")
+  outcome String? @db.VarChar(24)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  @@index([state, availableAt])
+  @@index([expiresAt])
+  @@index([challengeKey])
+  @@map("email_outbox")
+}
+
+model EmailWebhook {
+  id String @id
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  @@map("email_webhooks")
+}
+
+model EmailSuppression {
+  recipientKey String @id @map("recipient_key") @db.VarChar(64)
+  reason String @db.VarChar(24)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  @@map("email_suppressions")
+}
+
+model AuthAudit {
+  id String @id @default(dbgenerated("app_uuid_v7()")) @db.Uuid
+  userId String? @map("user_id") @db.Uuid
+  action String @db.VarChar(32)
+  outcome String @db.VarChar(16)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  @@index([createdAt])
+  @@map("auth_audit")
+}

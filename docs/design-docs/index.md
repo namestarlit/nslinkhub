@@ -27,6 +27,9 @@ frequently for the root `ARCHITECTURE.md`. The **authoritative system design**
 - `observability.md`: implemented API LogTape/Sentry boundary and future runtime telemetry,
   shared Alloy collection of stdout/dependency metrics, the PII allowlist and
   pseudonymous-reference rules, and the request-id foundation already in place.
+- [auth-delivery-integration.md](auth-delivery-integration.md): pinned gate #3
+  compatibility evidence, enforced profile/deletion boundaries and the proposed
+  better-auth integration needed before code delivery is enabled.
 
 - [web-product-experience.md](web-product-experience.md): first reading
   journeys, recency discovery, unavailable collections, later account flows

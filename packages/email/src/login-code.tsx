@@ -3,7 +3,7 @@ import {
   type CodeEmailBaseInput,
   type RenderedEmail,
   renderCodeEmail,
-} from "./code-email";
+} from "./code-email.js";
 
 // Sign-in code: sent when someone continues with email on the sign-in screen.
 // Template inputs follow the transactional-email doc: minimum variable set,
@@ -19,6 +19,5 @@ export async function renderLoginCode(input: LoginCodeEmailInput): Promise<Rende
   return renderCodeEmail("Your nslinkhub sign-in code", input, {
     preview: "Your nslinkhub sign-in code",
     lead: "Here's your verification code to sign in to nslinkhub:",
-    actionLabel: "Sign in",
   });
 }

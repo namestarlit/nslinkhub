@@ -6,6 +6,7 @@
 // checks as plain env vars — the production path must not bypass validation.
 
 import { trustedProxies } from "../common/middleware/request-budget";
+import { emailConfig } from "../email/config";
 import { readSecret } from "./secret";
 import { telemetryConfig } from "./telemetry";
 
@@ -63,5 +64,6 @@ export function validateEnv(config: Record<string, unknown>): Record<string, unk
     throw new Error(`Invalid configuration:\n- ${errors.join("\n- ")}`);
   }
 
+  emailConfig(env);
   return config;
 }

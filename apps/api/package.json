@@ -15,7 +15,9 @@
     "test": "bun ../../tooling/verify-api-tests.ts unit",
     "test:watch": "bun test --watch src",
     "test:cov": "bun test --coverage src",
-    "test:e2e": "bun ../../tooling/verify-test-isolation.ts && bun ../../tooling/verify-api-tests.ts e2e"
+    "test:e2e": "bun ../../tooling/verify-test-isolation.ts && bun ../../tooling/verify-api-tests.ts e2e",
+    "email:worker": "bun src/email/worker.ts",
+    "email:worker:prod": "bun --tsconfig-override tsconfig.runtime.json dist/src/email/worker.js"
   },
   "dependencies": {
     "@logtape/logtape": "2.3.0",
@@ -43,7 +45,8 @@
     "pg": "^8.13.1",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
-    "@nslinkhub/types": "workspace:*"
+    "@nslinkhub/types": "workspace:*",
+    "@nslinkhub/email": "workspace:*"
   },
   "devDependencies": {
     "@nestjs/cli": "^11.0.0",

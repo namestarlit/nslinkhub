@@ -5,6 +5,7 @@ import request from "supertest";
 import { App } from "supertest/types";
 import { AppModule } from "../src/app.module";
 import { configureApp } from "../src/app.setup";
+import { signInWithCode } from "./fixtures/sign-in";
 
 // Drive-style inheritance: a grant (share or publish) on a parent collection
 // flows down to its children — sharing a folder shares its contents.
@@ -13,10 +14,10 @@ describe("Nested access inheritance (e2e)", () => {
   const sfx = Date.now().toString(36);
 
   const signUp = async (label: string) => {
-    const res = await request(app.getHttpServer())
-      .post("/api/v1/auth/sign-up/email")
-      .send({ email: `${label}_${sfx}@example.com`, password: "Password123!", name: label })
-      .expect(200);
+    const res = await signInWithCode(app.getHttpServer(), {
+      email: `${label}_${sfx}@example.com`,
+      name: label,
+    });
     return res.headers["set-auth-token"] as string;
   };
 

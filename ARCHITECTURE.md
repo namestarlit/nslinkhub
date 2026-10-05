@@ -20,9 +20,8 @@ the clients (W2 shared types done; W3 web, W4 extension) and Phase E hardening.
 
 A Bun-managed TypeScript codebase. The backend is a NestJS modular monolith
 backed by PostgreSQL 18 (Prisma 7 with the pg driver adapter); BullMQ on
-Redis is reserved for future email/notification delivery (nothing queues
-today). Auth is self-hosted better-auth (DB sessions, bearer
-plugin, email + password, argon2id via `Bun.password`) mounted as raw
+Redis delivers email through a PostgreSQL outbox and separate worker. Auth is self-hosted better-auth (DB sessions, bearer
+plugin, email codes only) mounted as raw
 middleware ahead of body parsing. A Next.js web app and an MV3 browser
 extension are planned client surfaces. The repository is a Bun workspace:
 the backend lives at `apps/api`; `apps/web`, `apps/extension`, and further
@@ -61,6 +60,7 @@ ref/               disposable, git-ignored implementation context
 | `auth` (`apps/api/src/auth`) | better-auth instance + personal-hub onboarding hook; handler mounted in `app.setup.ts` |
 | `common/guards` | `AuthGuard`/`OptionalAuthGuard` via `resolveSessionUser` |
 | `hubs` | one-hub-per-user ownership + handle management (`HubsService`), collection access policy — owner → direct share → link → published, inheriting down the collection tree (`CollectionPolicyService`) |
+| `email` (`apps/api/src/email`) | encrypted PostgreSQL outbox, BullMQ relay/worker, capture/Resend providers, signed delivery webhooks and cleanup |
 | `users` | self-service profile at `/profile` (display name, bio, hub handle) |
 | `collections` | collection CRUD (two-level nesting), publish/unpublish, link + direct sharing, ownership transfer, saves, `/explore`, public hub pages + handle resolution (`/hubs/by-handle/:handle`), `/me/{shared,saved,audit}`, hub+slug lookup and the durable id permalink (`GET /collections/:id`) |
 | `resources` | resource CRUD (own canonical URL, tags array, nesting via section entries), reorder with version checks |
@@ -101,7 +101,7 @@ itself with `Content-Disposition: attachment`.
 ## Cross-Cutting Concerns
 
 Authentication, authorization policy, validation, request identity, auditing, request budgets and telemetry cross module boundaries;
-the future transactional outbox joins them.
+the transactional email outbox joins them.
 Shared infrastructure belongs under `src/common` or another explicit
 shared boundary.
 

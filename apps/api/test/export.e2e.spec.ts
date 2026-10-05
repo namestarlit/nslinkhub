@@ -5,6 +5,7 @@ import request, { Response as SupertestResponse } from "supertest";
 import { App } from "supertest/types";
 import { AppModule } from "../src/app.module";
 import { configureApp } from "../src/app.setup";
+import { signInWithCode } from "./fixtures/sign-in";
 
 // Collects binary bodies (pdf/docx/zip) that supertest would otherwise drop.
 function binaryParser(res: SupertestResponse, callback: (err: null, body: Buffer) => void) {
@@ -25,10 +26,7 @@ describe("Export (e2e)", () => {
   const sfx = Date.now().toString(36);
 
   const signUp = async (email: string, name: string) => {
-    const res = await request(app.getHttpServer())
-      .post("/api/v1/auth/sign-up/email")
-      .send({ email, password: "Password123!", name })
-      .expect(200);
+    const res = await signInWithCode(app.getHttpServer(), { email, name });
     return res.headers["set-auth-token"];
   };
   const createCollection = async (slug: string) => {

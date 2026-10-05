@@ -5,15 +5,20 @@ services:
   api:
     image: ${API_IMAGE:?Build and select the local API image}
     environment:
+      EMAIL_PROVIDER: capture
+      EMAIL_SUPPORT_URL: https://example.com/support
+      QUEUE_NAMESPACE: local-rehearsal-email
       NODE_ENV: production
       PORT: '4000'
       DATABASE_URL_FILE: /run/secrets/database_url
       BETTER_AUTH_SECRET_FILE: /run/secrets/auth_secret
+      EMAIL_SUPPRESSION_SECRET_FILE: /run/secrets/email_suppression
       REDIS_URL: redis://redis:6379
       BETTER_AUTH_URL: http://api:4000
     secrets:
       - database_url
       - auth_secret
+      - email_suppression
     networks: [local]
     read_only: true
     tmpfs: [/tmp]
@@ -60,3 +65,5 @@ secrets:
     file: ${LOCAL_SECRETS_DIR}/auth_secret
   postgres_password:
     file: ${LOCAL_SECRETS_DIR}/postgres_password
+  email_suppression:
+    file: ${LOCAL_SECRETS_DIR}/email_suppression

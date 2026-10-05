@@ -18,6 +18,12 @@ function tests(directory: string): string[] {
     .sort();
 }
 const env: Record<string, string | undefined> = { ...process.env, NODE_ENV: "test" };
+// A local API .env may configure live Resend delivery. Tests always select the
+// capture provider; dotenv must not replace this explicit child environment.
+env.EMAIL_PROVIDER = "capture";
+env.EMAIL_SUPPRESSION_SECRET = "test-runner-suppression-secret-independent";
+delete env.EMAIL_SUPPRESSION_SECRET_FILE;
+env.QUEUE_NAMESPACE = `test-email-${crypto.randomUUID()}`;
 delete env.SENTRY_DSN;
 delete env.SENTRY_DSN_FILE;
 delete env.RELEASE_SHA;

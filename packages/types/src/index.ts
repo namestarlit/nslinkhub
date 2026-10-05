@@ -1,4 +1,5 @@
 export * from "./audit.js";
+export * from "./auth.js";
 export * from "./collections.js";
 export * from "./common.js";
 export * from "./envelope.js";
