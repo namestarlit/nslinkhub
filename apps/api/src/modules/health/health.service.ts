@@ -1,5 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { PrismaService } from "src/database/prisma.service";
+import { emitEvent } from "../../common/observability/telemetry";
 import { RedisQueueReadinessService } from "./redis-queue-readiness.service";
 
 type Dependency = "postgres" | "redis_queue";
@@ -13,6 +14,7 @@ export interface Readiness {
 
 @Injectable()
 export class HealthService {
+  private previousStatus: SystemStatus | undefined;
   constructor(
     private readonly prisma: PrismaService,
     private readonly redisQueue: RedisQueueReadinessService,
@@ -47,6 +49,14 @@ export class HealthService {
       status = "ready";
     }
 
+    if (status !== this.previousStatus) {
+      this.previousStatus = status;
+      emitEvent(
+        "health.transition",
+        { "health.status": status },
+        status === "ready" ? "info" : "warn",
+      );
+    }
     return { status, dependencies };
   }
 }

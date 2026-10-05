@@ -9,6 +9,52 @@ summary of what changed after completed work has been promoted out of `ref/`.
 
 ## Unreleased
 
+### Documentation
+
+- Recorded a pinned comparison with Pigfarm (`f0bab0a`) and the remaining
+  foundation adoption decisions in `docs/design-docs/adoption-decisions.md`.
+  The sequence separates W3 design, test isolation and safe wire/error contracts
+  before web implementation, auth/email delivery with the code-first account
+  journey, and public-release operational gates. Reference-only proposals and
+  incomplete deployment work are distinguished from implemented patterns.
+- Updated the observability direction to LogTape + Sentry application
+  telemetry with shared Alloy collecting stdout and dependency metrics;
+  the comparison was documentation-only; implementation follows below.
+  Retained NSLinkHub's password alternative, code-plus-link emails, individual
+  hubs, stable URL scheme, and synchronous exports rather than adopting
+  Pigfarm-specific product behavior.
+- Reconciled the security document's stale membership rules with the built
+  Drive model, recorded cookie-mutation/CSRF and auth-origin verification gates,
+  expanded delivery failure/retention acceptance, and refreshed the debt tracker
+  and onboarding walkthrough. The walkthrough pin must be advanced in its
+  guide-only follow-up after the reviewed documentation commit exists.
+
+### Added
+
+- Local release foundations (#4 first): telemetry-first API startup, pinned
+  LogTape/Sentry logging, isolated request traces/metrics, SDK privacy hooks,
+  sanitized unexpected failures and bounded shutdown. Real local SDK-envelope
+  tests cover privacy, concurrency, correlation, aborts and collector failure.
+- Transactional publication/share/link/transfer/deletion/handle audit with
+  owner-scoped `GET /api/v1/me/audit`, including audit-read records and retained
+  source-hub history after transfer. Added shared PostgreSQL request budgets,
+  explicit proxy trust, safe fail-closed responses and bounded counter cleanup.
+- API Dockerfile, local/production Swarm definitions, verification and manual
+  GHCR-image workflows, plus a disposable image/migration/backup-restore/outage
+  rehearsal and operator release runbook. Live infrastructure is deferred;
+  artifacts do not claim Swarm, Dokploy, off-host restore or Alloy readiness.
+- Pulled isolated e2e databases and explicit source test discovery forward from
+  #1; tests no longer write to/reset development data or consume its request
+  budgets. Added a telemetry import/logging boundary check to verification.
+
+### Fixed
+
+- Production startup now executes the actual compiled `dist/src/entrypoint.js`
+  with compiled alias resolution; builds explicitly generate Prisma from schema.
+  Link enable reads token state under its transaction lock so a stale request
+  cannot restore a rotated token. Fresh TypeScript 6 installs use explicit
+  email-package ambient types and NodeNext-compatible shared type exports.
+
 ### Added
 
 - Stack-wide local conventions adopted (zanlis.dwh handoff): nslinkhub owns

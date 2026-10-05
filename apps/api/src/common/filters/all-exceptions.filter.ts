@@ -1,13 +1,8 @@
-import {
-  ArgumentsHost,
-  Catch,
-  ExceptionFilter,
-  HttpException,
-  HttpStatus,
-  Logger,
-} from "@nestjs/common";
+import { ArgumentsHost, Catch, ExceptionFilter, HttpException, HttpStatus } from "@nestjs/common";
 import type { Response } from "express";
 import type { RequestWithId } from "../middleware/request-id";
+import { requestRoute } from "../observability/http-telemetry";
+import { captureFailure } from "../observability/telemetry";
 
 interface ErrorEnvelope {
   error: {
@@ -32,8 +27,6 @@ const STATUS_CODES: Record<number, string> = {
 
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
-  private readonly logger = new Logger(AllExceptionsFilter.name);
-
   catch(exception: unknown, host: ArgumentsHost): void {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
@@ -77,10 +70,18 @@ export class AllExceptionsFilter implements ExceptionFilter {
       }
     } else {
       // Unknown failures are never reflected to the caller.
-      this.logger.error(
-        `Unhandled exception (${requestId})`,
-        exception instanceof Error ? exception.stack : String(exception),
-      );
+    }
+
+    const expectedReadiness = status === 503 && code === "dependencies_unavailable";
+    if (status >= 500 && !expectedReadiness) {
+      captureFailure(exception, {
+        "request.id": requestId,
+        "http.route": requestRoute(request),
+        "http.status_code": status,
+      });
+      message = "Internal server error";
+      code = "internal_error";
+      for (const key of Object.keys(details)) delete details[key];
     }
 
     const envelope: ErrorEnvelope = {

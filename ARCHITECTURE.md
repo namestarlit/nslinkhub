@@ -35,19 +35,21 @@ apps/
   api/
     src/
       modules/     domain modules (controllers, services, DTOs)
-      common/      guards, decorators, enums, utils, interfaces
+      common/      guards, audit, request budgets, telemetry, utils
       auth/        better-auth instance/config
       database/    PrismaModule / PrismaService
       generated/   Prisma client (gitignored; regenerated on install)
-      app.setup.ts shared HTTP stack (auth mount, parsers, validation)
+      entrypoint.ts telemetry-first source/compiled startup and shutdown
+      app.setup.ts shared HTTP stack (request budget, auth, parsers, validation)
     prisma/        schema, migrations (prisma.config.ts beside them)
     test/          e2e specs (run the production HTTP stack)
 packages/
   config/          shared TypeScript base configuration
   types/           @nslinkhub/types — shared API wire contracts for clients
   email/           @nslinkhub/email — backend-owned React Email templates
-tooling/           repository checks (client boundary check)
+tooling/           boundaries, isolated test runner and image rehearsal
 compose.yml        local dev services (root; serves the whole workspace)
+docker-stack.*.yml local Swarm rehearsal and production API topology
 docs/              product/design docs, exec plans, runbooks
 ref/               disposable, git-ignored implementation context
 ```
@@ -60,7 +62,7 @@ ref/               disposable, git-ignored implementation context
 | `common/guards` | `AuthGuard`/`OptionalAuthGuard` via `resolveSessionUser` |
 | `hubs` | one-hub-per-user ownership + handle management (`HubsService`), collection access policy — owner → direct share → link → published, inheriting down the collection tree (`CollectionPolicyService`) |
 | `users` | self-service profile at `/profile` (display name, bio, hub handle) |
-| `collections` | collection CRUD (two-level nesting), publish/unpublish, link + direct sharing, ownership transfer, saves, `/explore`, public hub pages + handle resolution (`/hubs/by-handle/:handle`), `/me/{shared,saved}`, hub+slug lookup and the durable id permalink (`GET /collections/:id`) |
+| `collections` | collection CRUD (two-level nesting), publish/unpublish, link + direct sharing, ownership transfer, saves, `/explore`, public hub pages + handle resolution (`/hubs/by-handle/:handle`), `/me/{shared,saved,audit}`, hub+slug lookup and the durable id permalink (`GET /collections/:id`) |
 | `resources` | resource CRUD (own canonical URL, tags array, nesting via section entries), reorder with version checks |
 | `imports` | bookmarks-HTML + universal-CSV ingestion with per-row error reports |
 | `exports` | synchronous export (`POST /exports`): markdown/PDF/Word, one document per collection, zipped when several — programmatic renderers, no queue |
@@ -98,9 +100,9 @@ itself with `Content-Disposition: attachment`.
 
 ## Cross-Cutting Concerns
 
-Authentication, authorization policy, validation, request identity, and (in
-target state) auditing and the transactional outbox cross module boundaries;
-their shared infrastructure belongs under `src/common` or another explicit
+Authentication, authorization policy, validation, request identity, auditing, request budgets and telemetry cross module boundaries;
+the future transactional outbox joins them.
+Shared infrastructure belongs under `src/common` or another explicit
 shared boundary.
 
 ## Invariants

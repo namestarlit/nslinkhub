@@ -1,4 +1,4 @@
-import type { ExportFormat } from "./common";
+import type { ExportFormat } from "./common.js";
 
 // Export is synchronous: POST /exports responds with the file itself
 // (Content-Disposition attachment) — one document per collection, zipped when

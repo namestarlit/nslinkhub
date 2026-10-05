@@ -15,7 +15,7 @@ Related documents:
   with namestarlit"), deliberately bounded to users + SSO (no orgs).
 - `docs/design-docs/conventions.md` — API/persistence casing and envelope.
 - `docs/design-docs/transactional-email.md`, `observability.md` — operational
-  direction (Resend, Pino/OTel), built at their triggers.
+  direction (Resend, LogTape/Sentry + shared Alloy), built at their triggers.
 - `docs/design-docs/infra-deployment.md` — namestarlit VPS + Dokploy.
 - `docs/exec-plans/completed/drive-model-tenancy.md` — the decision log behind
   the Google-Drive individual model defined here.
@@ -318,16 +318,25 @@ stacking migrations.
 
 Remaining:
 
+- **Foundation adoption gates.** `docs/design-docs/adoption-decisions.md`
+  records the 2026-10 comparison and delivery decisions. W3 design follows
+  review of those decisions; isolated verification and safe wire/error
+  contracts precede web implementation. Auth delivery belongs with the first
+  code-first account journey, not after all web work.
 - **W3 — Web app.** Opens with an impeccable design/product pass producing the
   three web design documents (`web-product-experience`, `web-interface-system`,
   `web-design-tokens`), then scaffolds `apps/web` and builds vertical slices:
   explore, sign-in, the hub page, collection list/detail (guides), resource
   capture, sharing + transfer management, shared/ and saved/. Cookie sessions.
 - **W4 — Browser extension.** `apps/extension` (MV3) capture companion.
-- **Phase E — tracked, not blocking.**
+- **Phase E — tracked, not blocking W3 design.** Release prerequisites remain
+  mandatory before public exposure, separately from deferred product features.
   - nsauth SSO once it exists (users + SSO; see `identity-sso.md`).
-  - Audit records; transactional outbox + worker split; Resend email delivery;
-    Pino/OTel observability.
+  - API collection audit and LogTape/Sentry foundations are implemented
+    locally; auth-security audit, browser/worker instrumentation and live
+    collector/deployment proof remain before public release. Transactional outbox + worker split and Resend delivery
+    move into the W3 auth-delivery slice; they are prerequisites for code-first
+    sign-in and verified email change, not optional later polish.
   - `/@handle` vanity route resolving to `hubId` (direct hub navigation).
   - Explore discovery by **tags + text** (search) beyond the initial recency
     list; full-text search across collections/resources.

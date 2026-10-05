@@ -3,10 +3,13 @@ import { NestExpressApplication } from "@nestjs/platform-express";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import { AppModule } from "./app.module";
 import { configureApp } from "./app.setup";
+import { TelemetryNestLogger } from "./common/observability/telemetry";
 
-async function bootstrap() {
+export async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     bodyParser: false,
+    logger: new TelemetryNestLogger(),
+    abortOnError: false,
   });
 
   configureApp(app);
@@ -27,5 +30,5 @@ async function bootstrap() {
   // 4000 by default: 3000 belongs to the web app (Next.js dev default). The
   // web fronts the API same-origin (path-routed /api/*), so there is no CORS.
   await app.listen(process.env.PORT ?? 4000);
+  return app;
 }
-void bootstrap();

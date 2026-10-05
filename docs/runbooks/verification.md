@@ -6,27 +6,25 @@ The canonical verification gate:
 bun run verify
 ```
 
-It runs, in order:
+It runs client and telemetry boundary checks, the guide-pin check, shared
+wire/email typechecks, Biome format/lint, email tests, then the API build (including explicit Prisma generation),
+typecheck, source unit suites and real-service e2e suites. Test discovery names
+source files explicitly and excludes generated/compiled copies.
 
-1. `bun run check:boundaries` — fails if a client app imports `apps/api`
-   internals or Prisma (a no-op pass until clients exist).
-2. `bun run check:guide-pin` — fails if any file the onboarding walkthrough
-   (`docs/guides/`) links changed after the guide's pinned commit (fix:
-   sweep the guide, bump its pin in a guide-only commit).
-3. `bun run types:typecheck` — type-checks `packages/types`.
-4. `bun run email:typecheck` — type-checks `packages/email`.
-5. `bun run format:check` — Biome formatting check across the workspace.
-6. `bun run lint` — Biome lint across the workspace.
-7. `bun run email:test` — email template tests (both render formats,
-   validation rejections).
-8. `bun run build` (in `apps/api`) — `nest build` (TypeScript compilation of
-   the app and the generated Prisma client).
-9. `bun run typecheck` (in `apps/api`) — `tsc --noEmit`, which also type-checks
-   the test files that `nest build` does not compile.
-10. `bun test src` (in `apps/api`) — unit tests.
-11. `bun test test` (in `apps/api`) — e2e tests, which boot the real HTTP
-    stack (`configureApp`: better-auth mount + body-parser ordering) against
-    the local docker services.
+`tooling/verify-api-tests.ts` creates a fresh random PostgreSQL database for
+each e2e run, applies every migration, runs suites serially, and drops only
+that database on success, failure or handled interruption. It clears request
+budgets only inside that disposable database between suites. It refuses
+production configuration and non-loopback test-admin hosts. A killed process
+that cannot run cleanup (SIGKILL or host failure) can leave a `test_*` database;
+inspect ownership/running processes before manually removing any abandoned one.
+
+Defaults use the local +4 ports. Override only through test-specific
+`TEST_DATABASE_ADMIN_URL` (a loopback PostgreSQL role with CREATEDB) and
+`TEST_REDIS_URL`. Development `DATABASE_URL` and `_FILE` inputs never select
+the test database. Redis currently only receives readiness pings: there are no
+jobs or queue keys. Add per-run queue namespaces before the worker is built.
+Remote telemetry is disabled by the runner; SDK tests use a local listener.
 
 Formatting and linting are Biome (`biome.json`). `useImportType` is disabled
 for `apps/api` only (via a Biome override) because NestJS dependency injection
@@ -62,12 +60,14 @@ This escalation path is the decided design; only its trigger is pending.
 
 - Every phase/milestone ends green on `bun run verify` before it is
   committed.
-- E2E currently runs against the local dev database (accepted debt — see
-  `docs/exec-plans/tech-debt-tracker.md`). Tests suffix their data uniquely,
-  but fixtures with *fixed* seeds still accumulate across reruns — the
-  derived-handle space for a fixed test name once exhausted after ~24 runs
-  and broke sign-ups. When e2e fails strangely, reset the dev DB first
-  (`docs/runbooks/local-development.md` § Resetting Local Data).
+- E2E does not require resetting development data. On failure inspect the
+  failing suite and service connectivity; the next run gets a fresh database.
+- `.github/workflows/verify.yml` runs this full gate with required PostgreSQL
+  and Redis services, then builds and rehearses the release image. Missing
+  infrastructure is a failure, never a skipped green suite. Hosted execution
+  is pending the first push; local results do not claim CI has run.
+- `bun run verify:release-image -- <image>` is the additional Docker release
+  check. See [release preparation](release.md) for its scope and live gates.
 - New behavior with route-shape or authorization consequences gets an e2e
   regression test (`test/routes.e2e.spec.ts` is the pattern: it exists
   because two shadowed routes shipped unnoticed).

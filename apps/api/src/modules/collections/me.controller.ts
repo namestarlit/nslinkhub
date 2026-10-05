@@ -1,9 +1,10 @@
-import { Controller, Get, UseGuards } from "@nestjs/common";
+import { Controller, Get, Query, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { CurrentUser } from "src/common/decorators/current-user.decorator";
 import { AuthGuard } from "src/common/guards/auth.guard";
 import type { AuthUser } from "src/common/interfaces/auth-user.interface";
 import { apiOk } from "src/common/utils/response.util";
+import { CursorQueryDto } from "../../common/dto/cursor-query.dto";
 import { CollectionsService } from "./collections.service";
 
 // User-level surfaces: shared/ (access granted to you) and saved/ (what you
@@ -14,6 +15,12 @@ import { CollectionsService } from "./collections.service";
 @Controller("api/v1/me")
 export class MeController {
   constructor(private readonly collectionsService: CollectionsService) {}
+
+  @Get("audit")
+  async audit(@CurrentUser() user: AuthUser, @Query() query: CursorQueryDto) {
+    const result = await this.collectionsService.listAudit(user, query);
+    return apiOk(result.items, result.meta);
+  }
 
   @Get("shared")
   async shared(@CurrentUser() user: AuthUser) {

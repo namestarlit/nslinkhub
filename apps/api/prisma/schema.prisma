@@ -178,3 +178,30 @@ model Verification {
   @@index([identifier], map: "idx_verifications_identifier")
   @@map("verifications")
 }
+
+// Audit references deliberately survive collection deletion and transfer.
+// Access always scopes by the immutable hubId; no mutable names or payloads.
+model AuditRecord {
+  id           String   @id @default(dbgenerated("app_uuid_v7()")) @db.Uuid
+  hubId        String   @map("hub_id") @db.Uuid
+  actorUserId  String   @map("actor_user_id") @db.Uuid
+  collectionId String?  @map("collection_id") @db.Uuid
+  targetUserId String?  @map("target_user_id") @db.Uuid
+  action       String   @db.VarChar(48)
+  role         String?  @db.VarChar(16)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([hubId, createdAt(sort: Desc), id(sort: Desc)], map: "idx_audit_hub_created")
+  @@map("audit_records")
+}
+
+// Atomic fixed-window budgets shared across API replicas. The key is a
+// purpose-bound HMAC, never a raw source address or credential.
+model RequestBudget {
+  key       String   @id @db.VarChar(80)
+  count     Int
+  expiresAt DateTime @map("expires_at") @db.Timestamptz(6)
+
+  @@index([expiresAt], map: "idx_request_budgets_expires")
+  @@map("request_budgets")
+}

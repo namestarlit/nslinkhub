@@ -12,7 +12,8 @@ import { decodeCursor, encodeCursor } from "src/common/utils/cursor.util";
 import { parseIfMatchVersion, toVersionEtag } from "src/common/utils/etag.util";
 import { normalizeTags } from "src/common/utils/tags.util";
 import { PrismaService } from "src/database/prisma.service";
-import { Collection, Hub } from "src/generated/prisma/client";
+import { Collection, Hub, Prisma } from "src/generated/prisma/client";
+import { type AuditInput, recordAudit } from "../../common/audit";
 import { CollectionPolicyService } from "../hubs/collection-policy.service";
 import { HubsService } from "../hubs/hubs.service";
 import { CreateCollectionDto } from "./dto/create-collection.dto";
@@ -119,34 +120,58 @@ export class CollectionsService {
 
     // Nesting is not changed here — it is managed only by nestCollection /
     // removing a section entry, so there is one way to nest and un-nest.
-    const saved = await this.prisma.collection.update({
-      where: { id: collection.id },
-      data: {
-        slug: dto.slug ?? collection.slug,
-        title: dto.title ?? collection.title,
-        description: dto.description ?? collection.description,
-        ...(dto.tags !== undefined ? { tags: normalizeTags(dto.tags) } : {}),
-        published: dto.published ?? collection.published,
-        version: { increment: 1 },
+    const saved = await this.mutateOwned(
+      collection,
+      user,
+      dto.published === undefined
+        ? undefined
+        : {
+            action: dto.published ? "collection.published" : "collection.unpublished",
+          },
+      async (tx) => {
+        const current = await tx.collection.findUniqueOrThrow({
+          where: { id: collection.id, hubId: collection.hubId },
+        });
+        if (current.version !== collection.version) throw new ConflictException("Version mismatch");
+        return tx.collection.update({
+          where: { id: collection.id, hubId: collection.hubId, version: collection.version },
+          data: {
+            slug: dto.slug ?? collection.slug,
+            title: dto.title ?? collection.title,
+            description: dto.description ?? collection.description,
+            ...(dto.tags !== undefined ? { tags: normalizeTags(dto.tags) } : {}),
+            published: dto.published ?? collection.published,
+            version: { increment: 1 },
+          },
+        });
       },
-    });
+    );
     return this.toPublicCollection(saved);
   }
 
   async remove(id: string, user: AuthUser) {
     const collection = await this.requireCollection(id);
     await this.policy.requireManage(collection, user);
-    await this.prisma.collection.delete({ where: { id: collection.id } });
+    await this.mutateOwned(collection, user, { action: "collection.deleted" }, (tx) =>
+      tx.collection.delete({ where: { id: collection.id, hubId: collection.hubId } }),
+    );
     return { id, deleted: true };
   }
 
   async setPublished(id: string, user: AuthUser, published: boolean) {
     const collection = await this.requireCollection(id);
     await this.policy.requireManage(collection, user);
-    const saved = await this.prisma.collection.update({
-      where: { id: collection.id },
-      data: { published, version: { increment: 1 } },
-    });
+    const saved = await this.mutateOwned(
+      collection,
+      user,
+      { action: published ? "collection.published" : "collection.unpublished" },
+      async (tx) => {
+        return tx.collection.update({
+          where: { id: collection.id },
+          data: { published, version: { increment: 1 } },
+        });
+      },
+    );
     return this.toPublicCollection(saved);
   }
 
@@ -156,33 +181,45 @@ export class CollectionsService {
 
     if (!dto.enabled) {
       // Disabling clears the token so an old link can never be resurrected.
-      await this.prisma.collection.update({
-        where: { id: collection.id },
-        data: {
-          linkSharingEnabled: false,
-          shareTokenHash: null,
-          version: { increment: 1 },
-        },
+      await this.mutateOwned(collection, user, { action: "link.disabled" }, async (tx) => {
+        return tx.collection.update({
+          where: { id: collection.id },
+          data: {
+            linkSharingEnabled: false,
+            shareTokenHash: null,
+            version: { increment: 1 },
+          },
+        });
       });
       return { collectionId: collection.id, linkSharingEnabled: false };
     }
 
-    const needsToken = !collection.shareTokenHash || dto.rotate === true;
     let token: string | undefined;
-    let shareTokenHash = collection.shareTokenHash ?? undefined;
-    if (needsToken) {
-      token = randomBytes(24).toString("base64url");
-      shareTokenHash = createHash("sha256").update(token).digest("hex");
-    }
-
-    await this.prisma.collection.update({
-      where: { id: collection.id },
-      data: {
-        linkSharingEnabled: true,
-        shareTokenHash,
-        version: { increment: 1 },
+    await this.mutateOwned(
+      collection,
+      user,
+      { action: dto.rotate ? "link.rotated" : "link.enabled" },
+      async (tx) => {
+        const current = await tx.collection.findUniqueOrThrow({
+          where: { id: collection.id, hubId: collection.hubId },
+        });
+        // Decide from locked state: ordinary enable must never restore a
+        // token invalidated by a concurrent rotation or disable.
+        let shareTokenHash = current.shareTokenHash;
+        if (!shareTokenHash || dto.rotate === true) {
+          token = randomBytes(24).toString("base64url");
+          shareTokenHash = createHash("sha256").update(token).digest("hex");
+        }
+        return tx.collection.update({
+          where: { id: collection.id },
+          data: {
+            linkSharingEnabled: true,
+            shareTokenHash,
+            version: { increment: 1 },
+          },
+        });
       },
-    });
+    );
 
     return {
       collectionId: collection.id,
@@ -207,18 +244,25 @@ export class CollectionsService {
     }
 
     const role = dto.role ?? "reader";
-    await this.prisma.collectionShare.upsert({
-      where: {
-        collectionId_userId: { collectionId: collection.id, userId: target.id },
+    await this.mutateOwned(
+      collection,
+      user,
+      { action: "share.granted", targetUserId: target.id, role },
+      async (tx) => {
+        return tx.collectionShare.upsert({
+          where: {
+            collectionId_userId: { collectionId: collection.id, userId: target.id },
+          },
+          update: { role, source: "direct" },
+          create: {
+            collectionId: collection.id,
+            userId: target.id,
+            role,
+            source: "direct",
+          },
+        });
       },
-      update: { role, source: "direct" },
-      create: {
-        collectionId: collection.id,
-        userId: target.id,
-        role,
-        source: "direct",
-      },
-    });
+    );
 
     return { collectionId: collection.id, userId: target.id, role };
   }
@@ -226,9 +270,16 @@ export class CollectionsService {
   async removeShare(id: string, user: AuthUser, targetUserId: string) {
     const collection = await this.requireCollection(id);
     await this.policy.requireManage(collection, user);
-    await this.prisma.collectionShare.deleteMany({
-      where: { collectionId: collection.id, userId: targetUserId },
-    });
+    await this.mutateOwned(
+      collection,
+      user,
+      { action: "share.revoked", targetUserId },
+      async (tx) => {
+        return tx.collectionShare.deleteMany({
+          where: { collectionId: collection.id, userId: targetUserId },
+        });
+      },
+    );
     return { collectionId: collection.id, userId: targetUserId, removed: true };
   }
 
@@ -322,34 +373,54 @@ export class CollectionsService {
     }
 
     const previousOwnerId = user.userId;
-    await this.prisma.$transaction(async (tx) => {
-      // Move the whole subtree into the recipient's hub.
-      await tx.collection.updateMany({
-        where: { id: { in: subtreeIds } },
-        data: { hubId: recipientHub.id, version: { increment: 1 } },
-      });
-      // Detach the transferred root from its old parent (which stayed behind).
-      await tx.collection.update({
-        where: { id: collection.id },
-        data: { parentCollectionId: null },
-      });
-      // The recipient now owns the subtree, so their shares on it are redundant.
-      await tx.collectionShare.deleteMany({
-        where: { collectionId: { in: subtreeIds }, userId: recipient.id },
-      });
-      // Give the previous owner editor access across the subtree (their shared/).
-      await tx.collectionShare.deleteMany({
-        where: { collectionId: { in: subtreeIds }, userId: previousOwnerId },
-      });
-      await tx.collectionShare.createMany({
-        data: subtreeIds.map((collectionId) => ({
-          collectionId,
-          userId: previousOwnerId,
-          role: "editor",
-          source: "direct",
-        })),
-      });
-    });
+    await this.mutateOwned(
+      collection,
+      user,
+      { action: "collection.transferred_out", targetUserId: recipient.id },
+      async (tx) => {
+        // Share management takes the same collection lock. Recheck after
+        // acquiring it so a concurrent revocation cannot authorize transfer.
+        const currentShare = await tx.collectionShare.findUnique({
+          where: { collectionId_userId: { collectionId: collection.id, userId: recipient.id } },
+          select: { role: true },
+        });
+        if (currentShare?.role !== "editor")
+          throw new BadRequestException("Recipient must already be an editor on this collection");
+        await recordAudit(tx, {
+          hubId: recipientHub.id,
+          actorUserId: user.userId,
+          collectionId: collection.id,
+          targetUserId: recipient.id,
+          action: "collection.transferred_in",
+        });
+        // Move the whole subtree into the recipient's hub.
+        await tx.collection.updateMany({
+          where: { id: { in: subtreeIds } },
+          data: { hubId: recipientHub.id, version: { increment: 1 } },
+        });
+        // Detach the transferred root from its old parent (which stayed behind).
+        await tx.collection.update({
+          where: { id: collection.id },
+          data: { parentCollectionId: null },
+        });
+        // The recipient now owns the subtree, so their shares on it are redundant.
+        await tx.collectionShare.deleteMany({
+          where: { collectionId: { in: subtreeIds }, userId: recipient.id },
+        });
+        // Give the previous owner editor access across the subtree (their shared/).
+        await tx.collectionShare.deleteMany({
+          where: { collectionId: { in: subtreeIds }, userId: previousOwnerId },
+        });
+        await tx.collectionShare.createMany({
+          data: subtreeIds.map((collectionId) => ({
+            collectionId,
+            userId: previousOwnerId,
+            role: "editor",
+            source: "direct",
+          })),
+        });
+      },
+    );
 
     return {
       collectionId: collection.id,
@@ -545,6 +616,66 @@ export class CollectionsService {
     return children.map((child) => this.toPublicCollection(child));
   }
 
+  async listAudit(user: AuthUser, query: CursorQueryDto) {
+    const hubId = await this.requireUserHub(user);
+    const limit = query.limit ?? 20;
+    let cursorId: string | undefined;
+    if (query.cursor) {
+      const cursor = decodeCursor<{ id: string }>(query.cursor);
+      if (
+        !cursor ||
+        typeof cursor.id !== "string" ||
+        !/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(cursor.id) ||
+        !(await this.prisma.auditRecord.findFirst({ where: { id: cursor.id, hubId } }))
+      ) {
+        throw new BadRequestException("Invalid audit cursor");
+      }
+      cursorId = cursor.id;
+    }
+    const rows = await this.prisma.$transaction(async (tx) => {
+      const entries = await tx.auditRecord.findMany({
+        where: { hubId },
+        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+        take: limit + 1,
+        ...(cursorId ? { cursor: { id: cursorId }, skip: 1 } : {}),
+      });
+      await recordAudit(tx, { hubId, actorUserId: user.userId, action: "audit.read" });
+      return entries;
+    });
+    const hasMore = rows.length > limit;
+    const items = rows
+      .slice(0, limit)
+      .map((row) => ({ ...row, createdAt: row.createdAt.toISOString() }));
+    return {
+      items,
+      meta: { limit, nextCursor: hasMore ? encodeCursor({ id: items.at(-1)?.id }) : null },
+    };
+  }
+
+  private async mutateOwned<T>(
+    collection: Collection,
+    user: AuthUser,
+    event: Omit<AuditInput, "hubId" | "actorUserId" | "collectionId"> | undefined,
+    mutate: (tx: Prisma.TransactionClient) => Promise<T>,
+  ): Promise<T> {
+    return this.prisma.$transaction(async (tx) => {
+      const locked = await tx.$queryRaw<Array<{ id: string }>>`
+        SELECT c.id FROM collections c JOIN hubs h ON h.id = c.hub_id
+        WHERE c.id = ${collection.id}::uuid AND c.hub_id = ${collection.hubId}::uuid
+          AND h.owner_user_id = ${user.userId}::uuid FOR UPDATE OF c`;
+      if (locked.length !== 1) throw new NotFoundException("Collection not found");
+      const result = await mutate(tx);
+      if (event)
+        await recordAudit(tx, {
+          ...event,
+          hubId: collection.hubId,
+          actorUserId: user.userId,
+          collectionId: collection.id,
+        });
+      return result;
+    });
+  }
+
   // --- internals ----------------------------------------------------------
 
   // Collections are always created as top-level. Nesting is a separate action
@@ -558,18 +689,28 @@ export class CollectionsService {
       throw new ConflictException("Collection slug already exists");
     }
 
-    const saved = await this.prisma.collection.create({
-      data: {
-        hubId,
-        // Immutable creator/provenance: unchanged if ownership is later
-        // transferred (the owning hubId changes, the creator does not).
-        creatorUserId: user.userId,
-        slug: dto.slug,
-        title: dto.title,
-        description: dto.description,
-        tags: normalizeTags(dto.tags),
-        published: dto.published ?? false,
-      },
+    const saved = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.collection.create({
+        data: {
+          hubId,
+          // Immutable creator/provenance: unchanged if ownership is later
+          // transferred (the owning hubId changes, the creator does not).
+          creatorUserId: user.userId,
+          slug: dto.slug,
+          title: dto.title,
+          description: dto.description,
+          tags: normalizeTags(dto.tags),
+          published: dto.published ?? false,
+        },
+      });
+      if (created.published)
+        await recordAudit(tx, {
+          hubId,
+          actorUserId: user.userId,
+          collectionId: created.id,
+          action: "collection.published",
+        });
+      return created;
     });
     return this.toPublicCollection(saved);
   }

@@ -1,0 +1,46 @@
+name: Build release image
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: release-image
+  cancel-in-progress: false
+jobs:
+  verify:
+    uses: ./.github/workflows/verify.yml
+  image:
+    needs: verify
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Resolve image name
+        id: name
+        env:
+          REPOSITORY: ${{ github.repository }}
+        run: echo "image=ghcr.io/${REPOSITORY,,}/api" >> "$GITHUB_OUTPUT"
+      - uses: docker/build-push-action@v6
+        id: build
+        with:
+          context: .
+          file: apps/api/Dockerfile
+          push: true
+          tags: ${{ steps.name.outputs.image }}:${{ github.sha }}
+          provenance: true
+          sbom: true
+      - name: Record immutable release input
+        env:
+          IMAGE: ${{ steps.name.outputs.image }}:${{ github.sha }}@${{ steps.build.outputs.digest }}
+        run: echo "API_IMAGE=$IMAGE" >> "$GITHUB_STEP_SUMMARY"
+      # Deliberately no deployment webhook: the reviewed migration/restore and
+      # platform rollout must be configured before any live promotion.

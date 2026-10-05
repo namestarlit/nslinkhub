@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
+import { RequestBudgetMaintenance } from "./common/request-budget-maintenance";
 import { validateEnv } from "./config/env.validation";
 import { PrismaModule } from "./database/prisma.module";
 import { CollectionsModule } from "./modules/collections/collections.module";
@@ -11,6 +12,7 @@ import { ResourcesModule } from "./modules/resources/resources.module";
 import { UsersModule } from "./modules/users/users.module";
 
 @Module({
+  providers: [RequestBudgetMaintenance],
   imports: [
     ConfigModule.forRoot({ isGlobal: true, validate: validateEnv }),
     PrismaModule,

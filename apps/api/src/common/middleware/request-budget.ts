@@ -1,0 +1,85 @@
+import { createHmac } from "node:crypto";
+import { isIP } from "node:net";
+import type { RequestHandler } from "express";
+import { readSecret } from "../../config/secret";
+import type { PrismaService } from "../../database/prisma.service";
+import type { RequestWithId } from "./request-id";
+
+export function trustedProxies(value: string | undefined): string[] {
+  if (!value?.trim()) return [];
+  return value.split(",").map((part) => {
+    const cidr = part.trim();
+    const [address, mask, extra] = cidr.split("/");
+    const family = isIP(address);
+    if (
+      !family ||
+      extra !== undefined ||
+      (mask !== undefined && (!/^\d+$/.test(mask) || Number(mask) > (family === 4 ? 32 : 128)))
+    ) {
+      throw new Error("TRUSTED_PROXY_CIDRS must contain only explicit IP addresses or CIDRs");
+    }
+    return cidr;
+  });
+}
+
+export function requestBudgetKey(scope: string, source: string, secret: string): string {
+  return createHmac("sha256", secret)
+    .update(`request-budget:v1\0${scope}\0${source}`)
+    .digest("hex");
+}
+
+export function requestBudget(
+  prisma: PrismaService,
+  secret = readSecret("BETTER_AUTH_SECRET") ?? "dev-better-auth-secret",
+): RequestHandler {
+  return async (request, response, next) => {
+    // Express matches literal routes without case sensitivity by default.
+    const path = request.path.toLowerCase();
+    // Infrastructure probes must remain reachable during dependency outages.
+    if (request.method === "GET" && ["/api/v1/health", "/api/v1/status"].includes(path))
+      return next();
+    const scope = path.startsWith("/api/v1/auth/")
+      ? "auth"
+      : /^\/api\/v1\/(imports|exports)(\/|$)/.test(path)
+        ? "file"
+        : ["GET", "HEAD", "OPTIONS"].includes(request.method)
+          ? "read"
+          : "write";
+    const limit = { auth: 30, file: 10, read: 300, write: 60 }[scope];
+    const key = requestBudgetKey(
+      scope,
+      request.ip ?? request.socket.remoteAddress ?? "unknown",
+      secret,
+    );
+    try {
+      const rows = await prisma.$queryRaw<Array<{ count: number }>>`
+        INSERT INTO request_budgets (key, count, expires_at)
+        VALUES (${key}, 1, clock_timestamp() + interval '1 minute')
+        ON CONFLICT (key) DO UPDATE SET
+          count = CASE WHEN request_budgets.expires_at <= clock_timestamp() THEN 1 ELSE request_budgets.count + 1 END,
+          expires_at = CASE WHEN request_budgets.expires_at <= clock_timestamp() THEN clock_timestamp() + interval '1 minute' ELSE request_budgets.expires_at END
+        WHERE request_budgets.expires_at <= clock_timestamp() OR request_budgets.count < ${limit}
+        RETURNING count`;
+      if (rows.length > 0) return next();
+      response.setHeader("Retry-After", "60");
+      response.status(429).json({
+        error: {
+          code: "too_many_requests",
+          message: "Too many requests",
+          requestId: (request as RequestWithId).requestId,
+          details: {},
+        },
+      });
+    } catch {
+      // A failed shared budget store must not silently remove abuse protection.
+      response.status(503).json({
+        error: {
+          code: "service_unavailable",
+          message: "Service temporarily unavailable",
+          requestId: (request as RequestWithId).requestId,
+          details: {},
+        },
+      });
+    }
+  };
+}

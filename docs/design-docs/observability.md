@@ -2,91 +2,93 @@
 
 ## Direction
 
-Use a managed, OpenTelemetry-compatible observability stack:
+Use one application telemetry pipeline:
 
-- Sentry for exception tracking, release diagnostics, source-mapped errors, and
-  browser-specific debugging context.
-- Pino JSON logs for the NestJS API and workers.
-- OpenTelemetry and OTLP as the portable telemetry boundary for traces and
-  metrics.
-- Grafana Alloy as the production collector and forwarding layer.
-- Grafana Cloud as the initial managed backend:
-  - Loki for centralized logs;
-  - Tempo for traces;
-  - Mimir or Prometheus-compatible storage for metrics;
-  - Grafana for dashboards and alerts.
+- LogTape is the structured logging API for NestJS and future workers.
+- Sentry owns application errors, traces, and correlated structured logs.
+- The same allowlisted, redacted record reaches console and Sentry log sinks.
+- Shared Grafana Alloy infrastructure collects container stdout for Loki and
+  PostgreSQL/Redis metrics for the Grafana metrics backend. It is outside the
+  application image and owns shipping credentials, buffering, and retries.
 
-Do not self-host the full observability stack initially. Keep the OTLP boundary
-so the backend can change later without rewriting application instrumentation.
+This decision supersedes the earlier Pino + application OpenTelemetry/OTLP +
+Tempo direction. Do not introduce a second application tracing pipeline.
+`adoption-decisions.md` records scope, evidence, and the delivery sequence.
 
-This replaces the current API logging (NestJS's default `Logger`), which is the
-"no structured logging pipeline" item in the tech-debt tracker. It lands before
-the first production release, not during Track W.
+## Implemented API foundation
 
-## Current Foundation
+The API pins LogTape and its Sentry sink to 2.3.0, and `@sentry/bun` to
+10.69.0. `src/entrypoint.ts` awaits telemetry initialization before dynamically
+importing Nest/auth/Prisma. `tsconfig.runtime.json` maps aliases to compiled
+output; both source and production scripts enter through that boundary.
 
-Two pieces already respect this direction and must not regress:
+`common/observability` owns SDK imports. A Nest logger adapter discards arbitrary
+framework text. Allowlisted event names/properties go to console and Sentry;
+SDK hooks reconstruct safe errors/transactions/spans and scrub log/metric
+attributes. Default SDK integrations are disabled, so there is no automatic
+SQL, body, console or URL capture. Stack frames retain line/column numbers,
+not source filenames, snippets or variables; diagnosis is deliberately less
+rich until a reviewed source-map/path policy exists.
 
-- `common/middleware/request-id.ts` mints a server-generated, PII-free
-  `req_<random>` id per request and **ignores caller-provided `X-Request-Id`**
-  (never trusted, reflected, or logged). Externally logged request IDs stay
-  API-generated; a future edge-propagated request ID would require an
-  authenticated proxy trust boundary and a reviewed replacement policy.
-- `common/filters/all-exceptions.filter.ts` already carries the request ID into
-  the error envelope; structured logging replaces its ad-hoc log line, not its
-  correlation model.
+AsyncLocalStorage and Sentry isolation scopes isolate each request. The API
+mints `req_<random>` IDs and ignores caller `X-Request-Id`. Manual incoming
+spans use registered server route templates (or `<unmatched>`). Finish/close
+produce one completion event per incoming request, including aborted requests.
+Unexpected failures create one sanitized issue; expected failures do not.
+Request count/duration metrics use bounded method, route, status and outcome
+labels. Health transitions emit aggregate state only. Shutdown flush is bounded
+at two seconds within a five-second application shutdown deadline.
+
+`telemetry.spec.ts` captures real SDK envelopes on loopback, verifies concurrent
+request/trace isolation and correlation, and injects arbitrary sensitive values
+and a failing sink. `bun run check:telemetry` guards application logging/SDK
+imports. No remote project or shared collector has been verified.
+
+The rest of this document includes future browser/worker/domain instrumentation.
+The API currently emits no domain pseudonyms or audit references; do not invent
+them or export raw IDs. Browser-to-API propagation and worker/SQL spans wait for
+those slices. Shared collector rollout remains an operator gate.
 
 ## Unified Trace And Error Model
 
-Treat Sentry and OpenTelemetry as participants in one observability pipeline,
-not as independent backend tracing systems.
-
 ```txt
-Next.js Sentry SDK (Track W3)
-  -> browser errors, source maps, and W3C trace-context propagation
-
 NestJS API and workers
-  -> OpenTelemetry spans and metrics
-  -> Pino JSON logs to standard output
-  -> Sentry SDK for sanitized backend exception events
+  -> LogTape -> redacted console -> stdout -> shared Alloy -> Loki
+             -> same redacted record -> Sentry logs
+  -> one Sentry SDK -> sanitized errors and application traces
+  -> bounded HTTP/readiness/worker metrics
 
-Grafana Alloy
-  -> receives OTLP telemetry and collects container logs
-  -> forwards traces and metrics to Grafana Cloud
-  -> forwards selected OTLP traces to Sentry
-  -> forwards Pino/container logs to Grafana Cloud
+Next.js browser (when instrumented)
+  -> separate Sentry project -> sanitized browser errors and traces
+
+Shared Alloy
+  -> dependency metrics -> Grafana metrics backend
 ```
 
-Backend business and infrastructure spans are OpenTelemetry-owned. Do not
-duplicate them with Sentry-specific span instrumentation. The Next.js Sentry SDK
-propagates W3C `traceparent` context to approved API origins, and the
-OpenTelemetry-instrumented API continues the same distributed trace. Backend
-exceptions captured by the Sentry SDK should link to the active OpenTelemetry
-trace when runtime support permits. Configure the backend Sentry SDK for
-exception capture and correlation without exporting a second set of backend
-transactions or spans.
+Use a single Bun SDK initialized before application imports; a Nest logger
+adapter and exception filter use that initialized client. Prove this preload
+path against our compiled Nest build and pinned Bun/SDK versions, rather than
+assuming a source-run reference configuration transfers unchanged.
 
-Grafana Alloy remains the routing, batching, filtering, redaction, sampling, and
-multi-destination layer. Initially: send traces to Grafana Cloud and selected
-traces to Sentry; send metrics to Grafana Cloud; keep the Pino/container log path
-to Grafana Cloud; send sanitized exception events directly through the Sentry
-SDK. Do not send OTLP logs to Sentry initially.
+Request/job context must be isolated across concurrent work. Emit one final
+request event with route template, status, duration, request ID, and available
+trace ID, plus bounded domain milestones. Never use raw URLs, handles, query
+strings, or resource IDs as route labels. Resolve route templates after Nest
+routing; use a fixed unmatched label for unresolved routes. Handle aborted
+responses without emitting duplicate completion events.
 
-Before relying on backend exception-to-trace correlation, run a compatibility
-spike against the pinned Bun, NestJS, Sentry SDK, and OpenTelemetry versions. The
-spike must prove: a Next.js browser action propagates approved W3C trace context
-to the API; the API and a worker continue and export the trace through Alloy to
-Grafana Cloud and Sentry; a sanitized backend exception links to the active
-trace; the backend Sentry SDK does not create duplicate transactions or spans;
-Pino JSON structure and standard-output shipping remain unchanged; shutdown
-flushes bounded telemetry work without delaying termination indefinitely; and
-prohibited PII/sensitive fields are removed before any signal leaves the
-application.
+Unexpected failures create one sanitized exception issue correlated to the
+request event. Expected validation failures, authorization denials, and
+readiness degradation are outcomes, not duplicate exception issues. Apply the
+same privacy rules at SDK hooks as at log sinks: automatic SDK capture does
+not necessarily pass through the application logger.
 
-If exception-to-trace correlation is not compatible with NestJS on Bun, keep
-OpenTelemetry traces and Sentry exception tracking separately functional while
-preserving trace IDs as approved correlation context. Document the limitation
-instead of adding duplicate backend tracing.
+The compatibility spike must prove concurrent context isolation, correct route
+and status attribution, one incoming span, correlated sanitized exceptions,
+allowlisted browser/API/worker propagation, and bounded shutdown flushing.
+Production telemetry outages must not prevent core requests from completing.
+The future browser SDK gets a separate public configuration entry; server
+secrets never enter the browser bundle. Correlation context never grants access.
 
 ## Log Flow
 
@@ -166,7 +168,7 @@ Track:
 
 - API request count, error rate, and latency;
 - database latency and pool pressure;
-- background-job success, failure, and duration (exports, email delivery);
+- background-job success, failure, and duration (email delivery);
 - publication and share-link activity counts (aggregate, no identifiers);
 - email delivery, bounce, complaint, and suppression counts.
 
@@ -177,29 +179,36 @@ Trace:
 - browser-to-API requests through approved W3C trace propagation;
 - incoming API requests;
 - database calls where instrumentation is compatible with the Bun runtime;
-- background jobs (export generation, email delivery);
+- email delivery jobs and synchronous export requests;
 - collection-policy resolution on hot read paths;
 - publication and share-link acceptance flows.
 
 ## Local Development
 
-Default local development uses Pino pretty output. Add an optional
-`compose.yml` observability profile when API instrumentation begins so
-contributors can inspect correlated local logs, traces, and metrics without
-sending development noise to the production backend. Local logs must follow the
-same redaction rules as production; development convenience is not a reason to
-print secrets or personal data.
+Local development uses a readable console sink without requiring a Sentry
+DSN or shared collector. Production uses structured JSON Lines. Both follow
+the same redaction rules; convenience never permits printing secrets or user
+content. Optional telemetry validation uses a dedicated non-production project.
 
-## Bun Compatibility
+## Implementation And Release Acceptance
 
-Verify Sentry, Pino, OpenTelemetry instrumentation, trace-context propagation,
-exception-to-trace correlation, and exporters against the pinned Bun version
-during the first observability integration. If a package is not compatible,
-document the exception and preserve structured logging plus the OTLP boundary
-where possible.
+Verify LogTape, the Bun Sentry SDK, browser integration, request/job context,
+and exception-to-trace correlation against pinned versions before relying on
+them. Record limitations rather than adding a second SDK or exporter. The implemented API pins and local proof are recorded above; browser and
+worker compatibility remain future acceptance.
 
-## References
+Use runtime-specific typed configuration and the `_FILE` contract. Add a
+focused structured-log boundary check alongside the implementation, covering
+message interpolation and unsafe object fields. Metric labels stay bounded;
+request IDs and pseudonymous actor/entity references are never labels.
 
-- [Sentry and OpenTelemetry working together](https://blog.sentry.io/sentry-opentelemetry-work-together/)
-- [Sentry with OpenTelemetry](https://docs.sentry.io/concepts/otlp/sentry-with-otel/)
-- [Grafana Alloy application observability](https://grafana.com/docs/opentelemetry/collector/grafana-alloy/)
+Retain `/api/v1/health` and `/api/v1/status` and their current contracts through
+W3. A friendly web status surface can map dependency readiness to an aggregate
+state. Review public status details versus internal probes before deployment;
+changing that API requires updated contracts and consumers.
+
+Before release, prove a synthetic sanitized failure can be followed from the
+application request ID to its Sentry issue/trace and shipped log. Verify
+collector delivery, dependency degradation, telemetry outage behavior, and
+operator access/retention separately. Do not report shared infrastructure as
+operational until those checks have actually run.

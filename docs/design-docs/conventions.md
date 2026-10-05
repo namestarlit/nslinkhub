@@ -38,3 +38,18 @@ camelCase everywhere; hold the line.
 
 See `docs/runbooks/verification.md` and the Phase A exec-plan for the
 originating decisions.
+
+## Before Web Contract Consumption
+
+The foundation gate in `adoption-decisions.md` adds a typed error catalog,
+safe exception mapping, and checks connecting response mappers and HTTP
+serialization to `@nslinkhub/types`. These are planned, not implemented.
+Keep the current envelope (including `details`), camelCase keys, ISO-string
+timestamps, and existence-hiding `not_found` behavior. Clients branch on
+stable codes and own user-facing copy, never parse an exception message.
+
+Retain Nest DTOs/class-validator and Swagger for this gate. A wholesale Zod
+or generated-client migration is deferred; the immediate requirement is
+mechanically checked wire contracts. Validation errors should expose bounded
+field/rule identifiers, never submitted values; arbitrary 5xx messages and
+details must not reach clients.

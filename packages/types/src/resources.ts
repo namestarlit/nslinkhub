@@ -1,5 +1,5 @@
-import type { ResourceKind } from "./common";
-import type { IsoTimestamp } from "./envelope";
+import type { ResourceKind } from "./common.js";
+import type { IsoTimestamp } from "./envelope.js";
 
 export interface Resource {
   id: string;

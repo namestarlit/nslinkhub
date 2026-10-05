@@ -1,0 +1,62 @@
+version: '3.8'
+# Use only on an explicitly selected disposable local Swarm host. There are no
+# published ports: probe through the attachable network from a local container.
+services:
+  api:
+    image: ${API_IMAGE:?Build and select the local API image}
+    environment:
+      NODE_ENV: production
+      PORT: '4000'
+      DATABASE_URL_FILE: /run/secrets/database_url
+      BETTER_AUTH_SECRET_FILE: /run/secrets/auth_secret
+      REDIS_URL: redis://redis:6379
+      BETTER_AUTH_URL: http://api:4000
+    secrets:
+      - database_url
+      - auth_secret
+    networks: [local]
+    read_only: true
+    tmpfs: [/tmp]
+    deploy:
+      # Deploy initially with zero replicas; migrate through a one-shot service
+      # before scaling API_REPLICAS to one. Swarm ignores depends_on.
+      replicas: ${API_REPLICAS:-0}
+      resources:
+        limits: { cpus: '1.0', memory: 512M }
+      restart_policy: { condition: on-failure, delay: 5s }
+  postgres:
+    image: postgres:18
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_DB: rehearsal
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+    secrets: [postgres_password]
+    volumes: [database:/var/lib/postgresql]
+    networks: [local]
+    deploy:
+      replicas: 1
+      resources:
+        limits: { cpus: '1.0', memory: 512M }
+  redis:
+    image: redis:7
+    command: [redis-server, --appendonly, 'yes', --maxmemory-policy, noeviction]
+    volumes: [queue:/data]
+    networks: [local]
+    deploy:
+      replicas: 1
+      resources:
+        limits: { cpus: '0.5', memory: 128M }
+networks:
+  local:
+    driver: overlay
+    attachable: true
+volumes:
+  database:
+  queue:
+secrets:
+  database_url:
+    file: ${LOCAL_SECRETS_DIR:?Set the disposable secret directory}/database_url
+  auth_secret:
+    file: ${LOCAL_SECRETS_DIR}/auth_secret
+  postgres_password:
+    file: ${LOCAL_SECRETS_DIR}/postgres_password

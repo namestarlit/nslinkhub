@@ -1,0 +1,73 @@
+version: '3.8'
+services:
+  api:
+    # Full SHA tag AND digest, supplied by the release workflow/operator.
+    image: ${API_IMAGE:?Set an immutable API image reference}
+    environment:
+      NODE_ENV: production
+      PORT: '4000'
+      RELEASE_SHA: ${RELEASE_SHA:?Set the full release commit SHA}
+      DATABASE_URL_FILE: /run/secrets/database_url
+      BETTER_AUTH_SECRET_FILE: /run/secrets/auth_secret
+      REDIS_URL_FILE: /run/secrets/redis_url
+      SENTRY_DSN_FILE: /run/secrets/sentry_dsn
+      BETTER_AUTH_URL: https://${PUBLIC_HOST:?Set the public host}
+      TRUSTED_PROXY_CIDRS: ${TRUSTED_PROXY_CIDRS:?Set only the trusted ingress proxy addresses}
+    secrets:
+      - database_url
+      - auth_secret
+      - redis_url
+      - sentry_dsn
+    networks:
+      - ingress
+      - backend
+    read_only: true
+    tmpfs:
+      - /tmp
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          memory: 128M
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+      update_config:
+        parallelism: 1
+        order: start-first
+        failure_action: rollback
+      rollback_config:
+        parallelism: 1
+      labels:
+        traefik.enable: 'true'
+        traefik.swarm.network: ${INGRESS_NETWORK:?Set the shared ingress network}
+        traefik.http.routers.link-api.rule: Host(`${PUBLIC_HOST}`) && PathPrefix(`/api/`)
+        traefik.http.routers.link-api.entrypoints: ${HTTPS_ENTRYPOINT:?Set the platform HTTPS entrypoint}
+        traefik.http.routers.link-api.tls: 'true'
+        traefik.http.routers.link-api.tls.certresolver: ${TLS_RESOLVER:?Set the platform certificate resolver}
+        traefik.http.services.link-api.loadbalancer.server.port: '4000'
+        traefik.http.services.link-api.loadbalancer.healthcheck.path: /api/v1/status
+        traefik.http.services.link-api.loadbalancer.healthcheck.interval: 15s
+networks:
+  ingress:
+    external: true
+    name: ${INGRESS_NETWORK}
+  backend:
+    external: true
+    name: ${BACKEND_NETWORK:?Set the private data-services network}
+secrets:
+  database_url:
+    external: true
+    name: ${DATABASE_URL_SECRET:?Set the database URL secret name}
+  auth_secret:
+    external: true
+    name: ${AUTH_SECRET:?Set the auth secret name}
+  redis_url:
+    external: true
+    name: ${REDIS_URL_SECRET:?Set the Redis URL secret name}
+  sentry_dsn:
+    external: true
+    name: ${SENTRY_DSN_SECRET:?Set the Sentry DSN secret name}

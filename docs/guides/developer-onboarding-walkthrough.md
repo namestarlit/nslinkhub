@@ -244,24 +244,20 @@ NODE_ENV=production bun run start   # refuses to boot: DATABASE_URL and
 cd ../..
 ```
 
-And the e2e caveat that will eventually bite you: e2e runs against the local
-dev database (accepted debt — [tech-debt-tracker.md](../exec-plans/tech-debt-tracker.md)
-row "E2E test isolation"). Fixed-seed fixtures accumulate across runs; when
-e2e fails strangely, reset first:
-
-```bash
-docker exec nslinkhub-postgres psql -U postgres \
-  -c "DROP DATABASE nslinkhub" -c "CREATE DATABASE nslinkhub"
-(cd apps/api && bunx prisma migrate deploy)
-bun run verify
-```
+E2E now creates, migrates and drops a disposable database per run. Run
+`bun run verify` with local services available; inspect failing suites and
+connectivity rather than resetting development data. Read
+[verification.md](../runbooks/verification.md) for test-specific configuration
+and [release.md](../runbooks/release.md) for the separate image rehearsal.
+The new audit/budget migration must also be applied to your development DB
+before starting the updated API: `(cd apps/api && bunx prisma migrate deploy)`.
 
 **Checkpoint 5**:
 
 - [ ] What is the three-step config resolution order in dev?
 - [ ] What exactly refuses to boot in production, and why is the dev default
       auth secret rejected even when present?
-- [ ] When e2e fails strangely, what is the first move?
+- [ ] How does e2e isolate its database, and what cleanup can SIGKILL prevent?
 
 ---
 
@@ -281,6 +277,10 @@ Read:
    base all three templates render through.
 3. [index.md](../design-docs/index.md) — the three `web-*` design documents
    the W3 design pass must produce (listed as Planned).
+4. [adoption-decisions.md](../design-docs/adoption-decisions.md) — the
+   foundation comparison and gates: isolated verification and safe contracts
+   before web implementation; auth delivery with the code-first journey;
+   observability and deployment acceptance before public release.
 
 The W3 session-starter itself lives in this machine's git-ignored
 `ref/w3-web-app-handoff.md` (disposable by contract — see
@@ -294,13 +294,17 @@ durable, it only sequences it.
       emit.
 - [ ] You can explain why the web app will have no CORS config and no
       `.env` for the API origin in dev (rewrites) or prod (path routing).
-- [ ] You know which auth flow ships first on the web (password) and which
-      direction is decided for later (code-first) — and why Impeccable may
-      restyle but not reorder it.
+- [ ] You can distinguish today's password-only backend from the code-first
+      account journey's delivery gate, and explain why Impeccable may restyle
+      but not reorder that journey.
+- [ ] You can name the foundation checks required before web implementation
+      and the separate public-release gates.
 - [ ] `bun run verify` is green on your machine right now.
 
-Next action: the Impeccable design pass — three `web-*` docs, moved from
-Planned to Current, **before** any `apps/web` scaffolding.
+Next action after review of the adoption decisions: the W3 design pass — three
+`web-*` docs, moved from Planned to Current. Complete the foundation gate before
+`apps/web` scaffolding; apply Impeccable to interface work under repository
+guidance. Auth-delivery implementation belongs with the account journey.
 
 ---
 
@@ -313,7 +317,7 @@ Planned to Current, **before** any `apps/web` scaffolding.
 - Engineering principles → [CORE_BELIEFS.md](../CORE_BELIEFS.md)
 - nsauth / "Continue with namestarlit" SSO direction →
   [identity-sso.md](../design-docs/identity-sso.md)
-- Observability direction (Pino/OTel/Grafana) →
+- Observability direction (LogTape/Sentry + shared Alloy) →
   [observability.md](../design-docs/observability.md)
 - Prisma migration discipline → [migrations.md](../runbooks/migrations.md)
 - Local commands and DB reset →
@@ -333,7 +337,7 @@ orchestrator (see `package.json` for the full set):
 | `bun run infra:up` / `infra:down` | local PostgreSQL + Redis |
 | `bun run api:dev` / `api:test` | single-service loop / API tests |
 | `bun run email:test` | email template tests |
-| `bun run verify` | the canonical 10-step gate |
+| `bun run verify` | the canonical 11-step gate |
 
 Cleanup after the walkthrough:
 

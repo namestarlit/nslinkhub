@@ -4,20 +4,22 @@
   "private": true,
   "license": "UNLICENSED",
   "scripts": {
-    "build": "nest build",
-    "verify": "bun run build && bun run typecheck && bun test src && bun test test",
+    "build": "bun run postinstall && nest build",
+    "verify": "bun run build && bun run typecheck && bun run test && bun run test:e2e",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "postinstall": "prisma generate",
-    "start": "bun src/main.ts",
-    "start:dev": "bun --watch src/main.ts",
-    "start:debug": "bun --inspect --watch src/main.ts",
-    "start:prod": "bun dist/main.js",
-    "test": "bun test src",
+    "start": "bun src/entrypoint.ts",
+    "start:dev": "bun --watch src/entrypoint.ts",
+    "start:debug": "bun --inspect --watch src/entrypoint.ts",
+    "start:prod": "bun --tsconfig-override tsconfig.runtime.json dist/src/entrypoint.js",
+    "test": "bun ../../tooling/verify-api-tests.ts unit",
     "test:watch": "bun test --watch src",
     "test:cov": "bun test --coverage src",
-    "test:e2e": "bun test test"
+    "test:e2e": "bun ../../tooling/verify-api-tests.ts e2e"
   },
   "dependencies": {
+    "@logtape/logtape": "2.3.0",
+    "@logtape/sentry": "2.3.0",
     "@nestjs/bullmq": "^11.0.2",
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.1",
@@ -27,6 +29,7 @@
     "@nestjs/swagger": "^11.2.0",
     "@prisma/adapter-pg": "^7.8.0",
     "@prisma/client": "^7.8.0",
+    "@sentry/bun": "10.69.0",
     "better-auth": "^1.6.23",
     "bullmq": "^5.20.5",
     "class-transformer": "^0.5.1",
@@ -39,7 +42,8 @@
     "pdfkit": "^0.19.1",
     "pg": "^8.13.1",
     "reflect-metadata": "^0.2.2",
-    "rxjs": "^7.8.1"
+    "rxjs": "^7.8.1",
+    "@nslinkhub/types": "workspace:*"
   },
   "devDependencies": {
     "@nestjs/cli": "^11.0.0",

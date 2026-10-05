@@ -2,6 +2,11 @@
 
 ## Direction
 
+Implementation status: three templates exist; provider delivery, outbox,
+worker, auth-code wiring, and webhooks do not. The auth-delivery gate in
+`adoption-decisions.md` is part of the W3 account journey, before code-first
+sign-in or email-change screens ship. It is not deferred until after W3.
+
 Use Resend as the initial transactional-email provider. It fits the
 namestarlit-VPS deployment model because the application only needs an HTTPS
 API, signed webhooks, and restricted deployment secret files — no outbound SMTP
@@ -108,7 +113,7 @@ delivery:
 8. process signed Resend webhooks idempotently;
 9. update delivery, bounce, complaint, delay, failure, and suppression status.
 
-This is the outbox + worker split tracked in Phase E
+This is the outbox + worker split brought into the W3 auth-delivery slice
 (`docs/SYSTEM_DESIGN.md`); email is the first — and currently
 only — consumer that makes it mandatory (exports are synchronous and never
 queue). Run delivery in a separate worker process
@@ -182,6 +187,42 @@ Resend retains idempotency keys for a limited window. Keep the durable
 deduplication state in PostgreSQL so retries remain safe beyond the provider
 window.
 
+Delivery has an external side effect and cannot be made atomic with a database
+transaction. Use an exclusive, expiring database claim so concurrent deliveries
+cannot both send; recover stale claims after crashes. Keep provider-send failure
+separate from failure to record provider success. The latter retries bookkeeping
+with the same idempotency key, not a new message. Do not claim exactly-once
+delivery beyond the provider's deduplication window; resolve uncertain outcomes
+explicitly before resending expired authentication material.
+
+The queue adapter owns bounded connection/retry/shutdown behavior. Versioned
+jobs carry only opaque delivery references and approved correlation context.
+Malformed known jobs fail terminally; unknown versions remain recoverable across
+rolling upgrades. Prove duplicate delivery, Redis loss/recovery, worker death,
+poison jobs, and retry exhaustion against isolated real services.
+
+## Auth Integration Gate
+
+Inject persistence, configuration, and durable-delivery callbacks into the
+better-auth composition root. Prove callbacks persist intent before reporting
+success; where better-auth and the outbox cannot share a transaction, document
+and test the recovery path. Preserve `resolveSessionUser`, app-owned hub
+onboarding, and the raw auth handler before body parsers.
+
+The product keeps codes plus direct links and password fallback. Before wiring
+templates, prove on pinned dependencies that the code and link complete the
+same expiring, one-time challenge, including resend invalidation, concurrent
+completion, cross-device use, and replay rejection. Opening a link only presents
+confirmation; deliberate POST consumes proof so mail prefetch cannot sign in.
+Keep low-entropy verification codes keyed-hashed through the supported auth
+integration, apply issue/verify budgets, and avoid account-enumerating responses.
+If this cannot be achieved within better-auth's ownership boundary, record the
+blocker before changing product behavior or building custom credential storage.
+
+Email change confirms the current address, verifies the new one, and revokes
+all sessions. Its proof cannot be replaced by a normal sign-in code. Security
+audit outcomes land with the flow, never including codes or links.
+
 ## Domain And Deliverability
 
 Use a dedicated sending subdomain such as:
@@ -242,6 +283,15 @@ Minimize provider-visible data:
 
 Store only the minimum delivery metadata required by the application. Define a
 retention policy before production.
+
+Credential-bearing render inputs need an explicit shorter lifecycle than
+delivery metadata. Strip them on delivery or terminal failure; sweep abandoned
+pending intents without disrupting live claims or legitimate retries. Do not
+deliver already expired challenges. Test cleanup after relay exhaustion as well
+as after worker attempts: a message the worker never sees can otherwise retain
+a plaintext code indefinitely. Hashing the auth verification row alone does
+not protect a renderable copy in the outbox. Review any transient plaintext
+retention and access boundary before enabling code delivery.
 
 ## Secrets
 

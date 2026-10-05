@@ -5,7 +5,9 @@
 // the _FILE contract (readSecret) so file-delivered secrets get the same
 // checks as plain env vars — the production path must not bypass validation.
 
+import { trustedProxies } from "../common/middleware/request-budget";
 import { readSecret } from "./secret";
+import { telemetryConfig } from "./telemetry";
 
 function isPort(value: string): boolean {
   const n = Number(value);
@@ -15,6 +17,8 @@ function isPort(value: string): boolean {
 export function validateEnv(config: Record<string, unknown>): Record<string, unknown> {
   const errors: string[] = [];
   const env = config as Record<string, string | undefined>;
+  telemetryConfig(env);
+  trustedProxies(env.TRUSTED_PROXY_CIDRS);
 
   // Zero-config is a development affordance only. In production the in-code
   // localhost defaults and the public dev auth secret are never acceptable:

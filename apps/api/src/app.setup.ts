@@ -4,7 +4,10 @@ import type { Express } from "express";
 import { json, urlencoded } from "express";
 import { auth } from "./auth/auth";
 import { AllExceptionsFilter } from "./common/filters/all-exceptions.filter";
+import { requestBudget, trustedProxies } from "./common/middleware/request-budget";
 import { requestIdMiddleware } from "./common/middleware/request-id";
+import { httpTelemetry } from "./common/observability/http-telemetry";
+import { PrismaService } from "./database/prisma.service";
 
 // Shared between main.ts and the e2e tests so both run the same HTTP stack.
 // Requires the app to be created with `bodyParser: false`: the better-auth
@@ -13,7 +16,10 @@ import { requestIdMiddleware } from "./common/middleware/request-id";
 // better-auth handler, then body parsers for Nest routes.
 export function configureApp(app: INestApplication): void {
   const expressApp = app.getHttpAdapter().getInstance() as Express;
+  expressApp.set("trust proxy", trustedProxies(process.env.TRUSTED_PROXY_CIDRS));
   expressApp.use(requestIdMiddleware);
+  expressApp.use(httpTelemetry);
+  expressApp.use(requestBudget(app.get(PrismaService)));
   expressApp.all("/api/v1/auth/{*any}", toNodeHandler(auth));
 
   app.use(json({ limit: "1mb" }));

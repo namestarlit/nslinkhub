@@ -18,12 +18,18 @@
 - Current state: nothing queues. Exports are synchronous (programmatic
   renderers, file in the response); BullMQ/Redis stay in the stack for the
   future email/notification path.
-- Target state (hub design doc, deferred list): PostgreSQL transactional
+- Target state (W3 auth-delivery gate): PostgreSQL transactional
   outbox relayed to BullMQ, with queue consumers in separate worker
   processes. PostgreSQL stays authoritative; Redis dispatches and is never
   the source of truth.
 - Queue Redis (when production-shaped) runs with AOF persistence and
   `noeviction`, and is never reused as a cache.
+- The email slice includes leases, bounded retries, crash recovery, terminal
+  failure handling, and credential-retention cleanup. Provider success and
+  database bookkeeping are separate outcomes; an external send is not an
+  exactly-once database transaction. See `docs/design-docs/transactional-email.md`.
+- Tests of relays and workers require disposable databases and queue namespaces;
+  never let a test relay claim development work or erase a shared queue.
 
 ## Data
 
@@ -36,9 +42,28 @@
 - Production databases get off-host backups with tested restores before
   launch (`docs/design-docs/infra-deployment.md`).
 
-## Observability (target state)
+## Audit and abuse budgets
 
-- Structured logs with server-generated request IDs; the stable error
-  envelope carries the request ID to users. Centralized
-  log/metric/trace shipping is tracked in the tech-debt tracker and lands
-  before first production release.
+- Sensitive collection management commits its audit row atomically; audit
+  failure rolls back the action. Transfer history remains in its original hub
+  and a receiving event is written to the destination hub in that transaction.
+- Request budgets use atomic PostgreSQL upsert/count rollover across replicas.
+  Store failure is fail-closed (503); dependency probes bypass the budget.
+- Every minute each API replica removes at most 1,000 counters expired for
+  more than a day using `SKIP LOCKED`; maintenance failure emits a sanitized
+  event and retries on the next interval. No overlapping maintenance per
+  process. Monitor backlog before raising limits or public traffic.
+- Audit records currently have no automatic expiry. Account deletion and
+  long-term retention require an explicit policy before public exposure.
+
+## Observability and release verification
+
+- LogTape console/Sentry logs and one manual incoming span carry isolated
+  server-generated request IDs; unexpected exceptions are sanitized and
+  correlated once. Telemetry sink/collector failure does not fail requests.
+- Application shutdown has a five-second bound including at most two seconds
+  of telemetry flushing. Startup uses the same entrypoint for source and
+  compiled output; image checks exercise the compiled aliases and secret files.
+- The [release runbook](runbooks/release.md) separates disposable local
+  migration/backup/restore and outage proof from outstanding live Swarm,
+  off-host restore, routing and collector checks.

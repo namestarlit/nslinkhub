@@ -1,5 +1,5 @@
-import type { ShareRole, ShareSource } from "./common";
-import type { IsoTimestamp } from "./envelope";
+import type { ShareRole, ShareSource } from "./common.js";
+import type { IsoTimestamp } from "./envelope.js";
 
 export interface Collection {
   id: string;

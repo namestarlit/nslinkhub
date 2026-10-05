@@ -7,6 +7,8 @@ frequently for the root `ARCHITECTURE.md`. The **authoritative system design**
 
 ## Current Documents
 
+- `adoption-decisions.md`: pinned foundation comparison, remaining adoption
+  decisions, and gates before web implementation, auth delivery, and release.
 - `conventions.md`: API and persistence conventions — casing (camelCase keys,
   snake-token values, snake_case DB columns via Prisma `@map`) and the
   response envelope.
@@ -22,9 +24,9 @@ frequently for the root `ARCHITECTURE.md`. The **authoritative system design**
   backend-owned React Email templates (`packages/email`), PostgreSQL outbox +
   BullMQ worker delivery, signed webhooks, and the better-auth boundary
   (better-auth mints verification/reset tokens; the app only delivers them).
-- `observability.md`: Pino JSON logging, Sentry + OpenTelemetry/OTLP + Grafana
-  Alloy → Grafana Cloud, the PII allowlist and pseudonymous-reference rules,
-  and the request-id foundation already in place.
+- `observability.md`: implemented API LogTape/Sentry boundary and future runtime telemetry,
+  shared Alloy collection of stdout/dependency metrics, the PII allowlist and
+  pseudonymous-reference rules, and the request-id foundation already in place.
 
 ## Planned Documents (produced by Track W3's design pass)
 

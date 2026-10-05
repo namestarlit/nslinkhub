@@ -1,4 +1,4 @@
-import type { IsoTimestamp } from "./envelope";
+import type { IsoTimestamp } from "./envelope.js";
 
 // The authenticated user's own profile (GET/PATCH /profile). `handle`/`hubId`
 // describe the user's one hub; `hubId` is the client's entry point to every

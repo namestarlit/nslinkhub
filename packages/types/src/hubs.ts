@@ -1,4 +1,4 @@
-import type { Collection } from "./collections";
+import type { Collection } from "./collections.js";
 
 // One hub per user (Google-Drive model): no memberships, no roles beyond the
 // owner; sharing happens per collection (see collections.ts).

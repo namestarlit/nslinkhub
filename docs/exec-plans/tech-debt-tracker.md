@@ -1,18 +1,29 @@
 # Technical Debt Tracker
 
 Record accepted compromises with an impact and a condition for revisiting the
-decision.
+decision. Implementation order and acceptance gates for foundation work are in
+`docs/design-docs/adoption-decisions.md` (2026-10-05 comparison). Decisions there
+are not claims that the work below has shipped.
 
 | Area | Debt | Impact | Revisit When |
 | --- | --- | --- | --- |
 | Export typography | PDF/Word renderers use library-default styling (Helvetica, default docx heading styles); no user-visible styling options | Exports are readable but plain; no branding or theme choices | Users ask for styled exports |
 | Import parsers | CSV parsing is naive (comma split, no quoting/escaping); the bookmarks parser is a regex MVP that flattens folder structure; the universal-CSV column format is not yet documented for users | Malformed or complex files import incorrectly; bookmark structure is lost; users must guess the CSV layout | Imports get real-world usage (document the CSV format with the W3 import UI) |
 | Async reliability | BullMQ/Redis are in the stack but unused (exports went synchronous); when email delivery lands there is no transactional outbox or separate worker process yet | A crash between DB write and enqueue could strand an email job once that path exists | Build with the email-delivery slice; direction in `docs/design-docs/transactional-email.md` (email is the first mandatory outbox consumer) |
-| Audit | No audit records exist for sensitive actions | Publication, share, and transfer changes leave no product-visible trail | Hub plan Phase E |
-| Email delivery | No email infrastructure; verification and share notifications are a logged no-op intent | Verification and share notices cannot reach users out-of-band | Direction set (`docs/design-docs/transactional-email.md`: Resend + React Email + outbox worker); build with the auth-delivery slice or nsauth work |
-| E2E test isolation | E2E tests run against the local dev database (`compose.yml` services), not an isolated test DB | Test data accumulates in the dev DB; parallel runs could interfere. Bit once (2026-07-08): a fixed-name fixture exhausted the derived-handle suffix space after ~24 runs and broke sign-ups; remedy is the runbook DB reset | Test suite grows or CI lands |
-| Observability | No structured logging pipeline, metrics, or tracing beyond Nest defaults (default `Logger`, not JSON) | Production behavior will not be centrally searchable | Before first production release; direction in `docs/design-docs/observability.md` (Pino JSON + Sentry/OTel/Grafana) |
-| Deployment artifacts | Direction is documented (`docs/design-docs/infra-deployment.md`) but Dockerfiles, `docker-stack.*.yml`, CI workflows, and health/readiness endpoints beyond `/health` do not exist | Nothing is deployable yet | Deployment nears (after Track W) |
-| Rate limiting | No rate limiting or abuse protection on any endpoint | Auth and capture endpoints are unprotected against abuse | Before first public exposure |
+| Audit and retention | Collection/share/link/transfer/handle actions and audit reads now commit hub-scoped records; auth-security outcomes, deletion policy and long-term audit retention remain | Existing profile DELETE can orphan retained audit identifiers; no purge policy yet | Gate 3 auth/deletion contract before public exposure |
+| Email delivery | No email infrastructure; verification and share notifications are a logged no-op intent | Verification and share notices cannot reach users out-of-band | Direction set (`docs/design-docs/transactional-email.md`: Resend + React Email + outbox worker); build with the W3 code-first account journey; do not wait for nsauth |
+| Queue test isolation | E2E databases are disposable and cleaned per run; Redis currently only receives readiness pings | Future relays/workers must never claim development work | Add per-run queue namespaces with the first queue consumer; finish runner interruption/failure coverage in gate 1 |
+| Observability rollout | API LogTape/Sentry boundary and local capture are implemented; browser/worker instrumentation and live Sentry/Alloy shipping are unverified | No claim of centralized operational visibility yet; sanitized stack frames omit source filenames | Live infrastructure milestone plus browser/worker slices; review source-map privacy before richer traces |
+| Deployment rollout | API image, Swarm files, verification/image workflows and local restore rehearsal exist; Swarm/Dokploy/TLS/off-host restore have not run | Local image proof is not live rollout acceptance | Separate operator milestone before exposure; runbook in docs/runbooks/release.md |
+| Auth abuse limits | Shared per-source PostgreSQL endpoint budgets exist; account/challenge issuance and verification budgets do not | NAT users share capacity; distributed credential attacks need purpose-specific limits | Gate 3 auth delivery and live ingress capacity/connection-limit review |
 | Generated client in build | `apps/api/src/generated/prisma` compiles inside the app build (`nest build` walks it) | Slower builds | Only if build times hurt |
 | Type-aware lint coverage | Biome replaced `typescript-eslint`; type-aware rules (`no-floating-promises`, `no-unsafe-*`) have no Biome equivalent | Async-safety lint classes (e.g. unhandled promises) are no longer caught at lint time; type *errors* are still caught by `tsc --noEmit` in `verify` | Revisit if a floating-promise/async bug ships, or if Biome gains type-aware rules |
+| Wire contracts and errors | Shared wire types are handwritten; 5xx payloads are sanitized but 4xx HttpException codes/messages/details remain arbitrary | DTO/mapping drift and unsafe 4xx error payloads can reach the first web client | Remaining gate 1: typed errors, safe validation mapping, HTTP and mapper contract checks; keep current DTO stack |
+| Browser mutation safety | Cookie writes, multipart imports, auth origins, and revocation-sensitive browser caches are not exercised by a web client | Same-origin routing alone does not prove CSRF or session/cache correctness | Before first W3 cookie mutation; real browser origin, expiry, revocation, and download checks |
+| Runtime configuration | API config is separate from auth/Prisma startup; packages/config contains only TypeScript settings | Web/worker additions could duplicate validation or expose server config | First second runtime in W3/worker work; typed server/browser entry points and boundary check |
+| Documentation checks | Guide pin checks committed trees only; no repository Markdown-link check | Uncommitted guide dependencies and broken links need manual review | Add link checking in foundation gate; sweep guide with each linked-doc change and pin after reviewed commits |
+
+Additional pre-release finding: `UsersService.updateMe` writes email and
+credential passwords directly, outside better-auth, without the planned
+verification/revocation flow. Correct this with gate 3; do not expose these
+fields in W3 account forms until the auth-owned implementation is verified.

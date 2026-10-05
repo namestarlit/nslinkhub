@@ -3,6 +3,7 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { bearer } from "better-auth/plugins";
+import { emitEvent } from "../common/observability/telemetry";
 import { readSecret } from "../config/secret";
 import { PrismaClient } from "../generated/prisma/client";
 import { createPersonalHub } from "../modules/hubs/hub-onboarding";
@@ -21,6 +22,14 @@ const prisma = new PrismaClient({
 });
 
 export const auth = betterAuth({
+  logger: {
+    log: (level) =>
+      emitEvent(
+        "auth.diagnostic",
+        {},
+        level === "error" ? "error" : level === "warn" ? "warn" : "info",
+      ),
+  },
   basePath: "/api/v1/auth",
   secret: readSecret("BETTER_AUTH_SECRET") ?? "dev-better-auth-secret",
   // The API's own origin (port 4000 in dev; 3000 belongs to the web app). In

@@ -6,6 +6,7 @@ import {
 } from "@nestjs/common";
 import { AuthUser } from "src/common/interfaces/auth-user.interface";
 import { PrismaService } from "src/database/prisma.service";
+import { recordAudit } from "../../common/audit";
 import { hasValidHandleFormat, isReservedHandle } from "./handle";
 
 // Hub authority for the individual (Google-Drive) model: each user owns exactly
@@ -73,7 +74,10 @@ export class HubsService {
       if (taken) {
         throw new BadRequestException("Handle already taken");
       }
-      await this.prisma.hub.update({ where: { id: hub.id }, data: { handle } });
+      await this.prisma.$transaction(async (tx) => {
+        await tx.hub.update({ where: { id: hub.id, ownerUserId: userId }, data: { handle } });
+        await recordAudit(tx, { hubId: hub.id, actorUserId: userId, action: "hub.handle_changed" });
+      });
     }
 
     return { hubId: hub.id, handle };

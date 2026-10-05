@@ -1,9 +1,9 @@
 # Infrastructure & Deployment Direction (ns series)
 
-Direction document, recorded 2026-07-03. Not scheduled work — like the
-identity direction (`docs/design-docs/identity-sso.md`), this records the shared
-platform the ns series deploys onto so each product builds toward it instead
-of inventing its own operations story.
+Platform direction recorded 2026-07-03; API release artifacts prepared
+2026-10-05. Live infrastructure comes later by explicit user direction.
+The [release runbook](../runbooks/release.md) owns commands, required operator
+inputs, local evidence limits, migration ordering and outstanding live proof.
 
 The deployment model is shared across the ns series and recorded here as
 NSLinkHub's own: the ns series is personal work under the namestarlit brand and
@@ -114,6 +114,13 @@ relied on by the app code:
 - File responses (exports) and headers like `X-Request-Id` are readable by
   the web app without exposed-header lists.
 
+The current development auth URL describes the API-only setup. When W3 adds
+the web proxy, align the browser auth URL and trusted-origin configuration with
+the web entry origin (`http://localhost:3000`) and verify real cookie, redirect,
+and CSRF behavior through it. Preserve direct API/bearer clients. Same-origin
+routing does not by itself establish cookie-mutation safety; the W3 gate is in
+`adoption-decisions.md` and `docs/SECURITY.md`.
+
 ## Conventions (apply to every ns product)
 
 - Production images are immutable and pinned by SHA tag and digest.
@@ -155,11 +162,18 @@ with this direction:
    `GET /api/v1/status` (readiness: postgres + queue Redis →
    ready/degraded/unavailable; 503 only when postgres is down, so
    orchestration gates on the authoritative store while a Redis-only outage
-   reads as degraded). When deployment nears, the repo still adds:
-   Dockerfiles per app and the production compose topology.
+   reads as degraded). The repo now supplies the API Dockerfile, local/production Swarm topologies
+   and verification/image-release workflows. Web/worker artifacts arrive with
+   their runtimes.
 3. The existing `compose.yml` remains a **local development** file; the
    production topology is a separate repository-owned
    `docker-stack.prod.yml` consumed by Dokploy.
 4. nsauth, when built, deploys to the same platform — which is what makes the
    "Continue with namestarlit" flow operationally cheap for every future ns
    product.
+
+Verification CI and release artifacts now exist. Local image and database
+rehearsals are separate from Swarm/Dokploy/Traefik, off-host restore and shared
+Alloy proof. The manually dispatched image workflow publishes only after its
+verification job; automatic Dokploy promotion remains deferred. No reference
+repository's collector configuration proves namestarlit is operational.
