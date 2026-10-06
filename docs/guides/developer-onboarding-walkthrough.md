@@ -315,8 +315,10 @@ deletion are disabled; password authentication has been removed.
 The reviewed backend auth-delivery implementation is committed and its source
 verification gate passes; see the
 [completed auth-delivery plan](../exec-plans/completed/prove-auth-delivery-boundary.md).
-W3 scaffolding is next. Local PostgreSQL/Redis run in containers; the API,
-worker and future Next.js dev server run on the host. Keep application builds
+The first W3 explore-to-resource journey is implemented. Continue with one
+complete vertical MLP journey at a time; hub/pretty-URL, status and account
+flows follow separately. Local PostgreSQL/Redis run in containers; the API,
+worker and Next.js dev server run on the host. Keep application builds
 and tests in `bun run verify`; fresh Docker image acceptance belongs to
 [deployment preparation](../runbooks/release.md), not the W3 readiness gate.
 Apply Impeccable to interface work under repository guidance, then prove the
@@ -349,11 +351,12 @@ orchestrator (see `package.json` for the full set):
 
 | Command | Does |
 | --- | --- |
-| `bun run dev` | infra up (idempotent) + API watch on :4000 |
+| `bun run dev` | infra up + API/worker watchers + Next.js on :3000 |
 | `bun run infra:up` / `infra:down` | local PostgreSQL + Redis |
 | `bun run api:dev` / `api:test` | single-service loop / API tests |
 | `bun run email:test` | email template tests |
-| `bun run verify` | the canonical full verification gate |
+| `bun run verify` | API/web builds, types, boundaries and source/integration tests |
+| `bun run test:browser` | production browser journey with isolated API/data fixtures |
 
 Cleanup after the walkthrough:
 

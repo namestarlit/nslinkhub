@@ -8,7 +8,8 @@ bun run verify
 
 It runs client/telemetry boundary checks, local documentation links, the
 guide-pin check, shared typechecks, Biome format/lint, tooling/email tests,
-then API generation/build, typecheck, source unit tests and real-service e2e.
+then API generation/build, typecheck, source unit tests and real-service e2e,
+plus web boundary checks, HTTP tests, production compilation and typechecking.
 Test discovery names source files explicitly and excludes generated/compiled
 copies. `check:docs` checks local inline/reference links and heading anchors
 in current Markdown documents; completed plans are historical snapshots and
@@ -36,6 +37,16 @@ Defaults use the local +4 ports. Override only through test-specific
 the test database. Email tests use a random per-run queue namespace and remove only their own
 queue keys. Tests force the capture provider regardless of local Resend settings.
 Remote telemetry is disabled by the runner; SDK tests use a local listener.
+
+API, browser and dev-loop runners use `tooling/verification-env.ts` to mask
+secret-file overrides, remote-delivery credentials and telemetry/proxy settings
+with explicit inherited empty strings (and a synthetic valid release SHA).
+Never delete these variables: Bun or dotenv can reload absent values from
+API-local `.env` files in a child or grandchild. The mask travels with migration,
+API, worker and web environments; the owned database URL remains explicit.
+`bun run tooling:test` exercises conflicting env files in a temporary workspace,
+including real Prisma/worker configuration resolution and nested Bun/Node
+spawns, without connecting to the conflicting database.
 
 Formatting and linting are Biome (`biome.json`). `useImportType` is disabled
 for `apps/api` only (via a Biome override) because NestJS dependency injection
@@ -75,7 +86,8 @@ This escalation path is the decided design; only its trigger is pending.
   failing suite and service connectivity; the next run gets a fresh database.
 - `.github/workflows/verify.yml` runs this full gate on pushes and pull
   requests with required PostgreSQL and Redis services. Missing infrastructure
-  is a failure, never a skipped green suite. Application compilation remains
+  is a failure, never a skipped green suite. It also installs Chromium and runs
+  `bun run test:browser` for the complete reading journey. Application compilation remains
   part of verification; Docker image builds and rehearsals are separate.
 - `.github/workflows/release.yml` is manually dispatched for deployment
   preparation. It requires the full gate, then builds and rehearses an image
@@ -94,3 +106,37 @@ This escalation path is the decided design; only its trigger is pending.
 Promote repeated manual checks into Bun scripts (root `package.json`, later
 `tooling/`) once they have been run manually twice. `bun run verify` should
 remain the single command a contributor needs before committing.
+
+## Browser journey gate
+
+Run `bun run test:browser` after `bun run infra:up`. It builds production Next.js,
+checks emitted browser assets for synthetic server-secret/origin canaries,
+creates an isolated test database using the existing lifecycle helper, and
+launches the real API, web server, loopback ingress and Chromium. Backend-owned
+fixtures live in `apps/api/test/browser/reading.browser.ts`; the web app still
+accesses every record through HTTP. Capture email and disabled external
+telemetry are forced. Never point these tests at a development or production DB.
+
+Install a browser with `bunx playwright install --with-deps chromium`, or use
+existing `/usr/bin/google-chrome-stable`. `BROWSER_CHROME_PATH` can select another
+local Chromium executable. CI installs Playwright Chromium explicitly. No
+missing-service or missing-browser case becomes a skipped pass.
+
+The journey covers explore/continuation (including no JavaScript), collection
+and nested reading, hidden/missing equivalence, unpublish/history, token
+rotation, session expiry, real browser-cookie issuance, error recovery and
+Origin enforcement for unsafe requests. It also checks keyboard interaction,
+saved section metadata, independent client read budgets, forged source headers,
+Escape-cancelled document navigation and reload recovery after access revocation,
+320/390/768/1280 px widths, enlarged text, reduced motion and clipboard fallback.
+Tests leave only synthetic screenshots under `/tmp/w3-reader-*.png`; their
+processes and database are owned fixtures. Do not run two web builds or dev
+and production browser builds concurrently in the same checkout (`.next` is shared).
+
+After dev-orchestrator or web-entry changes, run `bun run test:dev`. It migrates
+a disposable database, forces capture email, starts the real dev loop on
+temporary ports, checks SSR and the API rewrite, and verifies owned listeners
+stop on shutdown. Infrastructure stays up. Port-precedence fixtures also run
+in `bun run tooling:test`. The two-client browser budget regression uses Node's
+HTTP client only for source-bound socket fixtures because Bun's client ignores
+`localAddress`; both applications and all test runners use Bun.

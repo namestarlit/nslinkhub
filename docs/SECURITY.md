@@ -70,11 +70,13 @@ Recorded so a future security review doesn't read the absence as an oversight:
   even when it cannot read the response; whether cookies accompany them also
   depends on cookie/site policy. JSON preflight is not sufficient protection
   for every route: imports accept multipart and some commands are bodyless.
-  Before W3 enables cookie-authenticated writes, implement and test explicit
-  CSRF protection across all mutation routes, including imports. Auth routes
-  retain better-auth origin checks; product routes need their own enforcement.
-  Cover same-site foreign origins as well as cross-site requests. This is an
-  implementation gate, not a claim that browser mutation protection exists now.
+  The HTTP boundary now rejects every unsafe request carrying a session cookie
+  unless its Origin exactly matches `BETTER_AUTH_URL`, including multipart,
+  bodyless actions and bearer-plus-cookie requests. Missing/null/foreign
+  origins fail closed; cookie-free bearer clients remain supported. Auth routes
+  additionally retain better-auth origin checks. Browser fixtures exercise
+  issuance, session reads and origin enforcement through the actual web origin.
+  Each future mutation UI still owes its own end-to-end acceptance.
 - Adding a second public origin later is a deliberate act: CORS with exact
   origins + credentials + exposed headers, together with better-auth
   `trustedOrigins` — never a wildcard.
@@ -123,7 +125,7 @@ Auth audits retain 90 days; collection audit/deletion policy remains separate.
 
 ## Abuse protection
 
-Every non-probe request consumes an atomic PostgreSQL-backed source budget,
+Every non-probe request admitted by the browser-origin boundary consumes an atomic PostgreSQL-backed source budget,
 shared by replicas: auth 30/minute, imports/exports 10/minute, other writes
 60/minute, reads 300/minute. The HTTP boundary runs before better-auth/body
 parsing, returns 429 plus Retry-After, and fails closed with a safe 503 when
@@ -136,6 +138,21 @@ Configure the actual ingress boundary before deployment. These conservative
 per-source limits share capacity for users behind NAT and are not a distributed
 attack solution. Add account/challenge limits in auth delivery and ingress
 connection/body limits during live deployment.
+
+Web server rendering preserves the visitor's source budget through signed
+attribution. `apps/web/server.ts` derives the source from its socket, walking
+forwarded addresses only through explicit `WEB_TRUSTED_PROXY_CIDRS` hops, and
+overwrites any caller-supplied `x-web-read-source`. Server reads forward this
+30-second HMAC proof to the API. Only the read budget accepts verified proofs;
+invalid/absent proofs use the normal API socket/proxy source. They carry no
+authentication or authorization. API and web share an independent
+`WEB_SOURCE_SECRET` (at least 32 random characters, `_FILE` in production).
+Do not log the proof or expose it in browser data. The web entry point requires
+this secret; invoking `next start` directly bypasses this boundary and is unsupported.
+Ingress must overwrite incoming forwarding headers and both services must trust
+only its actual addresses. Until that topology is configured, no forwarded IP
+is trusted. Root `bun run dev` supplies an ephemeral shared secret with no web
+proxy trust, so direct local connections work without extra setup.
 
 Expired counters are pruned in bounded batches; audit history is retained
 until its separate policy is decided. Both stores are product persistence,

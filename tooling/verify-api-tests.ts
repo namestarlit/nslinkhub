@@ -1,6 +1,7 @@
 import { readdirSync } from "node:fs";
 import { resolve } from "node:path";
 import { withTestDatabase } from "./test-database";
+import { maskVerificationOverrides } from "./verification-env";
 
 const api = resolve(import.meta.dir, "../apps/api");
 const mode = process.argv[2];
@@ -17,17 +18,12 @@ function tests(directory: string): string[] {
     })
     .sort();
 }
-const env: Record<string, string | undefined> = { ...process.env, NODE_ENV: "test" };
+const env = maskVerificationOverrides({ ...process.env, NODE_ENV: "test" });
 // A local API .env may configure live Resend delivery. Tests always select the
 // capture provider; dotenv must not replace this explicit child environment.
 env.EMAIL_PROVIDER = "capture";
 env.EMAIL_SUPPRESSION_SECRET = "test-runner-suppression-secret-independent";
-delete env.EMAIL_SUPPRESSION_SECRET_FILE;
 env.QUEUE_NAMESPACE = `test-email-${crypto.randomUUID()}`;
-delete env.SENTRY_DSN;
-delete env.SENTRY_DSN_FILE;
-delete env.RELEASE_SHA;
-delete env.TRUSTED_PROXY_CIDRS;
 let child: ReturnType<typeof Bun.spawn> | undefined;
 async function run(command: string[]): Promise<number> {
   child = Bun.spawn(command, { cwd: api, env, stdout: "inherit", stderr: "inherit" });
@@ -40,9 +36,7 @@ if (mode !== "e2e") throw new Error("Expected unit or e2e test mode");
 const status = await withTestDatabase(
   async ({ url, sql }) => {
     env.DATABASE_URL = url;
-    delete env.DATABASE_URL_FILE;
     env.REDIS_URL = process.env.TEST_REDIS_URL ?? "redis://127.0.0.1:6383";
-    delete env.REDIS_URL_FILE;
     let result = await run(["bunx", "prisma", "migrate", "deploy"]);
     if (result === 0)
       for (const file of tests("test")) {

@@ -64,3 +64,9 @@ ref/*
 
 # Impeccable plugin session cache
 .impeccable/
+
+# Next.js generated output
+.next/
+*.tsbuildinfo
+playwright-report/
+test-results/

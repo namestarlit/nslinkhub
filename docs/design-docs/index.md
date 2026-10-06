@@ -39,5 +39,6 @@ frequently for the root `ARCHITECTURE.md`. The **authoritative system design**
 - [web-design-tokens.md](web-design-tokens.md): canonical Tailwind theme
   variables, light palette, typography, spacing and contrast evidence.
 
-The W3 documents define implementation contracts. The web scaffold and browser
-verification remain the next milestone of adoption gate #2.
+The W3 documents define implementation contracts. The first implemented vertical
+slice is explore → collection → section/external resource. Hub/pretty-URL, status,
+account and editing journeys follow separately under adoption gate #2.

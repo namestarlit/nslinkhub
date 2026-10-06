@@ -3,5 +3,10 @@
   "version": "0.0.1",
   "private": true,
   "license": "UNLICENSED",
-  "description": "Shared TypeScript and tooling configuration for the nslinkhub workspace."
+  "description": "Shared TypeScript settings and separate web server/browser runtime configuration.",
+  "exports": {
+    "./tsconfig.base.json": "./tsconfig.base.json",
+    "./web-browser": "./src/web-browser.ts",
+    "./web-server": "./src/web-server.ts"
+  }
 }

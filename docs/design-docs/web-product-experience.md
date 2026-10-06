@@ -1,6 +1,7 @@
 # Web product experience
 
-Status: W3 design contract, not an implemented web application. Read alongside
+Status: W3 design contract. The first explore-to-resource slice is implemented;
+later entry points and account/editing journeys remain separate slices. Read alongside
 [the system design](../SYSTEM_DESIGN.md), [adoption gates](adoption-decisions.md)
 and [interface system](web-interface-system.md). Product behavior stays owned
 by [PRODUCT.md](../../PRODUCT.md).
@@ -23,10 +24,14 @@ bright window, scans several links, then continues on a laptop. Use a light
 canvas with dark text and restrained accents, readable in daylight. A single
 light theme ships first; a theme switch waits for a complete second palette.
 
-## First milestone: shell and reading
+## Reading journeys: one complete slice at a time
 
-The first implemented navigation consists of the lowercase `nslinkhub`
-wordmark linking to explore and a service-status link. Add account navigation
+The first implemented navigation is the lowercase `nslinkhub` wordmark linking
+to explore. User direction (2026-10-06): complete explore → collection → section
+or external resource as one MLP journey before the next. Public hub/pretty-URL
+browsing and service status are subsequent slices; add their navigation only
+when they work end to end. The route table below is the complete reading target,
+not a claim that every entry point is implemented. Add account navigation
 only when a working sign-in/session journey exists. No disabled search box,
 “New collection” button, empty account menu or links to future pages.
 

@@ -286,7 +286,7 @@ A Bun-workspace monorepo:
 apps/
   api/        NestJS backend. Prisma schema/migrations/generated client and
               PrismaService stay inside; clients never touch persistence.
-  web/        Next.js — the full product surface (planned, Track W3).
+  web/        Next.js — explore-to-resource reading; remaining W3 journeys follow.
   extension/  MV3 capture companion (planned, Track W4).
 packages/
   types/      @nslinkhub/types — hand-curated API wire contracts.
@@ -324,12 +324,13 @@ Remaining:
   records the 2026-10 comparison and delivery decisions. Local release
   foundations, isolated verification, safe wire/error contracts and W3 design
   and the reviewed local auth-delivery milestone are complete. W3 web
-  implementation is next; Docker image acceptance belongs to deployment
+  implementation proceeds in complete vertical slices; Docker image acceptance belongs to deployment
   preparation. Browser and public-release gates remain open.
 - **W3 — Web app.** The three web design documents (`web-product-experience`,
   `web-interface-system`, `web-design-tokens`) are complete. Apply Impeccable
-  under those contracts, scaffold `apps/web`, and build vertical slices:
-  explore, sign-in, the hub page, collection list/detail (guides), resource
+  under those contracts. Explore → collection → section/external resource is
+  the first implemented slice, with real API/browser proof. Remaining slices:
+  public hub/pretty-URL browsing, status, sign-in, own collections, resource
   capture, sharing + transfer management, shared/ and saved/. Cookie sessions.
 - **W4 — Browser extension.** `apps/extension` (MV3) capture companion.
 - **Phase E — tracked alongside W3.** Release prerequisites remain

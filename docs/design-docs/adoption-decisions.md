@@ -76,15 +76,25 @@ keys and signed receipt reconciliation after code expiry. The
 records verification and review corrections. This milestone is reviewed and
 committed; live acceptance and web account screens remain outstanding.
 
+## Gate #2 vertical delivery (2026-10-06)
+
+User direction: complete one end-to-end MLP journey before the next. The first
+slice is explore → permalink → section/external resource, with production
+browser proof, no-JavaScript pagination, safe HTTP boundaries and access-change
+checks. Pigfarm's scaffold patterns and backend-authority rules were inspected
+and adapted; details are in [the interface system](web-interface-system.md).
+Public hub/pretty URLs, status, account and editing journeys follow separately;
+no placeholders or navigation for them ship in the first slice.
+
 ## Gate #2 design status (2026-10-05)
 
 The three W3 design documents now define the
 [experience](web-product-experience.md), [interface](web-interface-system.md)
 and [tokens](web-design-tokens.md). They cover public reading first, actual
 API fields, unavailable states, cookie/cache/CSRF boundaries and later account
-flows. The design milestone does not claim that the web app or its browser
-acceptance exists. Scaffolding and the first read journeys follow the selected
-auth work; gate #2 remains open until its implementation checks pass.
+flows. The design milestone alone did not claim browser acceptance. The first vertical
+slice above now supplies reading proof; gate #2 stays open for the remaining
+entry points and subsequent account/mutation journeys.
 
 ## Baseline and evidence
 
@@ -99,7 +109,9 @@ that Pigfarm's current deployment has been verified here.
 NSLinkHub already has the individual-hub backend, shared wire types, client
 import boundaries, Bun/Biome, `_FILE` secrets, request IDs, dependency readiness,
 three email templates, a freshness-pinned walkthrough, and verified pushes.
-`apps/web` and `apps/extension` do not exist. At the comparison baseline there was no email sender, outbox, worker,
+At the comparison baseline `apps/web` and `apps/extension` did not exist.
+`apps/web` now supplies the first reading slice; the extension remains unbuilt.
+At the comparison baseline there was no email sender, outbox, worker,
 structured telemetry, release pipeline, or deployment artifact.
 
 Two reference claims need qualification:

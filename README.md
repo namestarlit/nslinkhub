@@ -1,6 +1,7 @@
-# NSLinkHub API (NestJS v2)
+# NSLinkHub
 
-NSLinkHub is a link-organization API for creating and sharing curated repositories of resources.
+NSLinkHub organizes and shares curated link collections. The NestJS API owns
+the product rules; the Next.js web app reads through its HTTP contracts.
 
 This repository is a greenfield NestJS v2 rewrite. The old Flask v1 is retained for historical record only.
 
@@ -35,12 +36,14 @@ This repository is a greenfield NestJS v2 rewrite. The old Flask v1 is retained 
 - `@nslinkhub/types` (wire contracts) and `@nslinkhub/email` (code-email
   templates); liveness + per-dependency readiness endpoints; `_FILE`
   deployment-secret contract with zero-config dev
-- Swagger at `/api/docs`; remaining tracks: W3 (web), W4 (extension)
+- First W3 journey: explore → collection permalink → section/external resource,
+  with responsive reading and explicit pagination. Other web journeys and W4
+  (extension) follow as complete vertical slices. Swagger stays at `/api/docs`.
 
 ## Tech Stack
 
 - Bun (package manager **and** runtime)
-- NestJS
+- NestJS API and Next.js/React/Tailwind web
 - PostgreSQL + Prisma (with `@prisma/adapter-pg`)
 - better-auth (sessions, bearer plugin; no username — identity is a hub handle)
 - BullMQ + Redis
@@ -92,7 +95,7 @@ bun run infra:down     # stop them
 ## Repository Layout
 
 Bun workspace: the backend is `apps/api` (`@nslinkhub/api`); shared tooling
-config lives in `packages/config`. Root scripts delegate, so everything below
+config and runtime entry points live in `packages/config`; the web is `apps/web`. Root scripts delegate, so everything below
 runs from the repository root.
 
 ## Migrations
@@ -115,8 +118,8 @@ auto-generated diff.
 
 ```bash
 # daily driver (script convention: <service>:<action>; dev = orchestrator)
-bun run dev        # infra up (idempotent) + API watch (:4000); web joins at W3
-bun run api:dev    # the same, single service
+bun run dev        # infra up + API/worker watchers + Next.js (:3000)
+bun run api:dev    # API-only loop on :4000
 
 # build + prod
 bun run api:build
@@ -156,3 +159,15 @@ When server is running:
 - Exports are synchronous — the response body is the file (zip when several
   collections are selected); no queue, nothing stored server-side.
 - Import parsers are MVP-level and intended for hardening in next iterations.
+
+## Web development and browser acceptance
+
+`bun run dev` starts local PostgreSQL/Redis containers, API/worker watchers and
+Next.js. Open `http://localhost:3000`; browse existing published collections or
+open an authorized `/c/<id>` link. No synthetic content is seeded into dev data.
+See [local development](docs/runbooks/local-development.md) for individual
+process commands, email settings and the same-origin configuration.
+
+`bun run verify` includes API/web compilation and source/integration checks.
+`bun run test:browser` proves the reading journey against isolated fixtures and
+a production web build. Docker image acceptance remains deployment work.

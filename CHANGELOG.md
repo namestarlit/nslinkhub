@@ -9,6 +9,33 @@ summary of what changed after completed work has been promoted out of `ref/`.
 
 ## Unreleased
 
+### Web reading
+
+- Added explicit reload recovery when document navigation is cancelled, keeping
+  stale reader content hidden until fresh server authorization. Browser coverage
+  checks Escape cancellation, keyboard recovery and revocation while waiting.
+
+- Prevented API-local env files from overriding disposable verification
+  databases or restoring live delivery/telemetry settings. API, browser and
+  dev-loop runners now preserve explicit masks through nested child processes;
+  regression fixtures cover conflicting env files and configuration resolution.
+
+- Preserved per-visitor API read budgets through authenticated server source
+  attribution, restored saved section title overrides/tags, and made the dev
+  orchestrator honor API-local port configuration before checking listeners
+  and configuring the web API origin. Added spoofing, budget-isolation, metadata
+  and environment-precedence regressions.
+
+- Added the first W3 vertical slice: explore → collection permalink → section
+  or external resource, with cursor continuation, no-JavaScript fallback,
+  safe errors, explicit shared-link copying and responsive keyboard reading.
+- Adopted Pigfarm's separate runtime config, HTTP-client and host dev-loop
+  patterns under NSLinkHub's same-origin, uncached-data contracts. Web code
+  consumes API wire types; import checks reject persistence/backend access.
+- Added browser-origin protection for cookie-authenticated API mutations and
+  production browser verification using isolated API/database fixtures. Image
+  builds remain separate deployment work.
+
 ### Development and release workflow
 
 - Separated routine application verification from Docker image acceptance.

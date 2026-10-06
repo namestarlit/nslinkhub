@@ -9,7 +9,7 @@
   ],
   "scripts": {
     "prepare": "bun run tooling/setup-git-hooks.ts",
-    "dev": "bun run api:dev",
+    "dev": "bun tooling/dev.ts",
     "infra:up": "docker compose up -d",
     "infra:down": "docker compose down",
     "api:dev": "bun run infra:up && bun run --cwd apps/api start:dev",
@@ -22,10 +22,10 @@
     "types:typecheck": "bun run --cwd packages/types typecheck",
     "email:typecheck": "bun run --cwd packages/email typecheck",
     "email:test": "bun test packages/email",
-    "build": "bun run api:build",
+    "build": "bun run api:build && bun run web:build",
     "check:boundaries": "bun tooling/check-client-boundaries.ts",
     "check:guide-pin": "bun tooling/check-guide-pin.ts",
-    "verify": "bun run check:boundaries && bun run check:telemetry && bun run check:docs && bun run check:guide-pin && bun run types:typecheck && bun run email:typecheck && bun run format:check && bun run lint && bun run tooling:test && bun run email:test && bun run --cwd apps/api verify",
+    "verify": "bun run check:boundaries && bun run check:telemetry && bun run check:docs && bun run check:guide-pin && bun run types:typecheck && bun run email:typecheck && bun run format:check && bun run lint && bun run tooling:test && bun run email:test && bun run --cwd apps/api verify && bun run check:web && bun run web:test && bun run web:build && bun run web:typecheck",
     "check": "biome check --write package.json biome.json apps packages tooling",
     "format": "biome format --write package.json biome.json apps packages tooling",
     "format:check": "biome format package.json biome.json apps packages tooling",
@@ -33,10 +33,18 @@
     "check:telemetry": "bun tooling/check-telemetry.ts",
     "verify:release-image": "bun tooling/verify-release-image.ts",
     "check:docs": "bun tooling/check-docs.ts",
-    "tooling:test": "bun test ./tooling/check-docs.test.ts"
+    "tooling:test": "bun test ./tooling/check-docs.test.ts ./tooling/dev-config.test.ts ./tooling/verification-env.test.ts",
+    "web:dev": "bun run infra:up && bun run --cwd apps/web dev",
+    "web:build": "bun run --cwd apps/web build",
+    "web:typecheck": "bun run --cwd apps/web typecheck",
+    "web:test": "bun run --cwd apps/web test",
+    "check:web": "bun tooling/check-web-boundaries.ts",
+    "test:browser": "bun tooling/verify-browser.ts",
+    "test:dev": "bun tooling/verify-dev-loop.ts"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.4.16"
+    "@biomejs/biome": "2.4.16",
+    "@playwright/test": "1.63.0"
   },
   "trustedDependencies": [
     "@prisma/engines",

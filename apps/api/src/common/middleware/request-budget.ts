@@ -5,6 +5,7 @@ import type { RequestHandler } from "express";
 import { readSecret } from "../../config/secret";
 import type { PrismaService } from "../../database/prisma.service";
 import type { RequestWithId } from "./request-id";
+import { verifiedWebReadSource } from "./web-read-source";
 
 export function trustedProxies(value: string | undefined): string[] {
   if (!value?.trim()) return [];
@@ -32,6 +33,7 @@ export function requestBudgetKey(scope: string, source: string, secret: string):
 export function requestBudget(
   prisma: PrismaService,
   secret = readSecret("BETTER_AUTH_SECRET") ?? "dev-better-auth-secret",
+  sourceSecret = readSecret("WEB_SOURCE_SECRET"),
 ): RequestHandler {
   return async (request, response, next) => {
     // Express matches literal routes without case sensitivity by default.
@@ -49,7 +51,12 @@ export function requestBudget(
     const limit = { auth: 30, file: 10, read: 300, write: 60 }[scope];
     const key = requestBudgetKey(
       scope,
-      request.ip ?? request.socket.remoteAddress ?? "unknown",
+      (scope === "read"
+        ? verifiedWebReadSource(request.get("x-web-read-source"), sourceSecret)
+        : undefined) ??
+        request.ip ??
+        request.socket.remoteAddress ??
+        "unknown",
       secret,
     );
     try {

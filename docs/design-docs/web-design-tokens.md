@@ -1,6 +1,6 @@
 # Web design tokens
 
-Status: W3 theme contract, not installed application CSS. This document owns
+Status: W3 theme contract, installed in `apps/web/src/app/globals.css`. This document owns
 the concrete values consumed by the [interface system](web-interface-system.md).
 Use a light, restrained palette with one accent, a familiar system sans and
 compact product typography. Email's existing neutral styling is provisional
@@ -8,7 +8,7 @@ and is not a separate web theme.
 
 ## Token rules
 
-The web's global stylesheet will expose semantic Tailwind theme variables for
+The web's global stylesheet exposes semantic Tailwind theme variables for
 canvas, surface, ink, muted text, border, accent, focus and feedback. Components
 consume those roles rather than raw palette numbers. All color values use
 OKLCH. A single light theme ships initially; do not expose a theme toggle.
@@ -21,7 +21,7 @@ The pale notice accent is reserved for meaningful warnings, not decoration.
 
 ## Canonical color and type variables
 
-For Tailwind's CSS theme namespace, use the following block in the future
+For Tailwind's CSS theme namespace, the following block is installed in the
 global stylesheet. Theme colors create semantic utilities such as `bg-canvas`
 and `text-ink`; custom type roles create `text-page` and `text-body`.
 See the official [theme variable reference](https://tailwindcss.com/docs/theme).

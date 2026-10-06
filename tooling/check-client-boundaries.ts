@@ -1,15 +1,23 @@
 // Fails if a client app imports backend internals or Prisma. Clients consume
 // the API over HTTP and the `@nslinkhub/types` contract only — never
 // `apps/api` source or the persistence layer (ARCHITECTURE dependency rules).
-// A no-op pass until apps/web / apps/extension exist.
+// Also scan browser-reachable shared contracts/configuration.
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 
-const CLIENT_DIRS = ["apps/web", "apps/extension"];
+const CLIENT_DIRS = ["apps/web", "apps/extension", "packages/config/src", "packages/types/src"];
 const CODE_EXT = /\.(ts|tsx|js|jsx|mjs|cjs)$/;
 const SKIP_DIRS = new Set(["node_modules", ".next", "dist", "build", ".turbo"]);
 
 const FORBIDDEN: Array<{ pattern: RegExp; why: string }> = [
+  {
+    pattern: /^@nslinkhub\/(?!types(?:$|\/)|config(?:$|\/))/,
+    why: "backend-owned workspace package",
+  },
+  {
+    pattern: /^(?:(?:pg|postgres|ioredis|bullmq|drizzle-orm)(?:$|\/)|@nestjs\/)/,
+    why: "database or backend framework",
+  },
   { pattern: /(^|[^\w])@prisma\//, why: "Prisma client (@prisma/*)" },
   { pattern: /(^|\/)apps\/api(\/|$)/, why: "apps/api backend internals" },
   { pattern: /generated\/prisma/, why: "generated Prisma client" },
@@ -49,16 +57,20 @@ const violations: Array<{ file: string; spec: string; why: string }> = [];
 let scanned = 0;
 
 for (const clientDir of CLIENT_DIRS) {
-  const base = existsSync(join(clientDir, "src"))
-    ? join(clientDir, "src")
-    : existsSync(clientDir)
-      ? clientDir
-      : null;
+  const base = existsSync(clientDir) ? clientDir : null;
   if (!base) continue;
   for (const file of walk(base)) {
     scanned += 1;
     const source = readFileSync(file, "utf8");
     for (const spec of specifiers(source)) {
+      if (
+        spec.startsWith(".") &&
+        ["apps/api", "packages/email", "packages/domain"].some((base) =>
+          resolve(dirname(file), spec).startsWith(`${resolve(base)}/`),
+        )
+      ) {
+        violations.push({ file, spec, why: "relative backend import" });
+      }
       for (const rule of FORBIDDEN) {
         if (rule.pattern.test(spec)) {
           violations.push({ file, spec, why: rule.why });

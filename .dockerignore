@@ -1,6 +1,10 @@
 .git
 **/node_modules
 **/dist
+**/.next
+**/*.tsbuildinfo
+**/playwright-report
+**/test-results
 apps/api/src/generated
 **/.env
 **/.env.*
