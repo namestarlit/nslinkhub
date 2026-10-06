@@ -12,7 +12,7 @@ answer in your own words before continuing. Reading the whole file in one go
 is the failure mode this structure exists to prevent. Every file is a
 clickable link.
 
-**Pin:** verified against commit `81a92e0`. This is enforced, not honor
+**Pin:** verified against commit `d556236`. This is enforced, not honor
 system: `check:guide-pin` (part of `bun run verify`) fails when any file this
 guide links changes after the pinned commit. To clear it, reread the affected
 sessions, fix any drift, and move the pin to the latest commit — in a
@@ -306,9 +306,8 @@ durable, it only sequences it.
       and the separate public-release gates.
 - [ ] `bun run verify` is green on your machine right now.
 
-The foundation and W3 design milestones are committed. By user direction,
-gate #3 auth delivery precedes the remaining `apps/web` scaffold and gate #2
-browser proof. Read the [pinned auth integration evidence](../design-docs/auth-delivery-integration.md)
+The foundation, backend auth delivery, W3 design and first web reading journey
+are committed. Read the [pinned auth integration evidence](../design-docs/auth-delivery-integration.md)
 for the codes-only decision and the transaction-scoped integration that closes
 native delivery and email-change gaps. Profile credential writes and account
 deletion are disabled; password authentication has been removed.
