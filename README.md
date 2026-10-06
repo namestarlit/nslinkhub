@@ -164,7 +164,8 @@ When server is running:
 
 `bun run dev` starts local PostgreSQL/Redis containers, API/worker watchers and
 Next.js. Open `http://localhost:3000`; browse existing published collections or
-open `/@handle`, `/@handle/<slug>` or an authorized `/c/<id>` link. No synthetic content is seeded into dev data.
+open `/@handle`, `/@handle/<slug>` or an authorized `/c/<id>` link.
+The navigation also links to `/status` for aggregate readiness and rechecking. No synthetic content is seeded into dev data.
 See [local development](docs/runbooks/local-development.md) for individual
 process commands, email settings and the same-origin configuration.
 
@@ -176,3 +177,8 @@ The first reading journey is reviewed and committed.
 [Public hub and pretty-URL reading](docs/exec-plans/completed/deliver-public-hub-reading.md)
 is implemented and reviewed. Both entry points reuse the
 collection reader; copied links retain the immutable `/c/<id>` shape.
+
+[Service status](docs/exec-plans/completed/deliver-service-status.md) is implemented
+and reviewed. It distinguishes confirmed outages from failed
+checks, supports deliberate retry without JavaScript, and keeps internal
+dependency details out of the interface.

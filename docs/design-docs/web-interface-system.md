@@ -1,14 +1,14 @@
 # Web interface system
 
-Status: W3 interface contract. Explore/hub/pretty-URL/permalink reading is implemented;
+Status: W3 interface contract. Public reading and service status are implemented;
 other journeys retain their own browser acceptance.
 The [experience](web-product-experience.md) owns journeys and copy direction;
 [tokens](web-design-tokens.md) own all concrete theme values.
 
 ## Layout and hierarchy
 
-Use a compact top bar and centered content; add a status destination when its
-complete journey ships.
+Use a compact top bar with the explore wordmark and service-status link, and
+centered content. The navigation wraps at narrow widths and enlarged text.
 The collection is the main reading surface. Explore and hub views use a single
 list with separators; no nested cards, dashboard metrics or decorative covers.
 The collection title and resource titles provide the visual hierarchy.
@@ -187,3 +187,11 @@ suppressed and announcements count newly appended items. Hub rows use pretty
 URLs, while copied links and sections retain immutable ID URLs. Next's encoded
 dynamic route parameters are decoded once before validating the literal `@`
 prefix and permitted path shapes. No share token reaches public hub discovery.
+
+The status page uses the same reading width, plain-language heading and semantic
+status colors. A decorative marker supplements the full text; meaning never
+relies on color. Ready/limited/unavailable states come from the API aggregate
+contract; unconfirmed checks have a separate view. Native GET rechecks work
+without JavaScript; enhanced pending and throttle states preserve geometry.
+Global navigation/loading labels cover both collections and status. Status
+never sends a share token to its API or displays individual dependency details.

@@ -42,5 +42,7 @@ frequently for the root `ARCHITECTURE.md`. The **authoritative system design**
 The W3 documents define implementation contracts. The first implemented vertical
 slice is explore → collection → section/external resource.
 The [public hub reading plan](../exec-plans/completed/deliver-public-hub-reading.md)
-records the completed, reviewed hub/pretty-URL journey. Status,
-account and editing journeys follow separately under adoption gate #2.
+records the completed, reviewed hub/pretty-URL journey. The
+[service-status plan](../exec-plans/completed/deliver-service-status.md) records the
+completed, reviewed status journey. Account and editing journeys follow
+separately under adoption gate #2.

@@ -286,7 +286,7 @@ A Bun-workspace monorepo:
 apps/
   api/        NestJS backend. Prisma schema/migrations/generated client and
               PrismaService stay inside; clients never touch persistence.
-  web/        Next.js — explore, public hub and collection reading; remaining W3 journeys follow.
+  web/        Next.js — public reading and service status; remaining W3 journeys follow.
   extension/  MV3 capture companion (planned, Track W4).
 packages/
   types/      @nslinkhub/types — hand-curated API wire contracts.
@@ -333,7 +333,10 @@ Remaining:
   `9277461` (117 source tests and ten production browser cases passed).
   Public hub → pretty collection URL → section/resource is implemented and
   reviewed in [the public hub reading ExecPlan](exec-plans/completed/deliver-public-hub-reading.md).
-  It reuses the reader and copies immutable ID links. Later slices include status, sign-in, own collections, resource
+  It reuses the reader and copies immutable ID links. The
+  [service-status journey](exec-plans/completed/deliver-service-status.md) is implemented
+  and reviewed, including aggregate readiness, bounded failures and native
+  rechecks. Later slices include sign-in, own collections, resource
   capture, sharing + transfer management, shared/ and saved/. Cookie sessions.
 - **W4 — Browser extension.** `apps/extension` (MV3) capture companion.
 - **Phase E — tracked alongside W3.** Release prerequisites remain

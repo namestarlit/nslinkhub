@@ -1,7 +1,7 @@
 # Web product experience
 
-Status: W3 design contract. Explore, public hub and pretty-URL reading are
-implemented; status and account/editing journeys remain separate slices. Read alongside
+Status: W3 design contract. Public reading and service status are implemented;
+account/editing journeys remain separate slices. Read alongside
 [the system design](../SYSTEM_DESIGN.md), [adoption gates](adoption-decisions.md)
 and [interface system](web-interface-system.md). Product behavior stays owned
 by [PRODUCT.md](../../PRODUCT.md).
@@ -29,9 +29,9 @@ light theme ships first; a theme switch waits for a complete second palette.
 The first implemented navigation is the lowercase `nslinkhub` wordmark linking
 to explore. User direction (2026-10-06): complete explore → collection → section
 or external resource as one MLP journey before the next. Public hub/pretty-URL
-browsing now adds owning-hub context and pretty collection links. Service status
-remains a subsequent slice; add its navigation when it works end to end.
-The route table below includes that remaining reading target. Add account navigation
+browsing adds owning-hub context and pretty collection links. The top bar now
+also links to the complete service-status journey. The route table below lists
+the implemented public reading surfaces. Add account navigation
 only when a working sign-in/session journey exists. No disabled search box,
 “New collection” button, empty account menu or links to future pages.
 
@@ -39,7 +39,8 @@ Public hub → pretty collection URL → section/resource is implemented and rev
 in [its ExecPlan](../exec-plans/completed/deliver-public-hub-reading.md).
 The two collection entry points share one reader. Hub attribution uses only
 public hub data, and a failed optional hub lookup does not hide authorized ID
-reading. Status and account/editing remain separate subsequent milestones.
+reading. [Service status](../exec-plans/completed/deliver-service-status.md) is also
+implemented and reviewed. Account/editing remain subsequent milestones.
 
 | Surface | Route and data | Main action |
 | --- | --- | --- |
@@ -111,6 +112,15 @@ Public status displays “All systems ready”, “Some services are limited” 
 repeat dependency names, connection details or exception messages. A degraded
 Redis probe does not block browsing. API reachability failure is a separate
 “We couldn't check the service” state, with retry.
+
+The page is fully server-rendered and uncached. HTTP 503 with the safe
+`dependencies_unavailable` code confirms unavailable readiness; generic 503,
+timeout, connection failure and unknown payloads remain unconfirmed. Dependency
+names and error details never cross into rendered HTML or client props. Native
+GET forms recheck `/status` without retaining query tokens; enhancement hides
+stale status while loading and offers reload recovery after cancellation. A 429
+honors `Retry-After`; without JavaScript, a visible wait instruction and link
+provide recovery. Checks run on demand, with no polling.
 
 Private, removed and nonexistent collection URLs share one unavailable view:
 “This collection isn't available.” Offer return to explore; offer sign-in only

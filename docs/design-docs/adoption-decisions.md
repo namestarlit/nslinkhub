@@ -97,8 +97,12 @@ implemented and reviewed. The
 [public hub reading ExecPlan](../exec-plans/completed/deliver-public-hub-reading.md)
 records API evidence and acceptance. Public hub lists remain public-only for
 owners; pretty URLs share the reader and copied links use immutable IDs.
-The complete journey passed review. Status, account and mutation journeys remain
-later work; do not start them as parallel horizontal layers of this milestone.
+The complete journey passed review. The subsequent
+[service-status journey](../exec-plans/completed/deliver-service-status.md) is now
+implemented and reviewed. It uses the existing readiness/error contract,
+with 19 production browser cases passing across public reading and status.
+Account and mutation journeys remain later work, delivered one complete journey
+at a time.
 
 ## Gate #2 design status (2026-10-05)
 

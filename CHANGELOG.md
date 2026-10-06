@@ -11,6 +11,14 @@ summary of what changed after completed work has been promoted out of `ref/`.
 
 ### Web reading
 
+- Added `/status` and public navigation with aggregate ready/limited/unavailable
+  states, separate unconfirmed failures, deliberate rechecks, Retry-After and
+  no-JavaScript recovery. The page omits dependency details and remote error
+  messages; status links and API reads never propagate share tokens.
+- Added production browser status acceptance for real readiness responses,
+  outages, failure recovery, responsive keyboard access and cancelled rechecks.
+  Global loading feedback now covers both collection and status navigation.
+
 - Added public hub browsing at `/@handle` and pretty collection reading at
   `/@handle/<slug>`, reusing the permalink reader and copying only immutable
   `/c/<id>` links unless shared access is explicitly requested. Public lists
@@ -48,6 +56,11 @@ summary of what changed after completed work has been promoted out of `ref/`.
   builds remain separate deployment work.
 
 ### Development and release workflow
+
+- Fixed intermittent auth-delivery test failures by extracting the standalone
+  email code rather than an eight-digit segment in a generated target address.
+  The handover fixture now exercises that numeric-address case deterministically;
+  production authentication behavior is unchanged.
 
 - Separated routine application verification from Docker image acceptance.
   Push/PR CI keeps compilation and real-service tests; the manual release

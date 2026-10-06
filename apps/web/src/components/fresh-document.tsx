@@ -52,7 +52,7 @@ export function FreshDocument() {
   }, []);
   return (
     <div className="navigation-loading">
-      <p role="status">Loading collection content…</p>
+      <p role="status">Loading page…</p>
       <p>If loading stops, reload this page to try again.</p>
       <button type="button" className="button" onClick={() => window.location.reload()}>
         Reload this page

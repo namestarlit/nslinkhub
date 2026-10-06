@@ -21,9 +21,12 @@ export default function Layout({ children }: { children: ReactNode }) {
             <a className="wordmark" href="/">
               nslinkhub
             </a>
+            <a className="status-nav" href="/status">
+              Service status
+            </a>
           </nav>
         </header>
-        <main id="main" aria-label="Collection reading" tabIndex={-1} className="shell">
+        <main id="main" aria-label="Main content" tabIndex={-1} className="shell">
           <FreshDocument />
           {children}
         </main>

@@ -41,7 +41,9 @@ async function code(to: string) {
     take: 1,
   });
   const payload = unseal(rows[0].payload ?? "", secret);
-  return payload.text.match(/\b\d{8}\b/)?.[0] ?? "";
+  // The target address can contain an eight-digit UUID segment before the
+  // actual code. The template puts the proof on its own line.
+  return payload.text.match(/^\d{8}$/m)?.[0] ?? "";
 }
 async function signup(email = address()) {
   await call("/code/send", { email });
@@ -196,7 +198,9 @@ describe("transactional codes-only auth", () => {
       providerId: "credential",
       password: await context.password.hash(oldPassword),
     });
-    const next = address();
+    // Make the capture regression deterministic: this address appears before
+    // the actual proof in the confirmation message.
+    const next = `delivery-12345678-${randomUUID()}@example.com`;
     await call("/code/send", { email: owner.email });
     const second = await call("/code/verify", {
       email: owner.email,

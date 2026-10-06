@@ -130,8 +130,12 @@ Origin enforcement for unsafe requests. It also checks keyboard interaction,
 saved section metadata, independent client read budgets, forged source headers,
 Escape-cancelled document navigation and reload recovery after access revocation,
 320/390/768/1280 px widths, enlarged text, reduced motion and clipboard fallback.
-Tests leave only synthetic screenshots under `/tmp/w3-reader-*.png` and
-`/tmp/w3-hub-*.png`; their
+Status coverage exercises real ready/degraded and dependency-unavailable HTTP
+responses by overriding only readiness probes in the isolated test app; shared
+development services stay running. It also proves unknown/malformed/timeout
+states, throttling, no-JavaScript retry, history and cancelled rechecks.
+Tests leave only synthetic screenshots under `/tmp/w3-reader-*.png`,
+`/tmp/w3-hub-*.png` and `/tmp/w3-status-*.png`; their
 processes and database are owned fixtures. Do not run two web builds or dev
 and production browser builds concurrently in the same checkout (`.next` is shared).
 

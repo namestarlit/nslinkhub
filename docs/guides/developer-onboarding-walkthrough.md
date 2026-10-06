@@ -316,8 +316,9 @@ verification gate passes; see the
 [completed auth-delivery plan](../exec-plans/completed/prove-auth-delivery-boundary.md).
 The first W3 explore-to-resource journey is reviewed and committed. The
 [public hub/pretty-URL reading journey](../exec-plans/completed/deliver-public-hub-reading.md)
-is implemented and reviewed. Status and account journeys remain subsequent
-slices.
+is implemented and reviewed. The
+[service-status journey](../exec-plans/completed/deliver-service-status.md) is
+implemented and reviewed. Account journeys follow as subsequent slices.
 Continue with one complete vertical MLP journey at a time.
 Local PostgreSQL/Redis run in containers; the API,
 worker and Next.js dev server run on the host. Keep application builds

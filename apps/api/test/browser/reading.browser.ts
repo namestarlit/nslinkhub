@@ -31,6 +31,16 @@ let handle: string;
 const emptyHandle = `empty-${"long".repeat(13)}`;
 let hubMode: "normal" | "failure" | "timeout" = "normal";
 const hubReads: { path: string; token?: string }[] = [];
+let statusMode:
+  | "normal"
+  | "degraded"
+  | "unavailable"
+  | "failure"
+  | "offline"
+  | "timeout"
+  | "malformed"
+  | "throttled" = "normal";
+const statusReads: { path: string; token?: string }[] = [];
 let privateId: string;
 let parentId: string;
 let sectionId: string;
@@ -150,14 +160,72 @@ beforeAll(async () => {
   const { AppModule } = await import("../../src/app.module.js");
   const { configureApp } = await import("../../src/app.setup.js");
   const { PrismaService: Prisma } = await import("../../src/database/prisma.service.js");
-  const module = await Test.createTestingModule({ imports: [AppModule] }).compile();
+  const { RedisQueueReadinessService } = await import(
+    "../../src/modules/health/redis-queue-readiness.service.js"
+  );
+  // Override only the dependency probes; all persistence and the actual health
+  // service/controller/error stack remain real inside this isolated fixture.
+  class BrowserPrisma extends Prisma {
+    override async ping() {
+      if (statusMode === "unavailable") throw new Error("PRIVATE DATABASE FAILURE");
+      await super.ping();
+    }
+  }
+  class BrowserQueueReadiness extends RedisQueueReadinessService {
+    override async ping() {
+      if (statusMode === "degraded") throw new Error("PRIVATE QUEUE FAILURE");
+      await super.ping();
+    }
+  }
+  const module = await Test.createTestingModule({ imports: [AppModule] })
+    .overrideProvider(Prisma)
+    .useClass(BrowserPrisma)
+    .overrideProvider(RedisQueueReadinessService)
+    .useClass(BrowserQueueReadiness)
+    .compile();
   app = module.createNestApplication({ bodyParser: false, logger: false });
   app.use(
     (
       req: { url: string; headers: Record<string, string | undefined> },
-      res: { status: (code: number) => { json: (body: unknown) => void } },
+      res: {
+        status: (code: number) => { json: (body: unknown) => void };
+        setHeader: (name: string, value: string) => void;
+        destroy: () => void;
+      },
       next: () => void,
     ) => {
+      if (req.url.startsWith("/api/v1/status")) {
+        statusReads.push({ path: req.url, token: req.headers["x-share-token"] });
+        if (statusMode === "offline") {
+          res.destroy();
+          return;
+        }
+        if (statusMode === "malformed") {
+          res.status(200).json({
+            data: {
+              status: "PRIVATE UNKNOWN STATUS",
+              dependencies: { postgres: "PRIVATE CONNECTION" },
+            },
+          });
+          return;
+        }
+        if (statusMode === "throttled") {
+          res.setHeader("Retry-After", "2");
+          res
+            .status(429)
+            .json({ error: { code: "too_many_requests", message: "PRIVATE RATE LIMIT" } });
+          return;
+        }
+        if (statusMode === "failure" || statusMode === "timeout") {
+          const fail = () =>
+            res
+              .status(503)
+              .json({ error: { code: "service_unavailable", message: "PRIVATE STATUS DETAIL" } });
+          if (statusMode === "timeout") setTimeout(fail, 8500);
+          else fail();
+          return;
+        }
+      }
       if (req.url.startsWith("/api/v1/hubs/")) {
         hubReads.push({ path: req.url, token: req.headers["x-share-token"] });
         if (hubMode !== "normal" && !req.url.includes("/collections/")) {
@@ -341,6 +409,176 @@ afterAll(async () => {
 }, 10000);
 
 describe("explore to resource: production browser journey", () => {
+  it("reads real aggregate status and rechecks with or without JavaScript", async () => {
+    for (const js of [true, false]) {
+      const { page, close } = await freshPage(js);
+      try {
+        statusMode = "normal";
+        const api = await request(app.getHttpServer()).get("/api/v1/status").expect(200);
+        expect(api.body.data.status).toBe("ready");
+        await ready(page);
+        const navigation = page
+          .getByRole("navigation", { name: "Main navigation" })
+          .getByRole("link", { name: "Service status", exact: true });
+        await navigation.focus();
+        await navigation.press("Enter");
+        expect(new URL(page.url()).pathname).toBe("/status");
+        await browserExpect(page.locator("h1")).toHaveText("All systems ready");
+        statusMode = "degraded";
+        const degraded = await request(app.getHttpServer()).get("/api/v1/status").expect(200);
+        expect(degraded.body.data.status).toBe("degraded");
+        await page.getByRole("button", { name: "Check again", exact: true }).click();
+        await browserExpect(page.locator("h1")).toHaveText("Some services are limited");
+        await browserExpect(
+          page.getByText("You can still browse collections.", { exact: false }),
+        ).toBeVisible();
+        await page.getByRole("link", { name: "Explore collections", exact: true }).click();
+        await browserExpect(page.locator(".collection-row")).toHaveCount(20);
+        await ready(page, "/status");
+        statusMode = "unavailable";
+        const unavailable = await request(app.getHttpServer()).get("/api/v1/status").expect(503);
+        expect(unavailable.body.error.code).toBe("dependencies_unavailable");
+        await page.getByRole("button", { name: "Try again", exact: true }).click();
+        await browserExpect(page.locator("h1")).toHaveText("Temporarily unavailable");
+        const html = await page.content();
+        for (const secret of [
+          "postgres",
+          "redis_queue",
+          "PRIVATE DATABASE",
+          "PRIVATE QUEUE",
+          "dependencies_unavailable",
+        ])
+          expect(html).not.toContain(secret);
+        statusMode = "normal";
+        await page.getByRole("button", { name: "Try again", exact: true }).click();
+        await browserExpect(page.locator("h1")).toHaveText("All systems ready");
+      } finally {
+        statusMode = "normal";
+        await close();
+      }
+    }
+  }, 20000);
+
+  it("distinguishes unconfirmed status, honors throttling, and recovers without polling", async () => {
+    const { page, close } = await freshPage();
+    try {
+      for (const mode of ["failure", "offline", "malformed", "timeout"] as const) {
+        statusMode = mode;
+        await ready(page, "/status?s=status-must-ignore-this");
+        await browserExpect(page.locator("h1")).toHaveText("We couldn't check the service");
+        await browserExpect(page.locator("body")).not.toContainText("PRIVATE");
+        expect(await page.content()).not.toContain("PRIVATE STATUS DETAIL");
+        expect(await page.content()).not.toContain("PRIVATE UNKNOWN STATUS");
+        statusMode = "normal";
+        const requests = statusReads.length;
+        await page.getByRole("button", { name: "Try again", exact: true }).click();
+        await browserExpect(page.locator("h1")).toHaveText("All systems ready");
+        expect(statusReads.length).toBe(requests + 1);
+        expect(new URL(page.url()).search).toBe("");
+      }
+      statusMode = "throttled";
+      await ready(page, "/status");
+      await browserExpect(page.getByRole("button", { name: /Try again in/ })).toBeDisabled();
+      const requests = statusReads.length;
+      statusMode = "normal";
+      await browserExpect(
+        page.getByRole("button", { name: "Try again", exact: true }),
+      ).toBeEnabled();
+      expect(statusReads.length).toBe(requests);
+      await page.getByRole("button", { name: "Try again", exact: true }).click();
+      await browserExpect(page.locator("h1")).toHaveText("All systems ready");
+      expect(statusReads.every((read) => read.path === "/api/v1/status" && !read.token)).toBe(true);
+    } finally {
+      statusMode = "normal";
+      await close();
+    }
+    const plain = await freshPage(false);
+    try {
+      statusMode = "throttled";
+      await ready(plain.page, "/status");
+      await browserExpect(
+        plain.page.getByText("Wait 2 seconds, then", { exact: false }),
+      ).toBeVisible();
+      statusMode = "normal";
+      await plain.page.getByRole("link", { name: "check the service again", exact: true }).click();
+      await browserExpect(plain.page.locator("h1")).toHaveText("All systems ready");
+    } finally {
+      statusMode = "normal";
+      await plain.close();
+    }
+  }, 30000);
+
+  it("keeps status accessible on narrow screens and revalidates history and cancelled rechecks", async () => {
+    const { page, close } = await freshPage();
+    let release = () => {};
+    try {
+      await ready(page, "/status");
+      for (const width of [320, 390, 768, 1280]) {
+        await page.setViewportSize({ width, height: 900 });
+        expect(
+          await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+        ).toBe(true);
+        await browserExpect(
+          page.getByRole("button", { name: "Check again", exact: true }),
+        ).toBeVisible();
+      }
+      await page.screenshot({ path: "/tmp/w3-status-desktop.png" });
+      await page.setViewportSize({ width: 390, height: 844 });
+      statusMode = "degraded";
+      await page.reload();
+      await page.screenshot({ path: "/tmp/w3-status-phone.png" });
+      await page.emulateMedia({ reducedMotion: "reduce" });
+      await page.evaluate(() => {
+        document.documentElement.style.fontSize = "200%";
+      });
+      expect(
+        await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+      ).toBe(true);
+      await page.evaluate(() => {
+        document.documentElement.style.fontSize = "";
+      });
+      await page.getByRole("link", { name: "Explore collections", exact: true }).click();
+      statusMode = "unavailable";
+      await page.goBack();
+      await browserExpect(page.locator("h1")).toHaveText("Temporarily unavailable");
+      let started = () => {};
+      const waiting = new Promise<void>((resolve) => {
+        started = resolve;
+      });
+      const released = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      delayedDocument = { path: "/status", started, released };
+      const aborted = page.waitForEvent("requestfailed", {
+        predicate: (req) => req.isNavigationRequest() && new URL(req.url()).pathname === "/status",
+      });
+      await page
+        .getByRole("button", { name: "Try again", exact: true })
+        .click({ noWaitAfter: true });
+      await waiting;
+      await page.keyboard.press("Escape");
+      const protocol = await page.context().newCDPSession(page);
+      await protocol.send("Page.stopLoading");
+      await protocol.detach();
+      expect((await aborted).failure()?.errorText).toContain("ERR_ABORTED");
+      await browserExpect(page.locator("h1")).toBeHidden();
+      await browserExpect(page.getByRole("status")).toHaveText("Loading page…");
+      delayedDocument = undefined;
+      release();
+      statusMode = "normal";
+      const reload = page.getByRole("button", { name: "Reload this page", exact: true });
+      await reload.focus();
+      await browserExpect(reload).toBeFocused();
+      await reload.press("Enter");
+      await browserExpect(page.locator("h1")).toHaveText("All systems ready");
+    } finally {
+      delayedDocument = undefined;
+      release();
+      statusMode = "normal";
+      await close();
+    }
+  }, 20000);
+
   it("recovers cancelled document navigation with fresh authorization", async () => {
     const { page, close } = await freshPage();
     let release = () => {};
@@ -372,7 +610,7 @@ describe("explore to resource: production browser journey", () => {
           await protocol.send("Page.stopLoading");
           await protocol.detach();
           expect((await aborted).failure()?.errorText).toContain("ERR_ABORTED");
-          await browserExpect(page.getByRole("status")).toHaveText("Loading collection content…");
+          await browserExpect(page.getByRole("status")).toHaveText("Loading page…");
           expect(page.url()).toBe(origin + entry);
           await browserExpect(page.locator("h1")).toBeHidden();
           if (revoke) {
@@ -652,7 +890,7 @@ describe("explore to resource: production browser journey", () => {
         await browserExpect(page.locator("body")).not.toContainText("Private title");
       }
       for (const path of [
-        "/status",
+        "/not-a-page",
         "/unrelated/reading-guide",
         `/@${handle}/reading-guide/useful-section`,
       ]) {
