@@ -1,8 +1,29 @@
 import { describe, expect, it } from "bun:test";
 import { webServerConfig } from "@nslinkhub/config/web-server";
-import { permalink, readJson, safePath, sessionCookie } from "../src/lib/http";
+import {
+  permalink,
+  readJson,
+  routeHandle,
+  routeSegment,
+  safePath,
+  sessionCookie,
+} from "../src/lib/http";
 
 describe("web HTTP boundary", () => {
+  it("decodes literal hub prefixes once without accepting encoded separators or unrelated routes", () => {
+    expect(routeHandle(routeSegment("%40reader"))).toBe("reader");
+    expect(routeHandle(routeSegment("@reader"))).toBe("reader");
+    for (const segment of [
+      "reader",
+      "%2540reader",
+      "%40reader%2Fother",
+      "%40reader%5Cother",
+      "%40ab",
+      "%",
+    ]) {
+      expect(routeHandle(routeSegment(segment))).toBeUndefined();
+    }
+  });
   it("only forwards session cookies and keeps shared links explicit", () => {
     expect(sessionCookie("other=secret; better-auth.session_token=proof; tracking=secret")).toBe(
       "better-auth.session_token=proof",

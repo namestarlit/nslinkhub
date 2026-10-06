@@ -27,19 +27,23 @@ export function Retry({ seconds = 0, action }: { seconds?: number; action?: () =
 export function Feedback({
   error,
   collection = false,
+  hub = false,
   resetPath = "/",
 }: {
   error: Failure;
   collection?: boolean;
+  hub?: boolean;
   resetPath?: string;
 }) {
   const cursor = error.code === "invalid_cursor";
-  const hidden = collection && !cursor && [400, 401, 403, 404].includes(error.status);
+  const hidden = (collection || hub) && !cursor && [400, 401, 403, 404].includes(error.status);
   return (
     <section className="feedback" data-reader>
       <h1>
         {hidden
-          ? "This collection isn't available."
+          ? hub
+            ? "This hub isn't available."
+            : "This collection isn't available."
           : cursor
             ? "This list has changed."
             : "We couldn't load this page."}

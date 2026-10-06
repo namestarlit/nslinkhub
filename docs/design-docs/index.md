@@ -28,8 +28,8 @@ frequently for the root `ARCHITECTURE.md`. The **authoritative system design**
   shared Alloy collection of stdout/dependency metrics, the PII allowlist and
   pseudonymous-reference rules, and the request-id foundation already in place.
 - [auth-delivery-integration.md](auth-delivery-integration.md): pinned gate #3
-  compatibility evidence, enforced profile/deletion boundaries and the proposed
-  better-auth integration needed before code delivery is enabled.
+  compatibility evidence, enforced profile/deletion boundaries and the implemented
+  transactional better-auth delivery and verified email-change integration.
 
 - [web-product-experience.md](web-product-experience.md): first reading
   journeys, recency discovery, unavailable collections, later account flows
@@ -40,5 +40,7 @@ frequently for the root `ARCHITECTURE.md`. The **authoritative system design**
   variables, light palette, typography, spacing and contrast evidence.
 
 The W3 documents define implementation contracts. The first implemented vertical
-slice is explore → collection → section/external resource. Hub/pretty-URL, status,
+slice is explore → collection → section/external resource.
+The [public hub reading plan](../exec-plans/completed/deliver-public-hub-reading.md)
+records the completed, reviewed hub/pretty-URL journey. Status,
 account and editing journeys follow separately under adoption gate #2.

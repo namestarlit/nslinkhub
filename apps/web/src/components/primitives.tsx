@@ -1,5 +1,5 @@
 import type { Collection, Resource } from "@nslinkhub/types";
-import { permalink } from "../lib/http";
+import { permalink, prettyPath } from "../lib/http";
 
 export function Tags({ tags }: { tags: string[] }) {
   return tags.length ? (
@@ -10,11 +10,11 @@ export function Tags({ tags }: { tags: string[] }) {
     </ul>
   ) : null;
 }
-export function CollectionRow({ item }: { item: Collection }) {
+export function CollectionRow({ item, handle }: { item: Collection; handle?: string }) {
   return (
     <li className="collection-row">
       <h2>
-        <a href={permalink(item.id)}>{item.title}</a>
+        <a href={handle ? prettyPath(handle, item.slug) : permalink(item.id)}>{item.title}</a>
       </h2>
       {item.description && <p className="preview">{item.description}</p>}
       <div className="row-meta">

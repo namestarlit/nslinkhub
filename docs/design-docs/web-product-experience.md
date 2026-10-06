@@ -1,7 +1,7 @@
 # Web product experience
 
-Status: W3 design contract. The first explore-to-resource slice is implemented;
-later entry points and account/editing journeys remain separate slices. Read alongside
+Status: W3 design contract. Explore, public hub and pretty-URL reading are
+implemented; status and account/editing journeys remain separate slices. Read alongside
 [the system design](../SYSTEM_DESIGN.md), [adoption gates](adoption-decisions.md)
 and [interface system](web-interface-system.md). Product behavior stays owned
 by [PRODUCT.md](../../PRODUCT.md).
@@ -29,11 +29,17 @@ light theme ships first; a theme switch waits for a complete second palette.
 The first implemented navigation is the lowercase `nslinkhub` wordmark linking
 to explore. User direction (2026-10-06): complete explore → collection → section
 or external resource as one MLP journey before the next. Public hub/pretty-URL
-browsing and service status are subsequent slices; add their navigation only
-when they work end to end. The route table below is the complete reading target,
-not a claim that every entry point is implemented. Add account navigation
+browsing now adds owning-hub context and pretty collection links. Service status
+remains a subsequent slice; add its navigation when it works end to end.
+The route table below includes that remaining reading target. Add account navigation
 only when a working sign-in/session journey exists. No disabled search box,
 “New collection” button, empty account menu or links to future pages.
+
+Public hub → pretty collection URL → section/resource is implemented and reviewed
+in [its ExecPlan](../exec-plans/completed/deliver-public-hub-reading.md).
+The two collection entry points share one reader. Hub attribution uses only
+public hub data, and a failed optional hub lookup does not hide authorized ID
+reading. Status and account/editing remain separate subsequent milestones.
 
 | Surface | Route and data | Main action |
 | --- | --- | --- |
@@ -85,8 +91,9 @@ order; do not resort by title or host. No remote thumbnails or favicon fetches
 in the first slice. Open links with ordinary anchor behavior; modified clicks
 work. An explicit new-tab affordance must be labelled.
 
-A section row uses the linked collection's title only after an authorized read
-succeeds. Section links navigate to `/c/<linkedCollectionId>`; inherited share
+A section row uses its saved title override first, otherwise the linked
+collection's title only after an authorized read succeeds. Render the resource's
+saved tags as well. Section links navigate to `/c/<linkedCollectionId>`; inherited share
 access must work through that navigation. A parent breadcrumb is rendered only
 after an authorized parent read, since direct access to a section does not
 necessarily grant parent access. Failed contextual reads must not hide an

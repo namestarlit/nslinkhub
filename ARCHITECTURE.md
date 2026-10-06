@@ -22,7 +22,7 @@ A Bun-managed TypeScript codebase. The backend is a NestJS modular monolith
 backed by PostgreSQL 18 (Prisma 7 with the pg driver adapter); BullMQ on
 Redis delivers email through a PostgreSQL outbox and separate worker. Auth is self-hosted better-auth (DB sessions, bearer
 plugin, email codes only) mounted as raw
-middleware ahead of body parsing. The Next.js web app implements explore-to-resource reading; an MV3 browser
+middleware ahead of body parsing. The Next.js web app implements explore, public hubs and collection reading; an MV3 browser
 extension remains planned. The repository is a Bun workspace:
 the backend lives at `apps/api`, the HTTP-only web client at `apps/web`;
 `apps/extension` joins in W4.
@@ -42,7 +42,7 @@ apps/
       app.setup.ts shared HTTP stack (request budget, auth, parsers, validation)
     prisma/        schema, migrations (prisma.config.ts beside them)
     test/          e2e specs (run the production HTTP stack)
-  web/             Next.js explore/permalink/section reader; HTTP client only
+  web/             Next.js explore/hub/pretty-URL/permalink reader; HTTP client only
 packages/
   config/          TypeScript base plus separate web server/browser configuration
   types/           @nslinkhub/types — shared API wire contracts for clients

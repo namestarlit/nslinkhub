@@ -164,10 +164,15 @@ When server is running:
 
 `bun run dev` starts local PostgreSQL/Redis containers, API/worker watchers and
 Next.js. Open `http://localhost:3000`; browse existing published collections or
-open an authorized `/c/<id>` link. No synthetic content is seeded into dev data.
+open `/@handle`, `/@handle/<slug>` or an authorized `/c/<id>` link. No synthetic content is seeded into dev data.
 See [local development](docs/runbooks/local-development.md) for individual
 process commands, email settings and the same-origin configuration.
 
 `bun run verify` includes API/web compilation and source/integration checks.
 `bun run test:browser` proves the reading journey against isolated fixtures and
 a production web build. Docker image acceptance remains deployment work.
+
+The first reading journey is reviewed and committed.
+[Public hub and pretty-URL reading](docs/exec-plans/completed/deliver-public-hub-reading.md)
+is implemented and reviewed. Both entry points reuse the
+collection reader; copied links retain the immutable `/c/<id>` shape.

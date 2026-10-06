@@ -1,5 +1,5 @@
 "use client";
-import type { Collection, Resource } from "@nslinkhub/types";
+import type { Collection, HubPage, Resource } from "@nslinkhub/types";
 import { useEffect, useRef, useState } from "react";
 import { browserRead } from "../lib/browser-api";
 import { type ApiPath, type Failure, withCursor } from "../lib/http";
@@ -11,6 +11,7 @@ type Props = {
   nextCursor?: string | null;
   token?: string;
   titles?: Record<string, string>;
+  publicHub?: { handle: string };
 } & ({ kind: "collections"; initial: Collection[] } | { kind: "resources"; initial: Resource[] });
 export function PaginatedList(props: Props) {
   const [items, setItems] = useState<(Collection | Resource)[]>(props.initial);
@@ -41,7 +42,7 @@ export function PaginatedList(props: Props) {
     active.current = controller;
     setPending(true);
     setError(undefined);
-    const result = await browserRead<(Collection | Resource)[]>(
+    const result = await browserRead<(Collection | Resource)[] | HubPage>(
       withCursor(props.path, cursor),
       controller.signal,
       props.token,
@@ -58,12 +59,18 @@ export function PaginatedList(props: Props) {
       setError(result);
       return;
     }
-    setItems((current) => [
-      ...current,
-      ...result.data.filter((item) => !current.some((old) => old.id === item.id)),
-    ]);
+    const data = props.publicHub
+      ? (result.data as HubPage).collections
+      : (result.data as (Collection | Resource)[]);
+    const seen = new Set(items.map((item) => item.id));
+    const additions = data.filter((item) => {
+      if (seen.has(item.id)) return false;
+      seen.add(item.id);
+      return true;
+    });
+    setItems((current) => [...current, ...additions]);
     setCursor(result.meta?.nextCursor);
-    setAnnouncement(`${result.data.length} more ${props.kind} loaded.`);
+    setAnnouncement(`${additions.length} more ${props.kind} loaded.`);
   }
   const fallback = `?${new URLSearchParams({ cursor: cursor ?? "", ...(props.token ? { s: props.token } : {}) })}`;
   return (
@@ -71,7 +78,11 @@ export function PaginatedList(props: Props) {
       <ul className={props.kind === "collections" ? "collection-list" : "resource-list"}>
         {items.map((item) =>
           props.kind === "collections" ? (
-            <CollectionRow key={item.id} item={item as Collection} />
+            <CollectionRow
+              key={item.id}
+              item={item as Collection}
+              handle={props.publicHub?.handle}
+            />
           ) : (
             <ResourceRow
               key={item.id}
@@ -85,7 +96,9 @@ export function PaginatedList(props: Props) {
       {!items.length && (
         <p className="empty">
           {props.kind === "collections"
-            ? "No published collections yet."
+            ? props.publicHub
+              ? "No published collections here yet."
+              : "No published collections yet."
             : "No resources in this collection yet."}
         </p>
       )}
@@ -101,16 +114,7 @@ export function PaginatedList(props: Props) {
           </p>
         )}
         {error?.code === "invalid_cursor" ? (
-          <a
-            className="button"
-            href={
-              props.kind === "collections"
-                ? "/"
-                : props.token
-                  ? `?s=${encodeURIComponent(props.token)}`
-                  : "?"
-            }
-          >
+          <a className="button" href={props.token ? `?s=${encodeURIComponent(props.token)}` : "?"}>
             Reload list
           </a>
         ) : error ? (

@@ -122,14 +122,16 @@ existing `/usr/bin/google-chrome-stable`. `BROWSER_CHROME_PATH` can select anoth
 local Chromium executable. CI installs Playwright Chromium explicitly. No
 missing-service or missing-browser case becomes a skipped pass.
 
-The journey covers explore/continuation (including no JavaScript), collection
-and nested reading, hidden/missing equivalence, unpublish/history, token
+The journey covers explore and public hubs/continuation (including no JavaScript),
+pretty URLs, collection and nested reading, public-only owner views, handle/slug
+rename durability, hidden/missing equivalence, unpublish/history, token
 rotation, session expiry, real browser-cookie issuance, error recovery and
 Origin enforcement for unsafe requests. It also checks keyboard interaction,
 saved section metadata, independent client read budgets, forged source headers,
 Escape-cancelled document navigation and reload recovery after access revocation,
 320/390/768/1280 px widths, enlarged text, reduced motion and clipboard fallback.
-Tests leave only synthetic screenshots under `/tmp/w3-reader-*.png`; their
+Tests leave only synthetic screenshots under `/tmp/w3-reader-*.png` and
+`/tmp/w3-hub-*.png`; their
 processes and database are owned fixtures. Do not run two web builds or dev
 and production browser builds concurrently in the same checkout (`.next` is shared).
 

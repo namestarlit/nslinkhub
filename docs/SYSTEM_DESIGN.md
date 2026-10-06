@@ -286,11 +286,11 @@ A Bun-workspace monorepo:
 apps/
   api/        NestJS backend. Prisma schema/migrations/generated client and
               PrismaService stay inside; clients never touch persistence.
-  web/        Next.js — explore-to-resource reading; remaining W3 journeys follow.
+  web/        Next.js — explore, public hub and collection reading; remaining W3 journeys follow.
   extension/  MV3 capture companion (planned, Track W4).
 packages/
   types/      @nslinkhub/types — hand-curated API wire contracts.
-  config/     shared TypeScript/tooling configuration.
+  config/     shared TypeScript plus separate web server/browser configuration.
 tooling/      repository checks (client boundary check).
 ```
 
@@ -329,8 +329,11 @@ Remaining:
 - **W3 — Web app.** The three web design documents (`web-product-experience`,
   `web-interface-system`, `web-design-tokens`) are complete. Apply Impeccable
   under those contracts. Explore → collection → section/external resource is
-  the first implemented slice, with real API/browser proof. Remaining slices:
-  public hub/pretty-URL browsing, status, sign-in, own collections, resource
+  the first reviewed slice, committed locally as `d556236` with guide pin
+  `9277461` (117 source tests and ten production browser cases passed).
+  Public hub → pretty collection URL → section/resource is implemented and
+  reviewed in [the public hub reading ExecPlan](exec-plans/completed/deliver-public-hub-reading.md).
+  It reuses the reader and copies immutable ID links. Later slices include status, sign-in, own collections, resource
   capture, sharing + transfer management, shared/ and saved/. Cookie sessions.
 - **W4 — Browser extension.** `apps/extension` (MV3) capture companion.
 - **Phase E — tracked alongside W3.** Release prerequisites remain
@@ -342,7 +345,6 @@ Remaining:
     local API/worker acceptance; web account journeys and live sender/domain
     and webhook validation remain outstanding. Account deletion stays disabled
     pending its verified ownership and retention workflow.
-  - `/@handle` vanity route resolving to `hubId` (direct hub navigation).
   - Explore discovery by **tags + text** (search) beyond the initial recency
     list; full-text search across collections/resources.
   - Read-only cross-hub **shortcut** references to shared collections.

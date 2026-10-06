@@ -11,6 +11,17 @@ summary of what changed after completed work has been promoted out of `ref/`.
 
 ### Web reading
 
+- Added public hub browsing at `/@handle` and pretty collection reading at
+  `/@handle/<slug>`, reusing the permalink reader and copying only immutable
+  `/c/<id>` links unless shared access is explicitly requested. Public lists
+  stay publication-only for owners and other visitors; readers link back to
+  the public owning hub without forwarding share tokens.
+- Added hub-aware cursor continuation, current-route recovery, duplicate
+  suppression and accurate append announcements. Production browser coverage
+  proves no-JavaScript navigation, privacy, rename durability, failure/retry,
+  revocation and responsive keyboard reading; encoded `@` route parameters
+  have a source regression.
+
 - Added explicit reload recovery when document navigation is cancelled, keeping
   stale reader content hidden until fresh server authorization. Browser coverage
   checks Escape cancellation, keyboard recovery and revocation while waiting.
@@ -75,6 +86,11 @@ summary of what changed after completed work has been promoted out of `ref/`.
   verified retention workflow. Email handover revokes all sessions, with no password route back in.
 
 ### Documentation
+
+- Recorded the reviewed W3 reading milestone and the next planned vertical
+  journey: public hub → pretty collection URL → section/resource. Added API
+  evidence, privacy and rename acceptance, and corrected stale web-scaffold
+  and Phase E routing status. The subsequent implementation is recorded above.
 
 - Reconciled auth-delivery status across system design, onboarding, reliability
   and adoption guidance. Documented the additive migration chain, current email

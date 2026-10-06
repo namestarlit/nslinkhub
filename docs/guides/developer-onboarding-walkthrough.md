@@ -314,9 +314,12 @@ deletion are disabled; password authentication has been removed.
 The reviewed backend auth-delivery implementation is committed and its source
 verification gate passes; see the
 [completed auth-delivery plan](../exec-plans/completed/prove-auth-delivery-boundary.md).
-The first W3 explore-to-resource journey is implemented. Continue with one
-complete vertical MLP journey at a time; hub/pretty-URL, status and account
-flows follow separately. Local PostgreSQL/Redis run in containers; the API,
+The first W3 explore-to-resource journey is reviewed and committed. The
+[public hub/pretty-URL reading journey](../exec-plans/completed/deliver-public-hub-reading.md)
+is implemented and reviewed. Status and account journeys remain subsequent
+slices.
+Continue with one complete vertical MLP journey at a time.
+Local PostgreSQL/Redis run in containers; the API,
 worker and Next.js dev server run on the host. Keep application builds
 and tests in `bun run verify`; fresh Docker image acceptance belongs to
 [deployment preparation](../runbooks/release.md), not the W3 readiness gate.

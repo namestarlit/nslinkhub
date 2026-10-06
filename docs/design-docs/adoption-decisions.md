@@ -12,13 +12,14 @@ retain their meaning as acceptance groups, not chronological order. The local
 release foundation is recorded in
 `docs/exec-plans/completed/deliver-release-foundations.md`. Live rollout remains
 a separate operator acceptance step; the email worker now has local acceptance,
-while browser acceptance awaits `apps/web`.
+while account-browser and live-provider acceptance remain outstanding. The
+first web reading slice is complete; its current status appears below.
 
 **User sequencing update (2026-10-06):** the reviewed auth-delivery backend is
-committed (`ce1c35b`, guide pin follow-up `ae63939`); start W3 next. Routine
+committed (`ce1c35b`, guide pin follow-up `ae63939`); W3 then began. Routine
 verification retains application compilation and real-service tests. Local
 PostgreSQL/Redis run in containers while app processes run on the host, with
-Next.js joining in W3. Move Docker image builds/rehearsals to deployment
+Next.js now running on the host too. Keep Docker image builds/rehearsals in deployment
 preparation and the manual release workflow; they do not gate web scaffolding.
 The latest auth fixes still need fresh image acceptance before deployment.
 This separation follows the inspected Pigfarm development/verification setup,
@@ -85,6 +86,19 @@ checks. Pigfarm's scaffold patterns and backend-authority rules were inspected
 and adapted; details are in [the interface system](web-interface-system.md).
 Public hub/pretty URLs, status, account and editing journeys follow separately;
 no placeholders or navigation for them ship in the first slice.
+
+The first slice is reviewed and committed locally as `d556236`, with guide pin
+`9277461`. Its source gate passed 117 tests and its production browser suite
+passed ten cases; dev-loop acceptance also passed. Commit existence is not a
+claim of remote publication, hosted CI, deployment or live email acceptance.
+
+**Completed milestone:** public hub → pretty collection URL → section/resource is
+implemented and reviewed. The
+[public hub reading ExecPlan](../exec-plans/completed/deliver-public-hub-reading.md)
+records API evidence and acceptance. Public hub lists remain public-only for
+owners; pretty URLs share the reader and copied links use immutable IDs.
+The complete journey passed review. Status, account and mutation journeys remain
+later work; do not start them as parallel horizontal layers of this milestone.
 
 ## Gate #2 design status (2026-10-05)
 

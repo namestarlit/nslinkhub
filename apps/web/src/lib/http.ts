@@ -66,6 +66,26 @@ export function withCursor(path: ApiPath, cursor?: string | null): ApiPath {
   if (cursor) url.searchParams.set("cursor", cursor);
   return safePath((url.pathname + url.search) as ApiPath) as ApiPath;
 }
+// Only @-prefixed route segments belong to public hubs. The API remains the
+// identity and authorization authority after this URL-shape validation.
+// Next's dynamic segment payload percent-encodes @. Decode exactly once;
+// route validation below still rejects separators and double-encoded input.
+export function routeSegment(value: string): string {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return "";
+  }
+}
+export function routeHandle(segment: string): string | undefined {
+  return /^@[a-z0-9-]{3,60}$/.test(segment) ? segment.slice(1) : undefined;
+}
+export function hubPath(handle: string): string {
+  return `/@${encodeURIComponent(handle)}`;
+}
+export function prettyPath(handle: string, slug: string): string {
+  return `${hubPath(handle)}/${encodeURIComponent(slug)}`;
+}
 export function collectionPath(id: string): ApiPath {
   return `/api/v1/collections/${encodeURIComponent(id)}`;
 }

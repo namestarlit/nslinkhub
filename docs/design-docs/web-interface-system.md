@@ -1,6 +1,6 @@
 # Web interface system
 
-Status: W3 interface contract. Explore/permalink/section reading is implemented;
+Status: W3 interface contract. Explore/hub/pretty-URL/permalink reading is implemented;
 other journeys retain their own browser acceptance.
 The [experience](web-product-experience.md) owns journeys and copy direction;
 [tokens](web-design-tokens.md) own all concrete theme values.
@@ -179,3 +179,11 @@ Direct `next start` is unsupported. Browser acceptance exercises that topology u
 isolated loopback proxy and the production web build. No deployment image is
 required. Next.js/React/Tailwind versions are pinned in the workspace lockfile;
 Webpack resolves the shared contracts' NodeNext `.js` specifiers to TS source.
+
+Hub continuation adapts the public `HubPage` envelope (`hub` + `collections`)
+using `/hubs/:hubId`, never the owner-visible collection-list endpoint.
+Invalid-cursor recovery stays on the current hub or reader; duplicate rows are
+suppressed and announcements count newly appended items. Hub rows use pretty
+URLs, while copied links and sections retain immutable ID URLs. Next's encoded
+dynamic route parameters are decoded once before validating the literal `@`
+prefix and permitted path shapes. No share token reaches public hub discovery.

@@ -142,8 +142,10 @@ section metadata, development ports, verification isolation and cancelled
 navigation are implemented.
 The final full gate passes 117 tests, builds and typechecks; ten production
 browser cases and the isolated development-loop smoke also pass. Documentation is reconciled and the milestone
-has passed review and is approved for commit. Hub/pretty-URL browsing, status, accounts and editing remain
-separate journeys. No image or deployment acceptance is claimed.
+is committed locally as `d556236`, with guide pin `9277461`. Remote publication
+is not claimed. Hub/pretty-URL browsing is now implemented and reviewed in
+[its completed plan](deliver-public-hub-reading.md); status, accounts and
+editing remain separate journeys. No image or deployment acceptance is claimed.
 
 ## Context And Orientation
 

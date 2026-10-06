@@ -25,6 +25,12 @@ let apiOrigin: string;
 let webOrigin = "";
 let owner: string;
 let cookie: string;
+let otherCookie: string;
+let hubId: string;
+let handle: string;
+const emptyHandle = `empty-${"long".repeat(13)}`;
+let hubMode: "normal" | "failure" | "timeout" = "normal";
+const hubReads: { path: string; token?: string }[] = [];
 let privateId: string;
 let parentId: string;
 let sectionId: string;
@@ -148,10 +154,22 @@ beforeAll(async () => {
   app = module.createNestApplication({ bodyParser: false, logger: false });
   app.use(
     (
-      req: { url: string },
+      req: { url: string; headers: Record<string, string | undefined> },
       res: { status: (code: number) => { json: (body: unknown) => void } },
       next: () => void,
     ) => {
+      if (req.url.startsWith("/api/v1/hubs/")) {
+        hubReads.push({ path: req.url, token: req.headers["x-share-token"] });
+        if (hubMode !== "normal" && !req.url.includes("/collections/")) {
+          const fail = () =>
+            res
+              .status(503)
+              .json({ error: { code: "service_unavailable", message: "PRIVATE HUB DETAIL" } });
+          if (hubMode === "timeout") setTimeout(fail, 8500);
+          else fail();
+          return;
+        }
+      }
       if (req.url.startsWith("/api/v1/explore") && exploreMode !== "normal") {
         if (exploreMode === "empty")
           res.status(200).json({ data: [], meta: { limit: 20, nextCursor: null } });
@@ -176,6 +194,35 @@ beforeAll(async () => {
       .map((value) => value.split(";")[0])
       .find((value) => value.startsWith("better-auth.session_token=")) ?? "";
   expect(cookie).not.toBe("");
+  const profile = await request(app.getHttpServer())
+    .get("/api/v1/profile")
+    .auth(owner, { type: "bearer" })
+    .expect(200);
+  hubId = profile.body.data.hubId;
+  handle = profile.body.data.handle;
+  await prisma.hub.update({
+    where: { id: hubId },
+    data: { description: "References for curious readers.\nCollected with care." },
+  });
+  const other = await signInWithCode(app.getHttpServer(), {
+    email: "empty-reader@example.com",
+    name: "Other reader",
+  });
+  const otherToken = other.headers["set-auth-token"];
+  otherCookie =
+    (other.headers["set-cookie"] as unknown as string[])
+      .map((value) => value.split(";")[0])
+      .find((value) => value.startsWith("better-auth.session_token=")) ?? "";
+  await request(app.getHttpServer())
+    .patch("/api/v1/profile")
+    .auth(otherToken, { type: "bearer" })
+    .send({ handle: emptyHandle })
+    .expect(200);
+  await request(app.getHttpServer())
+    .post("/api/v1/collections")
+    .auth(otherToken, { type: "bearer" })
+    .send({ slug: "private-reading", title: "Other private collection" })
+    .expect(201);
   for (let i = 0; i < 23; i++)
     publicIds.push(await create(`Reading collection ${i + 1}`, `reading-${i}`, true));
   parentId = await create(longTitle, "reading-guide", true);
@@ -299,57 +346,388 @@ describe("explore to resource: production browser journey", () => {
     let release = () => {};
     let unpublished = false;
     try {
-      for (const revoke of [false, true]) {
-        await ready(page, `/c/${parentId}`);
-        let started = () => {};
-        const waiting = new Promise<void>((resolve) => {
-          started = resolve;
-        });
-        const released = new Promise<void>((resolve) => {
-          release = resolve;
-        });
-        delayedDocument = { path: `/c/${sectionId}`, started, released };
-        const aborted = page.waitForEvent("requestfailed", {
-          predicate: (req) => req.isNavigationRequest() && req.url() === `${origin}/c/${sectionId}`,
-        });
-        await page
-          .getByRole("link", { name: "Curated section title" })
-          .click({ noWaitAfter: true });
-        await waiting;
-        await page.keyboard.press("Escape");
-        // Headless key dispatch does not invoke Chromium's browser-chrome
-        // Stop command. Drive that native cancellation explicitly as well.
-        const protocol = await page.context().newCDPSession(page);
-        await protocol.send("Page.stopLoading");
-        await protocol.detach();
-        expect((await aborted).failure()?.errorText).toContain("ERR_ABORTED");
-        await browserExpect(page.getByRole("status")).toHaveText("Loading collection content…");
-        expect(page.url()).toBe(`${origin}/c/${parentId}`);
-        await browserExpect(page.locator("h1")).toBeHidden();
-        if (revoke) {
-          await change(parentId, "unpublish");
-          unpublished = true;
+      for (const entry of [`/c/${parentId}`, `/@${handle}/reading-guide`]) {
+        for (const revoke of [false, true]) {
+          await ready(page, entry);
+          let started = () => {};
+          const waiting = new Promise<void>((resolve) => {
+            started = resolve;
+          });
+          const released = new Promise<void>((resolve) => {
+            release = resolve;
+          });
+          delayedDocument = { path: `/c/${sectionId}`, started, released };
+          const aborted = page.waitForEvent("requestfailed", {
+            predicate: (req) =>
+              req.isNavigationRequest() && req.url() === `${origin}/c/${sectionId}`,
+          });
+          await page
+            .getByRole("link", { name: "Curated section title" })
+            .click({ noWaitAfter: true });
+          await waiting;
+          await page.keyboard.press("Escape");
+          // Headless key dispatch does not invoke Chromium's browser-chrome
+          // Stop command. Drive that native cancellation explicitly as well.
+          const protocol = await page.context().newCDPSession(page);
+          await protocol.send("Page.stopLoading");
+          await protocol.detach();
+          expect((await aborted).failure()?.errorText).toContain("ERR_ABORTED");
+          await browserExpect(page.getByRole("status")).toHaveText("Loading collection content…");
+          expect(page.url()).toBe(origin + entry);
+          await browserExpect(page.locator("h1")).toBeHidden();
+          if (revoke) {
+            await change(parentId, "unpublish");
+            unpublished = true;
+          }
+          delayedDocument = undefined;
+          release();
+          const reload = page.getByRole("button", { name: "Reload this page", exact: true });
+          if (!revoke) await page.screenshot({ path: "/tmp/w3-navigation-recovery.png" });
+          await reload.focus();
+          await browserExpect(reload).toBeFocused();
+          await Promise.all([
+            page.waitForNavigation({ waitUntil: "domcontentloaded" }),
+            reload.press("Enter"),
+          ]);
+          await browserExpect(page.locator("h1")).toHaveText(
+            revoke ? "This collection isn't available." : longTitle,
+          );
+          await browserExpect(page.locator(".navigation-loading")).toBeHidden();
+          if (revoke) {
+            await browserExpect(page.locator(".resource-row")).toHaveCount(0);
+            await change(parentId, "publish");
+            unpublished = false;
+          }
         }
-        delayedDocument = undefined;
-        release();
-        const reload = page.getByRole("button", { name: "Reload this page", exact: true });
-        if (!revoke) await page.screenshot({ path: "/tmp/w3-navigation-recovery.png" });
-        await reload.focus();
-        await browserExpect(reload).toBeFocused();
-        await Promise.all([
-          page.waitForNavigation({ waitUntil: "domcontentloaded" }),
-          reload.press("Enter"),
-        ]);
-        await browserExpect(page.locator("h1")).toHaveText(
-          revoke ? "This collection isn't available." : longTitle,
-        );
-        await browserExpect(page.locator(".navigation-loading")).toBeHidden();
-        if (revoke) await browserExpect(page.locator(".resource-row")).toHaveCount(0);
       }
     } finally {
       delayedDocument = undefined;
       release();
       if (unpublished) await change(parentId, "publish");
+      await close();
+    }
+  }, 20000);
+
+  it("browses public hubs as anonymous, owner and another user without private data", async () => {
+    for (const session of [undefined, cookie, otherCookie]) {
+      const { page, close } = await freshPage();
+      try {
+        if (session) {
+          const [name, ...value] = session.split("=");
+          await page.context().addCookies([{ name, value: value.join("="), url: origin }]);
+        }
+        await ready(page, `/@${handle}?s=discovery-must-ignore-this`);
+        await browserExpect(page.locator("h1")).toHaveText(`@${handle}`);
+        await browserExpect(
+          page.getByText("References for curious readers.", { exact: false }),
+        ).toBeVisible();
+        await browserExpect(page.locator(".collection-row")).toHaveCount(20);
+        const more = page.getByRole("link", { name: "More collections", exact: true });
+        await more.focus();
+        await more.press("Enter");
+        await browserExpect(page.locator(".collection-row")).toHaveCount(24);
+        await browserExpect(
+          page.getByRole("link", { name: "All collections loaded" }),
+        ).toBeFocused();
+        await browserExpect(page.locator('p[aria-live="polite"]')).toHaveText(
+          "4 more collections loaded.",
+        );
+        await browserExpect(page.locator("body")).not.toContainText("Private title");
+        await browserExpect(page.locator("body")).not.toContainText("Other private");
+        await browserExpect(
+          page.getByRole("link", { name: "A useful section", exact: true }),
+        ).toHaveCount(0);
+        await browserExpect(
+          page.getByRole("link", { name: longTitle, exact: true }),
+        ).toHaveAttribute("href", `/@${handle}/reading-guide`);
+        await ready(page, `/@${emptyHandle}`);
+        await browserExpect(page.getByText("No published collections here yet.")).toBeVisible();
+        await browserExpect(page.locator(".collection-row")).toHaveCount(0);
+        await browserExpect(page.locator("body")).not.toContainText("Other private");
+        expect(
+          hubReads
+            .filter((read) => !read.path.includes("/collections/"))
+            .every((read) => !read.token && !read.path.includes("s=")),
+        ).toBe(true);
+      } finally {
+        await close();
+      }
+    }
+  }, 30000);
+
+  it("follows hub, pretty URL, section and external resource with keyboard, narrow widths and no JavaScript", async () => {
+    for (const js of [true, false]) {
+      const { page, close } = await freshPage(js);
+      try {
+        if (js)
+          await page.addInitScript(() => {
+            Object.defineProperty(navigator, "clipboard", {
+              value: { writeText: () => Promise.reject(new Error("Unavailable")) },
+            });
+          });
+        await ready(page, `/@${handle}`);
+        for (const width of [320, 390, 768, 1280]) {
+          await page.setViewportSize({ width, height: 900 });
+          expect(
+            await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+          ).toBe(true);
+        }
+        if (js) {
+          await page.screenshot({ path: "/tmp/w3-hub-desktop.png" });
+          await page.setViewportSize({ width: 390, height: 844 });
+          await page.screenshot({ path: "/tmp/w3-hub-phone.png" });
+        } else {
+          await page.getByRole("link", { name: "More collections", exact: true }).click();
+          await browserExpect(page.locator(".collection-row")).toHaveCount(4);
+          await ready(page, `/@${handle}`);
+        }
+        const collection = page.getByRole("link", { name: longTitle, exact: true });
+        await collection.focus();
+        await collection.press("Enter");
+        expect(new URL(page.url()).pathname).toBe(`/@${handle}/reading-guide`);
+        await browserExpect(page.locator("h1")).toHaveText(longTitle);
+        await page.reload();
+        await browserExpect(page.locator(".resource-row")).toHaveCount(20);
+        if (js) {
+          await page.getByRole("button", { name: "Copy link", exact: true }).click();
+          await browserExpect(
+            page.getByRole("textbox", { name: "Copy this link", exact: true }),
+          ).toHaveValue(`${origin}/c/${parentId}`);
+          await page.emulateMedia({ reducedMotion: "reduce" });
+          await page.evaluate(() => {
+            document.documentElement.style.fontSize = "200%";
+          });
+          expect(
+            await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+          ).toBe(true);
+          await page.evaluate(() => {
+            document.documentElement.style.fontSize = "";
+          });
+        }
+        await page.getByRole("link", { name: "More resources", exact: true }).click();
+        await browserExpect(page.locator(".resource-row")).toHaveCount(js ? 22 : 2);
+        await ready(page, `/@${handle}/reading-guide`);
+        await page.getByRole("link", { name: "Curated section title" }).click();
+        expect(new URL(page.url()).pathname).toBe(`/c/${sectionId}`);
+        await browserExpect(page.locator("h1")).toHaveText("A useful section");
+        await page.getByRole("link", { name: longTitle }).click();
+        await page.getByRole("link", { name: `@${handle}`, exact: true }).click();
+        await page.getByRole("link", { name: longTitle }).click();
+        await page.getByRole("link", { name: "Open the reference" }).click();
+        await browserExpect(page.locator("body")).toHaveText("External reference opened");
+        expect(captureReferer).toBeNull();
+      } finally {
+        await close();
+      }
+    }
+  }, 40000);
+
+  it("keeps hub continuation context through throttling, timeout, duplicates and invalid cursors", async () => {
+    const { page, close } = await freshPage();
+    try {
+      await ready(page, `/@${handle}`);
+      const pattern = `**/api/v1/hubs/${hubId}?**`;
+      await page.route(
+        pattern,
+        (route) =>
+          route.fulfill({
+            status: 429,
+            headers: { "Retry-After": "1" },
+            json: { error: { code: "too_many_requests", message: "PRIVATE RAW ERROR" } },
+          }),
+        { times: 1 },
+      );
+      await page.getByRole("link", { name: "More collections", exact: true }).click();
+      await browserExpect(page.getByRole("button", { name: /Try again in/ })).toBeDisabled();
+      await browserExpect(page.locator(".collection-row")).toHaveCount(20);
+      await page.route(
+        pattern,
+        async (route) => {
+          await new Promise((resolve) => setTimeout(resolve, 11000));
+          await route.abort().catch(() => {});
+        },
+        { times: 1 },
+      );
+      await page.getByRole("button", { name: "Try again", exact: true }).click();
+      await browserExpect(
+        page.getByText("Couldn't load more. Your current results are still here."),
+      ).toBeVisible({ timeout: 12000 });
+      await browserExpect(page.locator(".collection-row")).toHaveCount(20);
+      await page.route(
+        pattern,
+        async (route) => {
+          const response = await route.fetch();
+          const body = await response.json();
+          body.data.collections.push(body.data.collections[0]);
+          await route.fulfill({ response, json: body });
+        },
+        { times: 1 },
+      );
+      await page.getByRole("button", { name: "Try again", exact: true }).click();
+      await browserExpect(page.locator(".collection-row")).toHaveCount(24);
+      await browserExpect(page.locator('p[aria-live="polite"]')).toHaveText(
+        "4 more collections loaded.",
+      );
+      await ready(page, `/@${handle}`);
+      await page.route(
+        pattern,
+        (route) => route.fulfill({ status: 400, json: { error: { code: "invalid_cursor" } } }),
+        { times: 1 },
+      );
+      await page.getByRole("link", { name: "More collections", exact: true }).click();
+      await page.getByRole("link", { name: "Reload list", exact: true }).click();
+      expect(new URL(page.url()).pathname).toBe(`/@${handle}`);
+      await browserExpect(page.locator(".collection-row")).toHaveCount(20);
+      await ready(page, `/@${handle}?cursor=invalid`);
+      await browserExpect(page.locator("h1")).toHaveText("This list has changed.");
+      await page.getByRole("link", { name: "Reload collections", exact: true }).click();
+      expect(new URL(page.url()).pathname).toBe(`/@${handle}`);
+      await ready(page, `/@${handle}/reading-guide?cursor=invalid`);
+      await page.getByRole("link", { name: "Reload collection", exact: true }).click();
+      expect(new URL(page.url()).pathname).toBe(`/@${handle}/reading-guide`);
+    } finally {
+      await close();
+    }
+  }, 30000);
+
+  it("keeps copied ID links readable after handle and slug renames", async () => {
+    const { page, close } = await freshPage();
+    const renamed = "renamed-reader";
+    async function renameSlug(slug: string) {
+      const current = await request(app.getHttpServer())
+        .get(`/api/v1/collections/${parentId}`)
+        .auth(owner, { type: "bearer" })
+        .expect(200);
+      await request(app.getHttpServer())
+        .patch(`/api/v1/collections/${parentId}`)
+        .auth(owner, { type: "bearer" })
+        .send({ slug, version: current.body.data.version })
+        .expect(200);
+    }
+    try {
+      await ready(page, `/@${handle}/reading-guide`);
+      await request(app.getHttpServer())
+        .patch("/api/v1/profile")
+        .auth(owner, { type: "bearer" })
+        .send({ handle: renamed })
+        .expect(200);
+      await renameSlug("renamed-guide");
+      await ready(page, `/@${renamed}/renamed-guide`);
+      await browserExpect(page.locator("h1")).toHaveText(longTitle);
+      await ready(page, `/c/${parentId}`);
+      await browserExpect(page.locator("h1")).toHaveText(longTitle);
+      await browserExpect(
+        page.getByRole("link", { name: `@${renamed}`, exact: true }),
+      ).toBeVisible();
+      for (const path of [`/@${handle}/reading-guide`, `/@${renamed}/reading-guide`]) {
+        await ready(page, path);
+        await browserExpect(page.locator("h1")).toHaveText("This collection isn't available.");
+      }
+    } finally {
+      await request(app.getHttpServer())
+        .patch("/api/v1/profile")
+        .auth(owner, { type: "bearer" })
+        .send({ handle })
+        .expect(200);
+      await renameSlug("reading-guide");
+      await close();
+    }
+  }, 20000);
+
+  it("fails safely for invalid routes and hub lookup failures, retaining authorized ID reading", async () => {
+    const { page, close } = await freshPage();
+    try {
+      for (const path of ["/@missing-reader", "/@ab", "/@bad%2Fhandle"]) {
+        await ready(page, path);
+        await browserExpect(page.locator("h1")).toHaveText("This hub isn't available.");
+      }
+      for (const path of [
+        `/@${handle}/private-reading`,
+        `/@${handle}/missing`,
+        `/@${emptyHandle}/reading-guide`,
+        `/@${handle}/bad%2Fslug`,
+      ]) {
+        await ready(page, path);
+        await browserExpect(page.locator("h1")).toHaveText("This collection isn't available.");
+        await browserExpect(page.locator("body")).not.toContainText("Private title");
+      }
+      for (const path of [
+        "/status",
+        "/unrelated/reading-guide",
+        `/@${handle}/reading-guide/useful-section`,
+      ]) {
+        await ready(page, path);
+        await browserExpect(page.locator("h1")).toHaveText("This page isn't available.");
+      }
+      hubMode = "failure";
+      await ready(page, `/@${handle}/reading-guide`);
+      await browserExpect(page.locator("h1")).toHaveText("We couldn't load this page.");
+      await browserExpect(page.locator("body")).not.toContainText(longTitle);
+      await browserExpect(page.locator("body")).not.toContainText("PRIVATE HUB DETAIL");
+      await ready(page, `/c/${parentId}`);
+      await browserExpect(page.locator("h1")).toHaveText(longTitle);
+      await browserExpect(page.getByRole("link", { name: `@${handle}`, exact: true })).toHaveCount(
+        0,
+      );
+      hubMode = "timeout";
+      await ready(page, `/@${handle}`);
+      await browserExpect(page.locator("h1")).toHaveText("We couldn't load this page.");
+      hubMode = "normal";
+      await page.getByRole("button", { name: "Try again", exact: true }).click();
+      await browserExpect(page.locator("h1")).toHaveText(`@${handle}`);
+    } finally {
+      hubMode = "normal";
+      await close();
+    }
+  }, 25000);
+
+  it("revalidates pretty history and scopes shared access away from public hub discovery", async () => {
+    const { page, close } = await freshPage();
+    try {
+      await page.addInitScript(() => {
+        Object.defineProperty(navigator, "clipboard", {
+          value: { writeText: () => Promise.reject(new Error("Unavailable")) },
+        });
+      });
+      await ready(page, `/@${handle}/reading-guide`);
+      await page.getByRole("link", { name: `@${handle}`, exact: true }).click();
+      await change(parentId, "unpublish");
+      await page.goBack();
+      await browserExpect(page.locator("h1")).toHaveText("This collection isn't available.");
+      await ready(page, `/@${handle}/reading-guide?s=${linkToken}`);
+      await browserExpect(page.locator("h1")).toHaveText(longTitle);
+      await page.getByRole("button", { name: "Copy link", exact: true }).click();
+      await browserExpect(
+        page.getByRole("textbox", { name: "Copy this link", exact: true }),
+      ).toHaveValue(`${origin}/c/${parentId}`);
+      await page.getByRole("button", { name: "Copy shared access link", exact: true }).click();
+      await browserExpect(
+        page.getByRole("textbox", { name: "Copy this link", exact: true }),
+      ).toHaveValue(`${origin}/c/${parentId}?s=${linkToken}`);
+      await browserExpect(
+        page.getByRole("link", { name: `@${handle}`, exact: true }),
+      ).toHaveAttribute("href", `/@${handle}`);
+      expect(
+        hubReads
+          .filter((read) => !read.path.includes("/collections/"))
+          .every((read) => !read.token && !read.path.includes("s=")),
+      ).toBe(true);
+      await page.getByRole("link", { name: "Curated section title" }).click();
+      expect(new URL(page.url()).searchParams.get("s")).toBe(linkToken);
+      await browserExpect(page.locator("h1")).toHaveText("A useful section");
+      const previousToken = linkToken;
+      const rotated = await request(app.getHttpServer())
+        .put(`/api/v1/collections/${parentId}/link-sharing`)
+        .auth(owner, { type: "bearer" })
+        .send({ enabled: true, rotate: true })
+        .expect(200);
+      linkToken = rotated.body.data.token;
+      await ready(page, `/@${handle}/reading-guide?s=${previousToken}`);
+      await browserExpect(page.locator("h1")).toHaveText("This collection isn't available.");
+      await ready(page, `/@${handle}`);
+      await browserExpect(page.getByRole("link", { name: longTitle, exact: true })).toHaveCount(0);
+    } finally {
+      await change(parentId, "publish");
       await close();
     }
   }, 20000);
@@ -640,9 +1018,13 @@ describe("explore to resource: production browser journey", () => {
       } finally {
         await other.close();
       }
+      await ready(page, `/@${handle}/private-reading`);
+      await browserExpect(page.locator("h1")).toHaveText("Private title should never leak");
       await prisma.session.updateMany({ data: { expiresAt: new Date(0) } });
       await page.getByRole("link", { name: "← Explore" }).click();
       await page.goBack();
+      await browserExpect(page.locator("h1")).toHaveText("This collection isn't available.");
+      await ready(page, `/c/${privateId}`);
       await browserExpect(page.locator("h1")).toHaveText("This collection isn't available.");
     } finally {
       await close();
