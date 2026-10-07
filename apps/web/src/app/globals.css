@@ -1239,26 +1239,49 @@ html[data-revalidating="true"] .session-nav {
   width: min(28rem, calc(100vw - 2rem));
   pointer-events: none;
 }
+/* Toasts read as part of the page: its surface, border and radius, with a
+   small coloured mark for the tone instead of an inverted pill. */
 .toast {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.625rem 1rem;
-  border-radius: 999px;
-  background: var(--color-ink);
-  color: var(--color-canvas);
+  display: flex;
+  align-items: flex-start;
+  gap: 0.625rem;
+  width: fit-content;
+  max-width: 100%;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  color: var(--color-ink);
   font-size: 0.9375rem;
-  font-weight: 500;
+  line-height: 1.45;
   box-shadow: var(--elevation);
   pointer-events: auto;
   animation:
     toast-in 200ms var(--ease-feedback),
     toast-out 300ms ease-in 5s forwards;
 }
+.toast::before {
+  flex-shrink: 0;
+  display: inline-grid;
+  place-items: center;
+  width: 1.125rem;
+  height: 1.125rem;
+  margin-top: 0.1rem;
+  border-radius: 999px;
+  font-size: 0.6875rem;
+  font-weight: 700;
+}
 .toast.success::before {
   content: "✓" / "";
-  font-weight: 700;
-  color: var(--color-success-soft);
+  background: var(--color-success);
+  color: var(--color-canvas);
+}
+.toast.info::before {
+  content: "" / "";
+  width: 0.5rem;
+  height: 0.5rem;
+  margin: 0.45rem 0.3125rem 0;
+  background: var(--color-primary);
 }
 @keyframes toast-in {
   from {
@@ -2748,4 +2771,42 @@ main .ops-filters select {
 .resend-row .text-button {
   min-height: auto;
   padding: 0;
+}
+
+/* Email verification (sign in, first link, resume, confirm, invitation):
+   short paragraphs with clear space between them; the address is bold text. */
+.verify > h1 {
+  margin-bottom: 0.75rem;
+}
+.verify-reason {
+  margin: 0 0 0.75rem;
+  font-size: 1.0625rem;
+}
+.verify .action-form {
+  gap: 0.5rem;
+  margin-block: 0;
+}
+.verify-detail {
+  margin: 0;
+  color: var(--color-muted);
+}
+.verify .action-form > label {
+  margin-top: 0.5rem;
+}
+.verify-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+.verify-footer {
+  display: grid;
+  gap: 0.75rem;
+  justify-items: start;
+  margin-top: 1.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--color-border);
+}
+.verify .resend-row {
+  margin-top: 1rem;
 }

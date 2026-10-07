@@ -1655,7 +1655,7 @@ describe("service operations: production browser journey", () => {
       await browserExpect(page.locator(".form-notice")).toContainText("incorrect or expired");
       await waitForResend(page);
       await page.getByRole("button", { name: "Send a new code", exact: true }).click();
-      await browserExpect(page.locator(".toast")).toContainText("requested an email");
+      await browserExpect(page.locator(".toast")).toContainText("sent a new code");
       await page.getByLabel("Eight-digit code").fill(await capturedCode(op.email));
       await page.getByRole("button", { name: "Verify and continue" }).click();
       await browserExpect(page.locator("h1")).toHaveText("Good links deservea place to belong.");
@@ -1676,6 +1676,7 @@ describe("service operations: production browser journey", () => {
       await browserExpect(page.locator("h1")).toHaveText("Confirm it's you");
       await browserExpect(page.locator("main")).toContainText("sign this account out everywhere");
       await browserExpect(page.getByLabel("Email address")).toHaveCount(0);
+      await page.screenshot({ path: "/tmp/verify-confirm.png" });
       // Cancel sends nothing and returns to where the action was started.
       const mailsBefore = await prisma.emailOutbox.count();
       await page.getByRole("button", { name: "Cancel", exact: true }).click();
@@ -1687,6 +1688,7 @@ describe("service operations: production browser journey", () => {
       // Having chosen to send it, the code screen offers a new code, not a cancel.
       await browserExpect(page.getByRole("button", { name: "Cancel", exact: true })).toHaveCount(0);
       await browserExpect(page.locator(".resend-row")).toContainText("Didn't receive the code?");
+      await page.screenshot({ path: "/tmp/verify-code.png" });
       await browserExpect(page.locator("h1")).toHaveText("Confirm it's you");
       // A pasted code with a space ("3368 6575") is accepted.
       const confirmCode = await capturedCode(op.email);
@@ -1836,7 +1838,7 @@ describe("email invitation onboarding", () => {
   async function verifyInvitationCode(page: Page, email: string) {
     await browserExpect(page.locator("h1")).toHaveText("Check your email");
     await page.getByLabel("Eight-digit code").fill(await capturedCode(email));
-    await page.getByRole("button", { name: "Verify and continue" }).click();
+    await page.getByRole("button", { name: "Verify and activate" }).click();
     await browserExpect(page.locator("h1")).toHaveText("Accounts");
   }
   it("starts from email, creates accounts only on acceptance, and requires fresh OTP for matching sessions with or without JavaScript", async () => {
@@ -2503,14 +2505,14 @@ it("saves a first private link through email, preserves retries, then adds and r
       await browserExpect(page.locator("h1")).toHaveText("Check your email");
       expect(await prisma.user.findUnique({ where: { email } })).toBeNull();
       await page.getByLabel("Eight-digit code").fill("00000000");
-      await page.getByRole("button", { name: "Verify and continue" }).click();
+      await page.getByRole("button", { name: "Verify and save" }).click();
       await browserExpect(page.locator(".form-notice")).toContainText("incorrect or expired");
       await waitForResend(page);
       await page.getByRole("button", { name: "Send a new code", exact: true }).click();
-      await browserExpect(page.locator(".toast")).toContainText("requested an email");
+      await browserExpect(page.locator(".toast")).toContainText("sent a new code");
       await page.getByLabel("Eight-digit code").fill(await capturedCode(email));
       failCapture = js;
-      await page.getByRole("button", { name: "Verify and continue" }).click();
+      await page.getByRole("button", { name: "Verify and save" }).click();
       if (js) {
         await browserExpect(page.locator(".form-notice")).toContainText(
           "couldn't confirm the save",
@@ -2627,7 +2629,7 @@ it("saves a first private link through email, preserves retries, then adds and r
         await page.getByLabel("Email address").fill(email);
         await page.getByRole("button", { name: "Send code", exact: true }).click();
         await page.getByLabel("Eight-digit code").fill(await capturedCode(email));
-        await page.getByRole("button", { name: "Verify and continue" }).click();
+        await page.getByRole("button", { name: "Verify and save" }).click();
       }
       await browserExpect(page.locator(".resource-row")).toHaveCount(2);
       for (const width of [320, 390, 768, 1280]) {
@@ -2681,7 +2683,7 @@ it("saves a first private link through email, preserves retries, then adds and r
         await page.getByLabel("Email address").fill(email);
         await page.getByRole("button", { name: "Send code", exact: true }).click();
         await page.getByLabel("Eight-digit code").fill(await capturedCode(email));
-        await page.getByRole("button", { name: "Verify and continue" }).click();
+        await page.getByRole("button", { name: "Verify and save" }).click();
         await browserExpect(page.locator(".form-notice")).toContainText("Choose where to save");
         await browserExpect(page.getByLabel("Link URL", { exact: true })).toHaveValue(
           "https://fixture-links.dev/returning",
@@ -2904,11 +2906,13 @@ describe("collection discussion", () => {
           .getAttribute("href");
         const destination = new URL(signInHref ?? "", origin).searchParams.get("returnTo");
         expect(destination).toBe(`/c/${id}?compose=comment#comment-composer`);
-        await browserSignIn(
-          page,
-          `discussant-${crypto.randomUUID()}@example.com`,
-          destination ?? "",
+        // The sign-in screen says why it's asking.
+        await ready(page, signInHref ?? "/sign-in");
+        await browserExpect(page.locator(".verify-reason")).toHaveText(
+          "Sign in to join the discussion.",
         );
+        const discussant = `discussant-${crypto.randomUUID()}@example.com`;
+        await browserSignIn(page, discussant, destination ?? "");
         await browserExpect(page.locator("h1")).toHaveText("Discussion guide");
 
         await browserExpect(page.getByLabel("Add to the discussion")).toBeVisible();
@@ -2932,6 +2936,46 @@ describe("collection discussion", () => {
         await browserExpect(discussion.locator(".comment-replies")).toContainText(
           "Start with the first section.",
         );
+
+        // A session that ends mid-post: sign in again and the comment is posted.
+        await prisma.session.updateMany({
+          where: { user: { email: discussant } },
+          data: { expiresAt: new Date(0) },
+        });
+        if (!(await page.getByLabel("Add to the discussion").isVisible()))
+          await discussion.locator(".comment-compose > summary").click();
+        await page.getByLabel("Add to the discussion").fill(`After a break (${js})`);
+        await page.getByRole("button", { name: "Post", exact: true }).click();
+        await browserExpect(page.locator("h1")).toHaveText("Sign in to continue");
+        await browserExpect(page.locator(".verify-reason")).toContainText("post your comment");
+        await page.getByLabel("Email address").fill(discussant);
+        await page.getByRole("button", { name: "Send code", exact: true }).click();
+        await page.getByLabel("Eight-digit code").fill(await capturedCode(discussant));
+        await page.getByRole("button", { name: "Verify and continue" }).click();
+        await browserExpect(page.locator("h1")).toHaveText("Discussion guide");
+        await browserExpect(page.locator(".toast")).toContainText("Comment posted");
+        await browserExpect(discussion).toContainText(`After a break (${js})`);
+
+        // A different person signing in on this browser never runs it.
+        await prisma.session.updateMany({
+          where: { user: { email: discussant } },
+          data: { expiresAt: new Date(0) },
+        });
+        if (!(await page.getByLabel("Add to the discussion").isVisible()))
+          await discussion.locator(".comment-compose > summary").click();
+        await page.getByLabel("Add to the discussion").fill(`Not theirs (${js})`);
+        await page.getByRole("button", { name: "Post", exact: true }).click();
+        await browserExpect(page.locator("h1")).toHaveText("Sign in to continue");
+        const stranger = `stranger-${crypto.randomUUID()}@example.com`;
+        await page.getByLabel("Email address").fill(stranger);
+        await page.getByRole("button", { name: "Send code", exact: true }).click();
+        await page.getByLabel("Eight-digit code").fill(await capturedCode(stranger));
+        await page.getByRole("button", { name: "Verify and continue" }).click();
+        await browserExpect(page.locator("h1")).toHaveText("Discussion guide");
+        await browserExpect(discussion).not.toContainText(`Not theirs (${js})`);
+        expect(
+          await prisma.collectionComment.count({ where: { body: `Not theirs (${js})` } }),
+        ).toBe(0);
 
         await page.setViewportSize({ width: 1280, height: 700 });
         const composer = page.getByLabel("Add to the discussion");

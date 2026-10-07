@@ -127,11 +127,13 @@ The [service-operator contract](service-operations.md) is implemented with
 reusable email-code sign-in/session support. `/ops` provides account lookup,
 account/session actions, public-content holds and audit. Navigation appears
 only for currently granted admins/operators. Admins manage invitations and
-operator access at `/ops/operators`. Recipients open the emailed link before sign-in. New recipients enter their name
+operator access at `/ops/team`. Recipients open the emailed link before sign-in. New recipients enter their name
 and accept; every recipient then verifies a fresh emailed OTP, including matching
 sessions. Existing names are preserved. `/invitations/:id` is status only. The role
 activates after verification and `/ops` opens; startup creates only an invitation. Native POST forms work without JavaScript;
-recent-authentication expiry returns to sign-in without replaying an action.
+when recent authentication has expired, the operator confirms it's them with a
+fresh code and the waiting action then runs once (see the verification flow in
+`web-interface-system.md`).
 
 ## Later W3 journeys: specified, not first-slice navigation
 

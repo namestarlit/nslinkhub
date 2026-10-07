@@ -28,14 +28,18 @@ import {
 import { type ApiPath, safeDocumentReturn, safeReturn, sessionCookie } from "../../../lib/http";
 import { sealSearch } from "../../../lib/ops-search";
 import {
+  accountFingerprint,
+  lastAccountCookie,
   type PendingAction,
   pendingActionCookie,
+  readLastAccount,
   readPendingAction,
 } from "../../../lib/pending-action";
 import { readSession } from "../../../lib/session";
 import { resendTiming } from "../../../lib/sign-in-flow";
 import { appearanceCookie } from "../../../lib/theme";
 import { captureUrl, isUuid, parseTags } from "../../../lib/validation";
+import type { VerificationPurpose } from "../../../lib/verification";
 
 export async function POST(request: Request, { params }: { params: Promise<{ action: string }> }) {
   const { action } = await params;
@@ -151,7 +155,16 @@ export async function POST(request: Request, { params }: { params: Promise<{ act
         result.data?.id && action !== "comment-delete" ? `comment-${result.data.id}` : "comments",
       );
     if (result.status === 401)
-      return redirectResponse(`/sign-in?returnTo=${encodeURIComponent(returnTo)}`);
+      return resumeAfterSignIn({
+        path: path as ApiPath,
+        method,
+        body: payload as Record<string, unknown>,
+        target: returnTo,
+        anchor: "comments",
+        success,
+        label: commentLabels[action] ?? "update the discussion",
+        issued: Date.now(),
+      });
     return back(
       result.code === "comments_disabled"
         ? "comments-off"
@@ -219,7 +232,15 @@ export async function POST(request: Request, { params }: { params: Promise<{ act
         headers: { "Cache-Control": "private, no-store" },
       });
     if (!result.ok && result.status === 401)
-      return redirectResponse("/sign-in?returnTo=%2Fsettings&notice=signin");
+      return resumeAfterSignIn({
+        path: "/api/v1/profile",
+        method: "PATCH",
+        body: { displayName, hubName, handle, hubDescription, showNameOnHub },
+        target: "/settings",
+        success: "profile-saved",
+        label: "save your profile",
+        issued: Date.now(),
+      });
     return redirectResponse(
       `/settings?notice=${result.ok ? "profile-saved" : result.code === "handle_unavailable" ? "handle-unavailable" : result.code === "handle_reserved" || result.code === "handle_invalid" ? "handle-invalid" : result.status === 429 ? "limited" : "unavailable"}`,
     );
@@ -326,7 +347,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ act
     const flow = {
       email: session.email,
       returnTo: pending.target,
-      confirm: true,
+      purpose: "confirm" as const,
       ...resendTiming(null, result, webServerConfig().codeResendSeconds),
     };
     return redirectResponse(
@@ -346,16 +367,29 @@ export async function POST(request: Request, { params }: { params: Promise<{ act
       previous?.invitationToken ? { token: previous.invitationToken } : { email },
       true,
     );
+    // The purpose comes from the situation, not the form: a waiting first link,
+    // an interrupted action, or plain sign-in (worded by where it leads).
+    const purpose: VerificationPurpose =
+      previous?.purpose ??
+      (previous?.invitationToken
+        ? "invitation"
+        : /^\/capture\/[a-f0-9-]{36}$/.test(returnTo)
+          ? "first-link"
+          : (await readPendingAction())?.target === returnTo
+            ? "resume"
+            : form.get("purpose") === "continue"
+              ? "continue"
+              : "sign-in");
     // Cooldowns do not change the flow's actual issuance or extend its lifetime.
     const flow = {
       email,
       returnTo,
+      purpose,
       ...resendTiming(previous, result, webServerConfig().codeResendSeconds),
       ...(previous?.invitationToken ? { invitationToken: previous.invitationToken } : {}),
-      ...(previous?.confirm ? { confirm: true } : {}),
     };
     return redirectResponse(
-      `/sign-in/code?notice=${result.ok ? "sent" : result.status === 429 ? "limited" : "unavailable"}${!result.ok && result.retryAfter ? `&wait=${Math.min(result.retryAfter, 600)}` : ""}`,
+      `/sign-in/code?notice=${result.ok ? (previous ? "resent" : "sent") : result.status === 429 ? "limited" : "unavailable"}${!result.ok && result.retryAfter ? `&wait=${Math.min(result.retryAfter, 600)}` : ""}`,
       [flowCookie(sealFlow(flow), returnTo.startsWith("/capture/") ? 1800 : 600)],
     );
   }
@@ -377,10 +411,20 @@ export async function POST(request: Request, { params }: { params: Promise<{ act
       );
     const verified = (result.setCookies ?? []).map((cookie) => cookie.split(";")[0]).join("; ");
     // Confirmed: run the action that asked for it, with the new session.
-    if (flow.confirm) {
+    if (flow.purpose === "confirm" || flow.purpose === "resume") {
       const pending = await readPendingAction();
-      const done = [...(result.setCookies ?? []), flowCookie("", 0), pendingActionCookie(null)];
-      if (!pending || pending.target !== flow.returnTo)
+      const done = [
+        ...(result.setCookies ?? []),
+        flowCookie("", 0),
+        pendingActionCookie(null),
+        lastAccountCookie(flow.email),
+      ];
+      // A waiting action runs only for the person it belongs to.
+      if (
+        !pending ||
+        pending.target !== flow.returnTo ||
+        (flow.purpose === "resume" && pending.owner !== accountFingerprint(flow.email))
+      )
         return redirectResponse(flow.returnTo, done);
       const headers = new Headers(request.headers);
       headers.set("cookie", verified);
@@ -388,10 +432,21 @@ export async function POST(request: Request, { params }: { params: Promise<{ act
         new Request(request.url, { headers }),
         pending.path,
         pending.body,
+        false,
+        pending.method ?? "POST",
       );
       const join = pending.target.includes("?") ? "&" : "?";
+      const notice = replay.ok
+        ? (pending.success ?? "done")
+        : replay.status === 409
+          ? "conflict"
+          : replay.status === 403
+            ? "forbidden"
+            : replay.status === 429
+              ? "limited"
+              : "unavailable";
       return redirectResponse(
-        `${pending.target}${join}notice=${replay.ok ? "done" : replay.status === 409 ? "conflict" : replay.status === 403 ? "forbidden" : replay.status === 429 ? "limited" : "unavailable"}`,
+        `${pending.target}${join}notice=${notice}${pending.anchor ? `#${pending.anchor}` : ""}`,
         done,
       );
     }
@@ -404,19 +459,25 @@ export async function POST(request: Request, { params }: { params: Promise<{ act
         return saveDraft(new Request(request.url, { headers }), draft, [
           ...(result.setCookies ?? []),
           flowCookie("", 0),
+          lastAccountCookie(flow.email),
         ]);
       }
     }
     return redirectResponse(flow.returnTo, [
       ...(result.setCookies ?? []),
       flowCookie("", 0),
+      lastAccountCookie(flow.email),
       ...(flow.invitationToken ? [invitationCookie("", 0)] : []),
     ]);
   }
   if (action === "sign-out") {
     const result = await formPost(request, "/api/v1/auth/sign-out", {}, true);
     return result.ok
-      ? redirectResponse("/?notice=signed-out", result.setCookies)
+      ? redirectResponse("/?notice=signed-out", [
+          ...(result.setCookies ?? []),
+          lastAccountCookie(null),
+          pendingActionCookie(null),
+        ])
       : redirectResponse("/sign-in?notice=signout-failed");
   }
   if (action === "ops-search") {
@@ -459,24 +520,19 @@ export async function POST(request: Request, { params }: { params: Promise<{ act
             version: Number(form.get("version")),
             ...(verb === "revoke" ? {} : { action: verb }),
           };
+    const teamLabel =
+      action === "invitation-create"
+        ? "invite this operator"
+        : verb === "resend"
+          ? "resend this invitation"
+          : verb === "cancel"
+            ? "revoke this invitation"
+            : "remove this operator";
     const result = await formPost(request, path, body);
     if (!result.ok && result.code === "recent_auth_required")
-      return confirmFirst({
-        path,
-        body,
-        target,
-        label:
-          action === "invitation-create"
-            ? "invite this operator"
-            : verb === "resend"
-              ? "resend this invitation"
-              : verb === "cancel"
-                ? "revoke this invitation"
-                : "remove this operator",
-        issued: Date.now(),
-      });
+      return confirmFirst({ path, body, target, label: teamLabel, issued: Date.now() });
     if (!result.ok && result.status === 401)
-      return redirectResponse(`/sign-in?returnTo=${encodeURIComponent(target)}&notice=reauth`);
+      return resumeAfterSignIn({ path, body, target, label: teamLabel, issued: Date.now() });
     return redirectResponse(
       `${target}${target.includes("?") ? "&" : "?"}notice=${result.ok ? "done" : result.status === 409 ? "conflict" : result.status === 403 ? "forbidden" : result.status === 400 ? "invalid" : result.status === 429 ? "limited" : "unavailable"}`,
     );
@@ -510,7 +566,13 @@ export async function POST(request: Request, { params }: { params: Promise<{ act
         issued: Date.now(),
       });
     if (!result.ok && result.status === 401)
-      return redirectResponse(`/sign-in?returnTo=${encodeURIComponent(target)}&notice=reauth`);
+      return resumeAfterSignIn({
+        path: "/api/v1/operations/commands",
+        body: command,
+        target,
+        label: operationLabels[command.action as OperationCommand["action"]],
+        issued: Date.now(),
+      });
     return redirectResponse(
       `${target}${target.includes("?") ? "&" : "?"}notice=${result.ok ? "done" : result.status === 409 ? "conflict" : result.status === 403 ? "forbidden" : result.status === 429 ? "limited" : "unavailable"}`,
     );
@@ -537,6 +599,23 @@ function opsReturn(value: string | null, fallback: string) {
 function confirmFirst(action: PendingAction) {
   return redirectResponse("/confirm", [pendingActionCookie(action)]);
 }
+// A session that ended mid-action: sign in, then the action continues — but
+// only for the same person (see readLastAccount).
+async function resumeAfterSignIn(action: PendingAction) {
+  const owner = await readLastAccount();
+  return redirectResponse(`/sign-in?returnTo=${encodeURIComponent(action.target)}`, [
+    owner ? pendingActionCookie({ ...action, owner }) : pendingActionCookie(null),
+  ]);
+}
+const commentLabels: Record<string, string> = {
+  "comment-post": "post your comment",
+  "comment-edit": "save your comment",
+  "comment-delete": "delete your comment",
+  "comment-hide": "hide that comment",
+  "comment-show": "show that comment",
+  "comment-accept": "mark that answer",
+  "comment-unaccept": "unmark that answer",
+};
 const operationLabels: Record<OperationCommand["action"], string> = {
   "account.suspend": "suspend this account",
   "account.reactivate": "reactivate this account",

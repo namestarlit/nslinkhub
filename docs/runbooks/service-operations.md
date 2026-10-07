@@ -30,7 +30,7 @@ replacement email for a still-pending tokenless initial-admin invitation.
 
 ## Invite and manage operators
 
-Only admins can open `/ops/operators` to invite, resend or cancel operator
+Only admins can open `/ops/team` to invite, resend or cancel operator
 invitations and inspect queued/sent/failed/suppressed delivery state. Resending
 extends expiry by seven days and invalidates the old token and form version. Multiple
 operators are supported. There is no command to directly grant operator access.

@@ -9,6 +9,15 @@ summary of what changed after completed work has been promoted out of `ref/`.
 
 ## Unreleased
 
+- One email-verification flow for every situation (sign in, first link,
+  signing in to do something, a session that ended mid-action, confirming a
+  sensitive action, invitations): the same two screens, worded for the
+  purpose ("Sign in to join the discussion.", "Your session ended before we
+  could post your comment."). Actions interrupted by an ended session now
+  continue after signing in instead of being lost, and only for the person
+  they belong to. Toasts use the page's own
+  surface and border instead of an inverted pill; a resent code says so, a
+  first send doesn't repeat what the page already says.
 - Sensitive operator actions that need a fresh code now ask "Confirm it's you"
   (names the action and the signed-in email; Send code or Cancel, nothing is
   emailed until chosen), then finish the action by itself once the code is

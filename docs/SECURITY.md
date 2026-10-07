@@ -202,6 +202,23 @@ never external telemetry payloads.
   server-generated and never echo caller input.
 
 
+## Interrupted actions and step-up verification
+
+Email-code verification is one flow with a purpose (sign in, first link,
+continue, resume, confirm, invitation; `apps/web/src/lib/verification.ts`).
+An action interrupted by verification — a sensitive operator action needing a
+fresh code (`recent_auth_required`, "Confirm it's you") or any form action whose
+session ended — is kept in a 15-minute HttpOnly AES-GCM cookie and replayed once
+after the code, with the new session. Only same-origin form posts can create it
+(`formData()` rejects other origins and cross-site requests), it never targets
+`/api/v1/auth/*`, and operator replays keep their `operationId`, so they cannot
+double-apply. A waiting action belongs to someone: every sign-in leaves a
+keyed one-way fingerprint of the email in an HttpOnly `last_account` cookie, an
+interrupted action records it, and the replay runs only if the same email signs
+in again. A different person signing in on that browser gets an ordinary
+sign-in and the action is discarded; with no known owner, nothing is kept.
+Signing out clears both cookies.
+
 ## Public link addresses
 
 Saved links are for sharing, so a link's host must be reachable on the public

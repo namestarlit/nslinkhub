@@ -100,7 +100,9 @@ send another code nor restore a revoked role. Token consent is audited with an
 
 Admins see delivery states without message contents or credentials. Routine admin
 and operator mutations still require cookie verification within five minutes.
-Reauthentication returns to review without replaying actions. Grants are checked
+When verification is too old, the operator confirms it's them (Send code or
+Cancel; Cancel returns to the page), and after the code the waiting action runs
+once with its original operation id, so it cannot double-apply. Grants are checked
 on every operation; neither is embedded as durable session authority. Invitation
 metadata can be pruned 30 days after expiry independently of grants and bootstrap.
 

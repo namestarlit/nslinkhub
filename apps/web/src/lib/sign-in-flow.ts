@@ -1,10 +1,11 @@
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:crypto";
 import { safeReturn } from "./http";
+import { type VerificationPurpose, verificationPurposes } from "./verification";
 
 export interface SignInFlow {
   invitationToken?: string;
-  /** Confirming it's an already signed-in person before a sensitive action. */
-  confirm?: boolean;
+  /** Why the code was sent: decides the wording and what runs afterwards. */
+  purpose?: VerificationPurpose;
   email: string;
   returnTo: string;
   issued: number;
@@ -40,6 +41,7 @@ export function openSignInFlow(
       !Number.isFinite(flow.issued) ||
       flow.issued > now ||
       (flow.retryAt !== undefined && !Number.isFinite(flow.retryAt)) ||
+      (flow.purpose !== undefined && !verificationPurposes.includes(flow.purpose)) ||
       now - flow.issued >
         (!flow.invitationToken && /^\/capture\/[a-f0-9-]{36}$/.test(flow.returnTo)
           ? 1800000

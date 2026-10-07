@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
-import { FormNotice } from "../../components/form-notice";
 import { NativeForm } from "../../components/native-form";
+import { VerifyStart } from "../../components/verification";
 import { readDraft } from "../../lib/capture-server";
 import { queryValue, safeReturn } from "../../lib/http";
+import { readPendingAction } from "../../lib/pending-action";
+import { type VerificationPurpose, verificationCopy } from "../../lib/verification";
 export const metadata: Metadata = { title: "Sign in" };
 export const dynamic = "force-dynamic";
 export default async function Page({
@@ -13,34 +15,40 @@ export default async function Page({
   const query = await searchParams;
   const returnTo = safeReturn(queryValue(query.returnTo) ?? "/hub");
   const draftId = /^\/capture\/([a-f0-9-]{36})$/.exec(returnTo)?.[1];
-  const draft = draftId ? await readDraft(draftId) : null;
+  const [draft, pending] = await Promise.all([
+    draftId ? readDraft(draftId) : null,
+    readPendingAction(),
+  ]);
+  // The situation decides the words: a waiting first link, an action the
+  // session interrupted, signing in to reach something, or plain sign-in.
+  const purpose: VerificationPurpose = draft
+    ? "first-link"
+    : pending?.target === returnTo
+      ? "resume"
+      : queryValue(query.returnTo)
+        ? "continue"
+        : "sign-in";
   return (
-    <section className="reader account-flow">
-      <h1>{draft ? "Verify your email to save this link" : "Sign in"}</h1>
-      <p>
-        Enter your email. We'll send an eight-digit code to sign in or create your personal hub.
-      </p>
-      <FormNotice code={queryValue(query.notice)} />
-      <NativeForm action="/forms/code-send">
-        <input type="hidden" name="returnTo" value={returnTo} />
-        <label htmlFor="email">Email address</label>
-        <input id="email" name="email" type="email" autoComplete="email" required maxLength={254} />
-        <button className="button primary" type="submit">
-          Send code
-        </button>
-      </NativeForm>
-      <p>
-        <a href={draft ? `/capture/${draft.id}` : "/discover"}>
-          {draft ? "Back to your link" : "Back to Discover"}
-        </a>
-      </p>
-      {query.notice === "signout-failed" && (
-        <NativeForm action="/forms/sign-out">
-          <button type="submit" className="button">
-            Try signing out again
-          </button>
-        </NativeForm>
-      )}
-    </section>
+    <VerifyStart
+      copy={verificationCopy(purpose, { returnTo, action: pending?.label })}
+      purpose={purpose}
+      sendAction="/forms/code-send"
+      returnTo={returnTo}
+      notice={queryValue(query.notice)}
+      footer={
+        <>
+          <a href={draft ? `/capture/${draft.id}` : "/discover"}>
+            {draft ? "Back to your link" : "Back to Discover"}
+          </a>
+          {query.notice === "signout-failed" && (
+            <NativeForm action="/forms/sign-out">
+              <button type="submit" className="button">
+                Try signing out again
+              </button>
+            </NativeForm>
+          )}
+        </>
+      }
+    />
   );
 }

@@ -20,13 +20,13 @@ const messages: Record<string, string> = {
   "wrong-account": "Sign out before accepting an invitation for another account.",
   declined: "You declined the invitation. No account or role was created.",
   sent: "We requested an email with your code. Check your inbox and spam folder.",
+  resent: "We sent a new code. Check your inbox and spam folder.",
   invalid: "Check your details. The code may be incorrect or expired.",
   expired: "This email verification expired. Request a new code.",
   limited: "Too many attempts. Wait before trying again.",
   unavailable:
     "We couldn't confirm the result. Reload to check the current state before trying again.",
   "signout-failed": "We couldn't confirm sign-out. Try again.",
-  reauth: "Continue with email to verify again. Then review and submit your action again.",
   "no-match": "No matching account was found.",
   done: "The action is complete.",
   conflict: "This changed since you opened it. Review the latest state before submitting again.",
@@ -51,6 +51,7 @@ const toasts = new Set([
   "profile-saved",
   "done",
   "sent",
+  "resent",
   "signed-out",
   "cleared",
   "comment-posted",
@@ -58,7 +59,7 @@ const toasts = new Set([
   "comment-deleted",
   "comment-answer",
 ]);
-const info = new Set(["invitation-accepted", "declined", "reauth", "signin", "comments-off"]);
+const info = new Set(["invitation-accepted", "declined", "signin", "comments-off"]);
 const errors = new Set([
   "link-invalid",
   "link-not-public",
@@ -79,7 +80,10 @@ export function FormNotice({ code, wait }: { code?: string; wait?: string }) {
   if (!code || !message) return null;
   const seconds = Math.min(600, Math.max(0, Number(wait) || 0));
   const text = `${message}${seconds > 0 ? ` Wait at least ${seconds} seconds.` : ""}`;
-  if (toasts.has(code)) return <Toast message={text} tone={code === "sent" ? "info" : "success"} />;
+  if (toasts.has(code))
+    return (
+      <Toast message={text} tone={code === "sent" || code === "resent" ? "info" : "success"} />
+    );
   const tone = info.has(code) ? " info" : errors.has(code) ? " error" : "";
   return (
     <div className={`form-notice${tone}`} role="status">

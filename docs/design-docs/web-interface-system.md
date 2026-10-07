@@ -37,7 +37,8 @@ Do not make a row containing secondary controls into one enclosing link.
 | Heading resource | Plain section heading in resource order, with spacing rather than a card or separator. |
 | Button | Filled accent for the primary action, bordered neutral with ink text for secondary, accent text for low emphasis. One shared control height: 38 px with a mouse/trackpad, 44 px touch targets on coarse pointers. Default/hover/focus/active/disabled/pending states share geometry. Signed-out navigation renders Sign in as a compact secondary button. |
 | Sharing | One unboxed section: “Share this hub” beneath hub descriptions, “Share this collection” fixed above Discussion from 1024 px. Narrow collection layouts retain a compact Share disclosure. Both use the same heading and one row of text links — LinkedIn, X, WhatsApp, Share link. Share link copies the address and says “Link copied to clipboard.” in reserved space beneath the row, without shifting content; if the clipboard is unavailable the exact address appears there to copy by hand. No email option (people share the link wherever they like). A source share token is only included through the explicit “Share access link”. Settings keeps a plain Copy hub link. |
-| Toast | Transient confirmations (saved, sent, signed out, done, copied) appear in a fixed top-center pill and clear after ~4.5 s; the `?notice=` code is removed afterwards. Errors, warnings and anything needing action stay inline: info (neutral blue), warning (amber), error (red). |
+| Toast | Transient confirmations (saved, resent, signed out, done, copied) appear top-center as a small card in the page's own surface, border and radius, with a tone mark (✓ success, dot info), fitted to the message; they clear after ~5 s and the `?notice=` code is removed afterwards. Errors, warnings and anything needing action stay inline: info (neutral blue), warning (amber), error (red). |
+| Email verification | One flow for every purpose (sign in, first link, continue, resume, confirm, invitation): the start screen (reason line; the known address in bold or an email field; what happens next; Send code, plus Cancel where backing out makes sense) and the code screen (where it went in bold, the code, the purpose's button, "Didn't receive the code? Send a new code"). Short paragraphs with clear space; no extra panels. |
 | Pagination | Visible continuation control with pending state and result-count announcement; prevent duplicate loads; preserve existing results on a retryable page failure. |
 | Feedback panel | Heading, short explanation, one recovery action. Errors use icon/text plus color. Request ID is optional expandable support detail, not the headline. |
 | Future input | Persistent label, instructions and inline error linked with `aria-describedby`; preserve entered values on retryable failure. |
@@ -228,7 +229,7 @@ ordinary reader. `/ops/audit` has actor/target/action/date filters and explicit
 cursor continuation. No metrics dashboard, private-content preview or disabled
 future actions. Error/reload and denied-access states work without JavaScript.
 
-`/ops/operators` uses an email invite form, a service-team list and invitation
+`/ops/team` uses an email invite form, a service-team list and invitation
 rows with explicit delivery/expiry states. Pending or expired operator invitations
 have separate confirmed resend/cancel forms. Account details show a confirmed
 remove-access form only to admins. `/invitations/accept` receives the emailed fragment token; `/invitations/review`

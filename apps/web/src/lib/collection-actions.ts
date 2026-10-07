@@ -5,6 +5,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import type { CollectionEditState } from "../components/collection-editor";
 import { formPost } from "./form-server";
+import { keepPendingAction } from "./pending-action";
 import { serverRead } from "./server-api";
 import { isUuid, splitTags } from "./validation";
 
@@ -41,6 +42,19 @@ export async function saveCollection(
     "PATCH",
   );
   if (result.ok) redirect(`/c/${id}?notice=collection-saved`);
+  // The session ended mid-save: sign in, then the save continues.
+  if (result.status === 401) {
+    await keepPendingAction({
+      path: `/api/v1/collections/${id}`,
+      method: "PATCH",
+      body: { ...patch, version: Number(data.get("version")) },
+      target: `/c/${id}`,
+      success: "collection-saved",
+      label: "save this collection",
+      issued: Date.now(),
+    });
+    redirect(`/sign-in?returnTo=${encodeURIComponent(`/c/${id}`)}`);
+  }
   const latest =
     result.status === 409 ? await serverRead<Collection>(`/api/v1/collections/${id}`) : null;
   return {
