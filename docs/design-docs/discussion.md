@@ -1,0 +1,29 @@
+# Collection discussion
+
+Status: implemented. Comments, replies, answers and moderation on a
+collection; access is the collection's own policy.
+
+## Model and access
+
+`collection_comments` hangs off one collection (cascade on delete): `parent_id`
+for one level of replies, `state` visible/hidden/deleted, at most one `accepted`
+reply per question (partial unique index), `author_user_id` set null if the
+account goes. `collections.comments_enabled` (default true) is the owner's
+switch. Access is the collection policy, unchanged: reading the discussion
+requires `canRead`; posting additionally requires a session, comments on and no
+active hold; hiding and marking answers require `canWriteContent` (owner or
+direct editor); edit/delete require authorship. Routes:
+`GET|POST /api/v1/collections/:id/comments` (share token accepted, cursor over
+questions newest first) and `PATCH|DELETE /api/v1/comments/:id`,
+`POST /api/v1/comments/:id/{hide,show,accept,unaccept}`.
+
+## Pagination
+
+`GET /api/v1/collections/:id/comments` paginates questions with `cursor` and
+`limit`. Each question includes `repliesNextCursor`; continue one question's
+replies by supplying `replyTo=<question id>` and `replyCursor=<cursor>` alongside
+the same question-page cursor. Reply cursors are bound to the question and
+access is rechecked on every read. Each thread returns at most 100 readable
+replies, with its readable accepted answer pinned first; other replies continue
+in creation order. The native reader's More replies link preserves the question
+page and share token, and works without JavaScript.

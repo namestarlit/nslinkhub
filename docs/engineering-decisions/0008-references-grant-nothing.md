@@ -30,4 +30,4 @@ stored override. Share tokens never travel to targets.
 ## Links
 
 - [SECURITY.md](../SECURITY.md)
-- [SYSTEM_DESIGN.md](../SYSTEM_DESIGN.md)
+- [collections-and-resources.md](../design-docs/collections-and-resources.md)

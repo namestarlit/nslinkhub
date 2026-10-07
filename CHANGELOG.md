@@ -9,6 +9,15 @@ summary of what changed after completed work has been promoted out of `ref/`.
 
 ## Unreleased
 
+- Documentation reorganized the pigfarm way: `PRODUCT.md` is the PRD (now with
+  a product design context), `ARCHITECTURE.md` the system-architecture
+  authority (domain model, client surfaces and invariants absorbed), and the
+  new root `DESIGN.md` the visual system with every theme token (replacing
+  `docs/design-docs/web-design-tokens.md`). `docs/SYSTEM_DESIGN.md` was split
+  into focused designs — tenancy and access, identity and handles, collections
+  and resources, discussion, email verification, exports — with its delivery
+  status moved to `PRODUCT.md` §9. New `docs/README.md` map; the design-docs
+  index is now `README.md`.
 - Product and system docs brought up to date: `PRODUCT.md` is now a shareable
   product definition (problem and goals, users, journeys, requirements,
   acceptance, current state by surface, open decisions such as the editor role

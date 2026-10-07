@@ -1,14 +1,63 @@
 # Product Definition
 
-NSLinkHub's canonical product definition, written to be understood without the
-conversations behind it. Where this document and older material conflict, this
-document and `docs/SYSTEM_DESIGN.md` win: this one says what the product is and
-must do, the system design says how it is built. Settled foundations are
-recorded as engineering decisions in `docs/engineering-decisions/`.
+NSLinkHub's canonical product definition (the PRD), written to be understood
+without the conversations behind it. Where this document and older material
+conflict, this document wins on what the product is and must do;
+`ARCHITECTURE.md` and `docs/design-docs/` say how it is built, `DESIGN.md` how
+it looks. Settled foundations are recorded in `docs/engineering-decisions/`.
 
 NSLinkHub is an ns-series product: a personal project under the namestarlit
 brand, built to solve its author's own problem and published for others. It has
 no company affiliation, and nothing here is deployed yet (see §9).
+
+## Register
+
+product
+
+## Product design context
+
+### Users and working context
+
+A reader arrives through a link or discovers recently updated collections,
+understands what a collection covers, then opens a useful resource. A curator
+returns to their own hub to save links one at a time, in the middle of other
+work, and to share one durable address. A collaborator reads or edits one
+specific collection; they never join a hub. Typical scene: someone opens a
+colleague's collection on a phone beside a bright window, scans several links,
+then continues on a laptop.
+
+### Brand personality
+
+Calm, legible and trustworthy — a dependable personal library. Lowercase
+`nslinkhub`, a personal ns-series product under the namestarlit brand.
+
+### Anti-references
+
+- Bookmark dumps: unordered, untitled lists that go stale.
+- Invented engagement: counts, decorative covers, recommendations or social
+  proof that the data doesn't support.
+- Document or course builders with rich editors and uploaded media.
+- Cramped, compact forms that save space by dropping labels or crowding fields.
+- Team workspaces, organization switchers and admin consoles in the product.
+
+### Product design principles
+
+1. Reading earns the most space; titles and destinations are always clear.
+2. People type only what they must; the product resolves the rest.
+3. UX over compactness: show fewer items rather than crowd a layout.
+4. Copy scans at a glance: short paragraphs, emphasis in bold, the reason
+   before the action.
+5. Every journey works without JavaScript; hidden controls never stand in
+   for permissions.
+
+### Accessibility and inclusion
+
+- WCAG 2.2 AA: keyboard operation, focus visible for keyboard users, reduced
+  motion, zoom and reflow, non-color status cues, verified contrast in light
+  and dark themes.
+- Readable on a phone in daylight and a laptop in the evening (Light, Dark,
+  System).
+- Labels stay visible; user content wraps rather than overflowing.
 
 ## 1. Product overview
 
@@ -344,7 +393,7 @@ Nothing is deployed; everything below runs and is verified locally. The API
 (NestJS, `/api/v1`) is the product authority; the web is the full surface; the
 browser extension will be a narrow capture companion. The web's journeys,
 interface and tokens are specified in `docs/design-docs/web-product-experience.md`,
-`web-interface-system.md` and `web-design-tokens.md`.
+and `web-interface-system.md`; the visual system is `DESIGN.md`.
 
 | Capability | Web | API |
 | --- | --- | --- |
@@ -362,6 +411,20 @@ interface and tokens are specified in `docs/design-docs/web-product-experience.m
 | Email change (account handover) | Not yet | Built |
 | Browser extension | Planned | Uses existing API |
 | Search, single sign-on, account deletion | Planned | Planned |
+
+Next:
+
+- **Internals pass** — [final-pass-internals](docs/exec-plans/active/final-pass-internals.md).
+- **W3, remaining journeys** — item management (remove, reorder, sections with
+  headings and references), sharing/publishing/transfer, saved and shared
+  lists, export, the web import page, email change, richer link details and
+  notes.
+- **W4 — Browser extension.** `apps/extension` (MV3) capture companion.
+- **Before public release** — live email provider and webhook acceptance,
+  browser and worker telemetry, deployment (`docs/design-docs/infra-deployment.md`).
+- **Phase E (deferred)** — "Continue with namestarlit" SSO; Discover search by
+  tags and text and full-text search; pending shares for people without an
+  account; item-level saves; account deletion with export and retention rules.
 
 ## 10. Open decisions
 

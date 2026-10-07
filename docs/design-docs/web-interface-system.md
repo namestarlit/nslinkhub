@@ -3,7 +3,7 @@
 Status: W3 interface contract. Public reading and account navigation are implemented;
 other journeys retain their own browser acceptance.
 The [experience](web-product-experience.md) owns journeys and copy direction;
-[tokens](web-design-tokens.md) own all concrete theme values.
+[DESIGN.md](../../DESIGN.md) owns all concrete theme values.
 
 ## Principles
 
@@ -455,7 +455,7 @@ Discover link is muted, turning ink on hover. The collection reader's hub link
 carries a small back chevron; operator section navigation does not. The account
 menu popup and the landing example are the only elevated surfaces. Hub and
 collection layouts add no row separators or container borders. Exact values live in
-[tokens](web-design-tokens.md); the change is tracked in
+[DESIGN.md](../../DESIGN.md); the change is tracked in
 `docs/exec-plans/active/unify-web-visual-system.md`.
 
 

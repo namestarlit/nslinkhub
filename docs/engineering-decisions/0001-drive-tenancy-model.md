@@ -35,5 +35,5 @@ memberships, no roles beyond owner/reader/editor, and no admin bypass.
 
 ## Links
 
-- [SYSTEM_DESIGN.md](../SYSTEM_DESIGN.md)
+- [tenancy-and-access.md](../design-docs/tenancy-and-access.md)
 - [SECURITY.md](../SECURITY.md)

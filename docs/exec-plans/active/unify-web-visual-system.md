@@ -134,7 +134,7 @@ details (pseudo-element names, menu motion) invisible in screenshots.
 `apps/web/src/app/globals.css` as hand-written semantic classes over Tailwind 4
 `@theme` tokens; components in `apps/web/src/components/` and routes in
 `apps/web/src/app/` emit those classes. Canonical token values and contrast
-evidence live in `docs/design-docs/web-design-tokens.md`; layout/component
+evidence live in `DESIGN.md`; layout/component
 contracts in `web-interface-system.md`; journeys and copy in
 `web-product-experience.md`. Desktop pagination in
 `apps/web/src/components/paginated-list.tsx` measures rendered row heights to

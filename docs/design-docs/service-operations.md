@@ -8,7 +8,7 @@ and [operator runbook](../runbooks/service-operations.md).
 This is the product-owned service-operator contract. It adds account operations
 and public-content moderation to the individual hub model; it does not add hub
 memberships, private-content access, or a new identity provider. The
-[system design](../SYSTEM_DESIGN.md) and [product definition](../../PRODUCT.md)
+[tenancy and access](tenancy-and-access.md) and [product definition](../../PRODUCT.md)
 remain authoritative. Implementation must deliver the whole operator journey,
 including its sign-in dependency, before advertising an admin surface.
 

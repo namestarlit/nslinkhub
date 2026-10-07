@@ -164,7 +164,7 @@ uses the claims (or its own domain data) to authorize. Fine-grained decisions
 stay in the product; nsauth provides identity and coarse, identity-scoped
 claims.
 
-Rules, consistent with the decisions recorded in `docs/SYSTEM_DESIGN.md`:
+Rules, consistent with the decisions recorded in [identity-and-handles.md](identity-and-handles.md):
 
 1. **Products keep their own immutable userId.** The nsauth subject (`sub`)
    is stored as a one-to-one linked identity on the product user — never as

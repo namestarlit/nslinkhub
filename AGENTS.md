@@ -10,14 +10,14 @@ New to the repository entirely? Walk
 `docs/guides/developer-onboarding-walkthrough.md` first (six hands-on
 sessions; commit-pinned and freshness-enforced by `bun run verify`). Then:
 
-1. Read `ARCHITECTURE.md` for the stable system map and dependency rules.
-2. Read `PRODUCT.md` for the product definition and acceptance criteria.
-3. Read `docs/SYSTEM_DESIGN.md` — the authoritative architecture
-   (the Google-Drive individual model: one hub per user, collection-level
-   independent collection sharing, discovery, workspace). The backend is
-   built; W3 (web) and W4 (extension) remain.
-4. Read the focused document for the area being changed
-   (`docs/design-docs/index.md`).
+1. Read `PRODUCT.md` — the product definition (PRD): users, journeys,
+   requirements, acceptance criteria, current state and open decisions.
+2. Read `ARCHITECTURE.md` — the system-architecture authority: the
+   Google-Drive individual model (one hub per user, independent collections),
+   codemap, domain model, dependency rules and architectural invariants.
+3. For web work, read `DESIGN.md` (the visual system and tokens).
+4. Read the focused design for the area being changed
+   (`docs/design-docs/README.md`; the map of all docs is `docs/README.md`).
 5. Check `docs/engineering-decisions/` for settled decisions in the area.
 6. For substantial work, read `PLANS.md`, then create or update an ExecPlan in
    `docs/exec-plans/active/`.
@@ -52,9 +52,10 @@ authoritative.
 - `docs/RELIABILITY.md`: idempotency, concurrency, jobs, and data rules.
 - `docs/engineering-decisions/README.md`: settled decisions (ADRs) — binding
   until explicitly superseded with recorded rationale.
-- `docs/SYSTEM_DESIGN.md`: the authoritative system design — the Google-Drive
-  individual tenancy model, access rules, web URL scheme, and remaining tracks.
-- `docs/design-docs/index.md`: focused satellite design documents.
+- `DESIGN.md`: the visual design system and canonical theme tokens.
+- `docs/design-docs/README.md`: focused designs — tenancy and access, identity
+  and handles, collections and resources, discussion, email verification,
+  exports, web experience and interface, operations, and more.
 - `docs/design-docs/conventions.md`: API/persistence casing and envelope rules.
 - `docs/design-docs/identity-sso.md`: ns-series IAM direction (nsauth,
   "Continue with namestarlit") — built as an IAM, first slice ships AuthN+SSO;

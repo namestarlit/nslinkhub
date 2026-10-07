@@ -76,9 +76,11 @@ Goal: the product model and the invariants, from the sources of truth.
 
 Source-of-truth hierarchy, one paragraph: [AGENTS.md](../../AGENTS.md) is the
 map and the non-negotiable invariants; [PRODUCT.md](../../PRODUCT.md) defines
-the product; [SYSTEM_DESIGN.md](../SYSTEM_DESIGN.md) is the authoritative
-architecture; [ARCHITECTURE.md](../../ARCHITECTURE.md) is the short stable
-code map; `docs/design-docs/` are focused satellites; `CHANGELOG.md` is what
+the product (the PRD); [ARCHITECTURE.md](../../ARCHITECTURE.md) is the
+system-architecture authority; [DESIGN.md](../../DESIGN.md) is the visual
+system; `docs/design-docs/` are focused designs (map: [docs/README.md](../README.md));
+[engineering decisions](../engineering-decisions/README.md) record settled
+foundations; `CHANGELOG.md` is what
 happened, in order.
 
 Read, in this order:
@@ -89,11 +91,14 @@ Read, in this order:
    set by *how it was added*, never URL inspection; tags are plain arrays;
    sharing = link / direct / publish; export reads like a Google Doc;
    sign-in is code-first; account handover = double-verified email change.
-2. [SYSTEM_DESIGN.md](../SYSTEM_DESIGN.md) — especially the access model
-   (owner → direct share → active link → published, independently per collection), Identity and handles, and the Web URL scheme
-   (`/c/<id>` permalink vs `/@handle/<slug>` pretty URL).
-3. [AGENTS.md](../../AGENTS.md) § Non-Negotiable Invariants — all of them.
-4. [ARCHITECTURE.md](../../ARCHITECTURE.md) — the codemap table + data flow.
+2. [ARCHITECTURE.md](../../ARCHITECTURE.md) — the domain model, codemap,
+   runtime and architectural invariants.
+3. [tenancy-and-access.md](../design-docs/tenancy-and-access.md) — the access
+   model (owner → direct share → active link → published, independently per
+   collection) — and [identity-and-handles.md](../design-docs/identity-and-handles.md)
+   for handles and the Web URL scheme (`/c/<id>` permalink vs
+   `/@handle/<slug>` pretty URL).
+4. [AGENTS.md](../../AGENTS.md) § Non-Negotiable Invariants — all of them.
 
 **Checkpoint 2** — answer in your own words:
 
@@ -269,16 +274,17 @@ Goal: everything the web track has already decided, then the go/no-go gate.
 
 Read:
 
-1. [SYSTEM_DESIGN.md](../SYSTEM_DESIGN.md) § Web URL scheme (W3 contract)
-   and § Identity and handles (code-first sign-in; the four-step
-   double-verified email change).
+1. [identity-and-handles.md](../design-docs/identity-and-handles.md) § Web URL
+   scheme and § Identity (code-first sign-in; the four-step double-verified
+   email change).
 2. [transactional-email.md](../design-docs/transactional-email.md) — the
    built template trio, encrypted outbox, separate worker and locally verified
    delivery path; distinguish these from live provider acceptance. Then open
    [code-email.tsx](../../packages/email/src/code-email.tsx) — the shared
    base all three templates render through.
-3. [index.md](../design-docs/index.md) — the three current `web-*` design
-   documents: experience, interface system and canonical theme tokens.
+3. [design-docs/README.md](../design-docs/README.md) — the two `web-*` design
+   documents (experience, interface system) and [DESIGN.md](../../DESIGN.md),
+   the canonical theme tokens.
 4. [adoption-decisions.md](../design-docs/adoption-decisions.md) — the
    foundation comparison and gates: isolated verification and safe typed
    contracts now implemented before web work; auth delivery with the code-first journey;

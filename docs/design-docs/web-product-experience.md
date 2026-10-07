@@ -2,7 +2,7 @@
 
 Status: W3 design contract. Public reading and account navigation are implemented;
 account/editing journeys remain separate slices. Read alongside
-[the system design](../SYSTEM_DESIGN.md), [adoption gates](adoption-decisions.md)
+[architecture](../../ARCHITECTURE.md), [adoption gates](adoption-decisions.md)
 and [interface system](web-interface-system.md). Product behavior stays owned
 by [PRODUCT.md](../../PRODUCT.md).
 

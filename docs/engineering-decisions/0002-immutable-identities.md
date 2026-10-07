@@ -32,5 +32,5 @@ pretty URLs (`/@handle/slug`) are allowed to break on rename.
 
 ## Links
 
-- [SYSTEM_DESIGN.md](../SYSTEM_DESIGN.md)
+- [identity-and-handles.md](../design-docs/identity-and-handles.md)
 - [conventions.md](../design-docs/conventions.md)

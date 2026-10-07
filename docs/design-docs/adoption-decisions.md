@@ -124,7 +124,7 @@ public-release gates remain. Account deletion and MFA retain their own scope.
 
 The three W3 design documents now define the
 [experience](web-product-experience.md), [interface](web-interface-system.md)
-and [tokens](web-design-tokens.md). They cover public reading first, actual
+and tokens (now the root [DESIGN.md](../../DESIGN.md)). They cover public reading first, actual
 API fields, unavailable states, cookie/cache/CSRF boundaries and later account
 flows. The design milestone alone did not claim browser acceptance. The first vertical
 slice above now supplies reading proof; gate #2 stays open for the remaining

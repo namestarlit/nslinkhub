@@ -1,0 +1,38 @@
+# Documentation
+
+The navigation map for repository knowledge. Start with the root
+[AGENTS.md](../AGENTS.md), then [PRODUCT.md](../PRODUCT.md) (the PRD),
+[ARCHITECTURE.md](../ARCHITECTURE.md) (the system-architecture authority) and,
+for web work, [DESIGN.md](../DESIGN.md) (the visual system). New contributors
+walk the [onboarding guide](guides/developer-onboarding-walkthrough.md) first.
+
+## Documentation spaces
+
+| Space | Use it for |
+| --- | --- |
+| [design-docs/](design-docs/README.md) | Focused current designs: domain, web, platform and delivery |
+| [engineering-decisions/](engineering-decisions/README.md) | Settled foundations and their rationale; binding until superseded |
+| [exec-plans/](exec-plans/README.md) | Active ExecPlans, completed plans and the tech-debt tracker |
+| [runbooks/](runbooks/) | Local development, verification, migrations, release, operations |
+| [guides/](guides/) | The onboarding walkthrough, pinned to a reviewed commit |
+
+## Top-level policies
+
+- [CORE_BELIEFS.md](CORE_BELIEFS.md) — engineering principles.
+- [SECURITY.md](SECURITY.md) — tenant isolation, authorization, tokens and the
+  auth boundary.
+- [RELIABILITY.md](RELIABILITY.md) — idempotency, concurrency, jobs and data.
+
+## Where things go
+
+```text
+idea or question -> PRODUCT.md §10 open decisions
+  -> focused design in design-docs/, when needed
+  -> engineering decision, when a durable foundation is settled
+  -> active ExecPlan, when implementation is ready
+  -> completed plan, CHANGELOG entry, docs updated
+```
+
+Renames and field changes are changelog material, not decisions. Disposable
+context lives in the git-ignored `ref/`; the shared namestarlit workspace
+mapping is in [PLANS.md](../PLANS.md#shared-namestarlit-workspace).

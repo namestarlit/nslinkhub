@@ -36,5 +36,5 @@ tags, order, and (planned) notes. A wrong link is removed and added again.
 
 ## Links
 
-- [SYSTEM_DESIGN.md](../SYSTEM_DESIGN.md)
+- [collections-and-resources.md](../design-docs/collections-and-resources.md)
 - [PRODUCT.md](../../PRODUCT.md)

@@ -1,12 +1,69 @@
-# Web design tokens
+---
+name: "nslinkhub"
+description: "A dependable personal library: legible titles, clear destinations, visible structure."
+colors:
+  canvas: "oklch(1 0 0)"
+  surface: "oklch(0.97 0.004 265)"
+  ink: "oklch(0.22 0.01 265)"
+  muted: "oklch(0.48 0.012 265)"
+  border: "oklch(0.64 0.01 265)"
+  divider: "oklch(0.91 0.006 265)"
+  primary: "oklch(0.47 0.13 255)"
+  primary-hover: "oklch(0.41 0.12 255)"
+  primary-pressed: "oklch(0.36 0.1 255)"
+  primary-soft: "oklch(0.95 0.02 255)"
+  on-primary: "oklch(1 0 0)"
+  focus: "oklch(0.47 0.13 255)"
+  notice: "oklch(0.96 0.045 95)"
+  notice-ink: "oklch(0.42 0.08 75)"
+  danger: "oklch(0.48 0.17 25)"
+  danger-soft: "oklch(0.955 0.022 25)"
+  success: "oklch(0.45 0.1 155)"
+  success-soft: "oklch(0.96 0.025 155)"
+typography:
+  family: "Schibsted Grotesk (self-hosted, variable), system sans fallback"
+  page: { fontSize: "2.125rem", lineHeight: "2.5rem", fontWeight: 650, letterSpacing: "-0.025em" }
+  section: { fontSize: "1.25rem", lineHeight: "1.75rem", fontWeight: 650, letterSpacing: "-0.015em" }
+  row: { fontSize: "1.0625rem", lineHeight: "1.5rem", fontWeight: 600 }
+  body: { fontSize: "1rem", lineHeight: "1.5rem", fontWeight: 400 }
+  meta: { fontSize: "0.875rem", lineHeight: "1.25rem", fontWeight: 400 }
+rounded:
+  control: "0.5rem"
+  panel: "0.75rem"
+  tag: "0.375rem"
+spacing:
+  unit: "0.25rem"
+  control-height: "2.375rem (2.75rem on coarse pointers)"
+  shell-max: "70rem"
+  reader-max: "48rem"
+---
 
-Status: W3 theme contract, installed in `apps/web/src/app/globals.css`. This document owns
-the concrete values consumed by the [interface system](web-interface-system.md).
-Use restrained light and dark palettes with one accent, one self-hosted brand
-sans (Schibsted Grotesk) and compact product typography. Email's existing neutral styling is provisional
-and is not a separate web theme.
+# Design System: nslinkhub
 
-## Token rules
+## Overview
+
+**Creative north star: "A dependable personal library."** A clearly labelled
+personal reference shelf, open in daylight: legible titles, clear destinations
+and visible structure, with reading given the most space. Nothing is invented to
+fill a page — no counts, decorative covers, recommendations or social proof.
+
+**Key characteristics:**
+
+- One confident library-ink blue for actions, links, focus and selection;
+  titles stay ink. Chromatic emphasis stays below roughly ten percent of a page.
+- Light, Dark and System appearances from one set of semantic OKLCH tokens.
+- One self-hosted sans (Schibsted Grotesk) with fixed rem product typography.
+- Grouping through separators and surface changes, not shadows or panels.
+- The lowercase wordmark `nslinkhub` alone is the logo — no icon.
+- UX over compactness; copy in short, scannable paragraphs (see the
+  [interface system](docs/design-docs/web-interface-system.md) principles).
+
+This document owns every concrete theme value. Layouts, components and states
+are in the [interface system](docs/design-docs/web-interface-system.md); journeys
+and copy in the [product experience](docs/design-docs/web-product-experience.md).
+`apps/web/src/app/globals.css` installs these tokens.
+
+## Colors
 
 The web's global stylesheet exposes semantic Tailwind theme variables for
 canvas, surface, ink, muted text, border, accent, focus and feedback. Components
@@ -23,7 +80,7 @@ selection only (2026-10-07 visual-system pass, superseding the original hue 230)
 controls, and chromatic emphasis stays below roughly ten percent of the page.
 The pale notice accent is reserved for meaningful warnings, not decoration.
 
-## Canonical color and type variables
+### Canonical color and type variables
 
 For Tailwind's CSS theme namespace, the following block is installed in the
 global stylesheet. Theme colors create semantic utilities such as `bg-canvas`
@@ -81,7 +138,7 @@ and announce progress. Selection uses primary-soft with primary text; status
 labels use the matching soft background and foreground. Focus uses the
 outline with a canvas gap, including around primary-filled controls.
 
-## Contrast evidence
+### Contrast evidence (light)
 
 Recalculated 2026-10-07 from OKLCH to linear sRGB using the OKLab inverse matrix
 and relative luminance `0.2126 R + 0.7152 G + 0.0722 B`; contrast is
@@ -108,7 +165,43 @@ styles when the web exists, including hover, focus and background variants.
 | success / success-soft | 6.36:1 |
 | focus / canvas | 6.88:1 |
 
-## Type, spacing and shape
+### Dark mode
+
+Dark mode keeps the same semantic roles with a neutral charcoal canvas, lighter text,
+readable blue actions and distinguishable form boundaries. Components inherit
+these tokens, including error, success, focus, hover and native control colors.
+`globals.css` is the exact palette source; verify the dark contrast pairs as part
+of browser acceptance. Motion respects reduced-motion preferences.
+
+Signed-out visitors always follow the system color preference, even when the
+browser retains an earlier appearance cookie. Saved Light/Dark/System preferences
+apply only with a currently valid session; preference changes require sign-in.
+
+#### Dark contrast evidence
+
+Recalculated 2026-10-07 using the same OKLab-to-linear-sRGB luminance method above.
+Body/muted/feedback pairs exceed 4.5:1; control boundaries exceed 3:1.
+
+| Foreground / background | Ratio |
+| --- | --- |
+| ink / canvas | 15.48:1 |
+| ink / surface | 14.03:1 |
+| muted / canvas | 7.77:1 |
+| muted / surface | 7.04:1 |
+| on-primary / primary | 8.77:1 |
+| on-primary / primary-hover | 10.79:1 |
+| on-primary / primary-pressed | 7.31:1 |
+| primary / canvas | 8.35:1 |
+| primary / primary-soft | 6.58:1 |
+| border / canvas | 3.69:1 |
+| border / surface | 3.34:1 |
+| notice-ink / notice | 10.15:1 |
+| danger / danger-soft | 6.27:1 |
+| success / success-soft | 7.98:1 |
+| focus / canvas | 8.35:1 |
+
+
+## Typography, spacing and shape
 
 | Role | Value |
 | --- | --- |
@@ -140,7 +233,7 @@ separators or surface changes establish grouping. The one elevation token
 (`--elevation`) is reserved for surfaces that float above content: the account
 menu popup and the landing example sheet.
 
-## Account shell and dark appearance
+## Components
 
 The header separates the left wordmark from Explore and the avatar-only account menu on the right. The menu groups Profile,
 Notifications (with an unread count), Settings and role-gated Service operations above
@@ -150,37 +243,20 @@ on the right (wrapping below on phones); no status link or appearance controls. 
 come from the API, seeded by immutable user UUID. The approved avatar palette
 and grid geometry stay fixed in both themes; no external provider is involved.
 
-Dark mode keeps the same semantic roles with a neutral charcoal canvas, lighter text,
-readable blue actions and distinguishable form boundaries. Components inherit
-these tokens, including error, success, focus, hover and native control colors.
-`globals.css` is the exact palette source; verify the dark contrast pairs as part
-of browser acceptance. Motion respects reduced-motion preferences.
-
-### Dark contrast evidence
-
-Recalculated 2026-10-07 using the same OKLab-to-linear-sRGB luminance method above.
-Body/muted/feedback pairs exceed 4.5:1; control boundaries exceed 3:1.
-
-| Foreground / background | Ratio |
-| --- | --- |
-| ink / canvas | 15.48:1 |
-| ink / surface | 14.03:1 |
-| muted / canvas | 7.77:1 |
-| muted / surface | 7.04:1 |
-| on-primary / primary | 8.77:1 |
-| on-primary / primary-hover | 10.79:1 |
-| on-primary / primary-pressed | 7.31:1 |
-| primary / canvas | 8.35:1 |
-| primary / primary-soft | 6.58:1 |
-| border / canvas | 3.69:1 |
-| border / surface | 3.34:1 |
-| notice-ink / notice | 10.15:1 |
-| danger / danger-soft | 6.27:1 |
-| success / success-soft | 7.98:1 |
-| focus / canvas | 8.35:1 |
-
-Signed-out visitors always follow the system color preference, even when the
-browser retains an earlier appearance cookie. Saved Light/Dark/System preferences
-apply only with a currently valid session; preference changes require sign-in.
 The account-menu trigger shows only the avatar, and Notifications sits directly
 below Profile inside the popup.
+
+Buttons, fields, tags, toasts, the verification screens and every other
+component are specified in the
+[interface system](docs/design-docs/web-interface-system.md).
+
+## Do's and Don'ts
+
+**Do:** consume semantic roles (`bg-canvas`, `text-ink`), never raw palette
+numbers; keep accent for actions, inline links, focus and selection; keep
+labels visible and controls at the shared height; show fewer items rather than
+crowd a layout.
+
+**Don't:** copy a second palette into components or email templates; add
+decorative shadows, accent side-stripes or icons beside the wordmark; dim whole
+controls with opacity; use the pale notice color as decoration.

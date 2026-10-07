@@ -116,7 +116,7 @@ delivery:
 9. update delivery, bounce, complaint, delay, failure, and suppression status.
 
 This is the outbox + worker split brought into the W3 auth-delivery slice
-(`docs/SYSTEM_DESIGN.md`); email is the first — and currently
+(`ARCHITECTURE.md`); email is the first — and currently
 only — consumer that makes it mandatory (exports are synchronous and never
 queue). Run delivery in a separate worker process
 built from the API image. Scale the worker independently or split specialized
@@ -139,7 +139,7 @@ never carries the code):
 - **email-change confirmation** (`renderEmailChangeConfirmation`) — to the
   **current** address, naming the target address; step one of the
   double-verified account-email change (the account/hub handover —
-  `docs/SYSTEM_DESIGN.md` § Identity and handles). Ignoring it changes
+  [identity-and-handles.md](identity-and-handles.md)). Ignoring it changes
   nothing.
 - **new-email verification** (`renderNewEmailVerification`) — to the **new**
   address; completing it applies the change and revokes all sessions.

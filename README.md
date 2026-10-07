@@ -18,7 +18,9 @@ This repository is a greenfield NestJS v2 rewrite. The old Flask v1 is retained 
 ## Current Documentation
 
 - Product definition: `PRODUCT.md`
-- Authoritative system design (Drive individual model): `docs/SYSTEM_DESIGN.md`
+- System architecture (Drive individual model): `ARCHITECTURE.md`
+- Visual design system: `DESIGN.md`
+- Documentation map: `docs/README.md`
 - Onboarding walkthrough: `docs/guides/developer-onboarding-walkthrough.md`
 - ns-series identity direction: `docs/design-docs/identity-sso.md`
 - ns-series deployment direction: `docs/design-docs/infra-deployment.md`
