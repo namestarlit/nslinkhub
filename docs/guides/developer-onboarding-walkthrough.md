@@ -12,7 +12,7 @@ answer in your own words before continuing. Reading the whole file in one go
 is the failure mode this structure exists to prevent. Every file is a
 clickable link.
 
-**Pin:** verified against commit `202f30c`. This is enforced, not honor
+**Pin:** verified against commit `493e690`. This is enforced, not honor
 system: `check:guide-pin` (part of `bun run verify`) fails when any file this
 guide links changes after the pinned commit. To clear it, reread the affected
 sessions, fix any drift, and move the pin to the latest commit — in a
@@ -249,8 +249,10 @@ E2E now creates, migrates and drops a disposable database per run. Run
 connectivity rather than resetting development data. Read
 [verification.md](../runbooks/verification.md) for test-specific configuration
 and [release.md](../runbooks/release.md) for the separate image rehearsal.
-The release-foundation and auth-delivery migrations must also be applied to your development DB
-before starting the updated API: `(cd apps/api && bunx prisma migrate deploy)`.
+Migrations start from a single squashed `0_init` (pre-deployment). If your
+development DB predates it, reset it and load the curated demo content
+([local-development.md](../runbooks/local-development.md) § Resetting Local Data,
+then `bun run db:seed`).
 
 **Checkpoint 5**:
 
@@ -309,16 +311,16 @@ deletion are disabled; password authentication has been removed.
 The reviewed backend auth-delivery implementation is committed and its source
 verification gate passes; see the
 [completed auth-delivery plan](../exec-plans/completed/prove-auth-delivery-boundary.md).
-The first W3 explore-to-resource journey is reviewed and committed. The
+The first W3 discover-to-resource journey is reviewed and committed. The
 [public hub/pretty-URL reading journey](../exec-plans/completed/deliver-public-hub-reading.md)
 is implemented and reviewed. The
 [service-status journey](../exec-plans/completed/deliver-service-status.md) is
-implemented and reviewed. The user then requested service administration:
-[service operations](../design-docs/service-operations.md) now implements separate
-operator authority, account restrictions, public-content holds and audit, with
-reusable sign-in/session support. Its milestone is awaiting review; operator
-authority never grants private collection access. The walkthrough pin below
-remains the reviewed status baseline until the operator milestone is committed.
+implemented and reviewed. [Service operations](../design-docs/service-operations.md)
+(separate operator authority, account restrictions, public-content holds and
+audit; never private collection access) and the unified web experience
+(one visual system, comments, notifications, saving one or two links with
+resolved titles and tags) are reviewed and committed. Next: an operations
+redesign and the [final internals pass](../exec-plans/active/final-pass-internals.md).
 Continue with one complete vertical MLP journey at a time.
 Local PostgreSQL/Redis run in containers; the API,
 worker and Next.js dev server run on the host. Keep application builds
