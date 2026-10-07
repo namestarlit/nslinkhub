@@ -5,6 +5,15 @@ other journeys retain their own browser acceptance.
 The [experience](web-product-experience.md) owns journeys and copy direction;
 [tokens](web-design-tokens.md) own all concrete theme values.
 
+## Principles
+
+- **UX over compactness.** When a screen must fit, keep the readable layout and
+  show fewer items or disclose progressively (tags behind "Add tags", two links
+  per save); never crowd fields side by side or drop labels to save space.
+- **Copy scans at a glance.** Short paragraphs with clear space between them;
+  emphasis is bold text, not extra panels competing with the actions.
+- **The wordmark is the logo.** Lowercase "nslinkhub" text only; no icon or mark.
+
 ## Layout and hierarchy
 
 Use a compact top bar with the wordmark, Discover link and account menu, and

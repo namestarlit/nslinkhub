@@ -9,6 +9,12 @@ summary of what changed after completed work has been promoted out of `ref/`.
 
 ## Unreleased
 
+- Engineering decision records (`docs/engineering-decisions/`) for the
+  foundations much else depends on — tenancy, identities, backend-owned rules,
+  passwordless codes, serialized writes, pre-deployment changes, resolved
+  titles, references, operator authority, the verification flow, toolchain —
+  each with its rationale and constraints. A change that contradicts one must
+  supersede it explicitly.
 - One email-verification flow for every situation (sign in, first link,
   signing in to do something, a session that ended mid-action, confirming a
   sensitive action, invitations): the same two screens, worded for the

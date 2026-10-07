@@ -18,11 +18,12 @@ sessions; commit-pinned and freshness-enforced by `bun run verify`). Then:
    built; W3 (web) and W4 (extension) remain.
 4. Read the focused document for the area being changed
    (`docs/design-docs/index.md`).
-5. For substantial work, read `PLANS.md`, then create or update an ExecPlan in
+5. Check `docs/engineering-decisions/` for settled decisions in the area.
+6. For substantial work, read `PLANS.md`, then create or update an ExecPlan in
    `docs/exec-plans/active/`.
-6. Run the verification workflow: `bun run verify`
+7. Run the verification workflow: `bun run verify`
    (see `docs/runbooks/verification.md`; e2e needs `bun run infra:up`).
-7. For completed work, update `CHANGELOG.md` before preparing commits.
+8. For completed work, update `CHANGELOG.md` before preparing commits.
 
 For web design work (Track W3), use the Impeccable skill after the design
 documents it produces exist; repository docs and acceptance criteria remain
@@ -35,8 +36,11 @@ authoritative.
    so the direction can be corrected before the diff exists.
 2. **Implement the complete milestone**, not fragments.
 3. **Verify**: `bun run verify` green (plus any plan-specific checks).
-4. **Present for review**: summarize the result and the diff.
-5. **Commit once per completed, reviewed milestone — then push.** No
+4. **Record settled decisions**: a durable choice gets an engineering
+   decision record; a change that contradicts an accepted record supersedes it
+   explicitly (new evidence, tradeoff, reason) — never silently.
+5. **Present for review**: summarize the result and the diff.
+6. **Commit once per completed, reviewed milestone — then push.** No
    micro-commits, no pushing half-reviewed states.
 
 ## Focused References
@@ -46,6 +50,8 @@ authoritative.
 - `docs/SECURITY.md`: tenant isolation, authorization, tokens, and auth
   boundary rules.
 - `docs/RELIABILITY.md`: idempotency, concurrency, jobs, and data rules.
+- `docs/engineering-decisions/README.md`: settled decisions (ADRs) — binding
+  until explicitly superseded with recorded rationale.
 - `docs/SYSTEM_DESIGN.md`: the authoritative system design — the Google-Drive
   individual tenancy model, access rules, web URL scheme, and remaining tracks.
 - `docs/design-docs/index.md`: focused satellite design documents.
