@@ -9,5 +9,6 @@ Substantial work is recorded in versioned ExecPlans (format: `PLANS.md`).
 - `TEMPLATE.md` — starting point for new plans.
 - `tech-debt-tracker.md` — accepted compromises with revisit conditions.
 
-The hub architecture work (`docs/SYSTEM_DESIGN.md`) gets an
-ExecPlan in `active/` when implementation starts (W1 first).
+Current and next work is summarized in `docs/SYSTEM_DESIGN.md` § Delivery
+status. `PLANS.md` § Shared namestarlit workspace maps these records to the
+shared workspace's plan and task conventions.

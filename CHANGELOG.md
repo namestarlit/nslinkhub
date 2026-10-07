@@ -9,6 +9,14 @@ summary of what changed after completed work has been promoted out of `ref/`.
 
 ## Unreleased
 
+- Product and system docs brought up to date: `PRODUCT.md` is now a shareable
+  product definition (problem and goals, users, journeys, requirements,
+  acceptance, current state by surface, open decisions such as the editor role
+  name and titles on import). `docs/SYSTEM_DESIGN.md` describes the
+  verification flow, link titles and public addresses, the operations console,
+  the squashed migration and the current delivery status. `PLANS.md` maps the
+  repository's plans to the shared namestarlit workspace, which now lists
+  nslinkhub as its active product.
 - Engineering decision records (`docs/engineering-decisions/`) for the
   foundations much else depends on — tenancy, identities, backend-owned rules,
   passwordless codes, serialized writes, pre-deployment changes, resolved

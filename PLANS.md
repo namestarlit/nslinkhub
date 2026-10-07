@@ -21,6 +21,24 @@ that describes the outcome. Move finished plans to `docs/exec-plans/completed/`.
 
 Start from `docs/exec-plans/TEMPLATE.md`.
 
+## Shared namestarlit workspace
+
+nslinkhub is listed in the shared planning workspace (`../workspace/`, local and
+not in Git) as one product row that points here; the workspace never holds a copy
+of this product's definition. Until plans are moved there, records map as follows:
+
+| Workspace convention | nslinkhub today |
+| --- | --- |
+| Product brief (`backlog/<idea>.md`) | `PRODUCT.md`, linked from the workspace row |
+| Plan `README.md` (scope, state, next actions) | `docs/SYSTEM_DESIGN.md` § Delivery status |
+| `plans/<idea>/tasks/` (implementation records) | ExecPlans in `docs/exec-plans/active/` |
+| Completed task evidence | `docs/exec-plans/completed/` and `CHANGELOG.md` |
+| Repository follow-ups (`<repo>/docs/backlog/`) | `docs/exec-plans/tech-debt-tracker.md` |
+| Plan `refs/` and repository handoffs | `ref/` (git-ignored, disposable) |
+
+Settled decisions stay in `docs/engineering-decisions/`. When plans do move,
+keep one copy of each task and preserve status, rationale, evidence and links.
+
 ## Required Properties
 
 Every ExecPlan must:

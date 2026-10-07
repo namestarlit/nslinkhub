@@ -19,8 +19,9 @@ Related documents:
 - `docs/design-docs/transactional-email.md`, `observability.md` — local email
   delivery and telemetry foundations, with separate live rollout requirements.
 - `docs/design-docs/infra-deployment.md` — namestarlit VPS + Dokploy.
-- `docs/exec-plans/completed/drive-model-tenancy.md` — the decision log behind
-  the Google-Drive individual model defined here.
+- [Engineering decisions](engineering-decisions/README.md) — the settled
+  foundations (tenancy, identities, auth, write ordering, …) and their rationale;
+  binding until explicitly superseded.
 
 ## The model in one line
 
@@ -103,6 +104,11 @@ CollectionShare — (collectionId, userId, role reader|editor, source
                   membership. Feeds the shared/ surface.
 CollectionSave  — (collectionId, userId, savedAt). A social-style bookmark of a
                   published collection. Feeds the saved/ surface.
+CollectionComment — the collection's discussion (see below).
+CaptureReceipt  — user-scoped retry identity for Save a link (ids and an input
+                  fingerprint only).
+Operator tables — OperatorGrant, AdminGrant, ServiceInvitation, CollectionHold,
+                  OperatorAudit (see Service operations).
 ```
 
 (No export entity: exports are synchronous and stateless — see Export below.)
@@ -127,12 +133,10 @@ CollectionSave  — (collectionId, userId, savedAt). A social-style bookmark of 
   Substack-style passwordless — continue with email → enter the emailed code
   (email codes only; no direct authentication links or passwords). There is no
   username. "Continue with namestarlit" SSO can join later without reshaping
-  this. The **flow** is decided here; the
-  **presentation** (screens, segmented code boxes, copy) is shaped by the W3
-  Impeccable design pass — Impeccable may restyle it, not reorder it.
-  Code delivery now has a local backend implementation; web presentation and
-  live provider acceptance remain separate. Optional TOTP/recovery codes follow
-  the core delivery milestone.
+  this. The web presents it as one verification flow (see "Email verification
+  and interrupted actions"): a single code field that accepts pasted spaces or
+  dashes. Live provider acceptance remains before release. Optional
+  TOTP/recovery codes are a later follow-up.
 - **Account/hub handover** is done by **changing the account email**, not a
   transfer model — a hub is 1:1 with its account, so handing over the account
   hands over the hub. The locally implemented flow is double-verified:
@@ -164,8 +168,8 @@ the address. The public URL shapes are:
 
 Owners see their own collections at both hub address forms; visitors see only
 published collections. The web resolves the authenticated profile's immutable
-hub ID before selecting the owner list endpoint. `/hub` is a compatibility
-redirect to `/h/<hubId>`. Settings provides an explicit `?view=public` preview,
+hub ID before selecting the owner list endpoint. `/hub` is the signed-in
+shortcut to the viewer's own `/h/<hubId>`. Settings provides an explicit `?view=public` preview,
 which always uses public queries. This view choice never grants API access.
 
 Rules that keep it drift-proof:
@@ -216,7 +220,9 @@ available to its active owner for correction, but unavailable to non-owners;
 publication, sharing and transfer cannot bypass the hold. References confer no access.
 Recovery preserves owner settings without restoring revoked sessions/grants.
 Actions and audit are atomic. The linked contract owns concurrency, authority
-lifecycle, privacy and retention details; these behaviors are not yet in code.
+lifecycle, privacy and retention details. The web console (`/ops`) finds
+accounts by email or handle, resolves a public collection from its link, manages
+the operator team and filters the audit; search text never appears in URLs.
 
 ## Collections and resources
 
@@ -233,6 +239,15 @@ Collections have no structural parent. Resources are ordered rows with versions:
   A heading groups resources without a collection or an access boundary.
 - `PATCH /collections/:id/resources/:resourceId`: tags and position only. To
   change an address or a heading, remove the item and add it again.
+
+A link must be a public web address (`isPublicLinkHost`, shared with the web):
+IP literals, single-label, local/internal and reserved example/test names are
+refused with `link_not_public`. Its title is looked up server-side after the
+write commits, and again whenever an untitled collection is read
+(`og:title`/`<title>`, YouTube oEmbed; SSRF-guarded, short deadline, small body
+cap); no lookup runs under the write lock. Imports currently keep the source
+file's title (bookmark text or a CSV `title` column); whether they should
+resolve like other saves is an open product decision.
 
 Reference edits, reorders and removal require only source write access. The
 viewer-filtered `linkedCollection` payload is `{ id, title }` or null; it never
@@ -254,6 +269,22 @@ direct editor); edit/delete require authorship. Routes:
 `GET|POST /api/v1/collections/:id/comments` (share token accepted, cursor over
 questions newest first) and `PATCH|DELETE /api/v1/comments/:id`,
 `POST /api/v1/comments/:id/{hide,show,accept,unaccept}`.
+
+## Email verification and interrupted actions
+
+Every email-code situation is one web flow with a purpose — `sign-in`,
+`first-link`, `continue`, `resume`, `confirm`, `invitation` — that sets the
+wording and what runs after the code (`apps/web/src/lib/verification.ts`). The
+start screen sends nothing until the person chooses Send code; a known address
+is shown, never asked for again. Sensitive operator actions answer
+`recent_auth_required`, and the web asks the operator to confirm it's them.
+
+An action interrupted by verification (a step-up, or any form action whose
+session ended) is kept in a 15-minute encrypted HttpOnly cookie and replayed
+once after the code, with the new session, then the person lands back where
+they were with the result. It belongs to the account that started it (a keyed
+fingerprint of the last signed-in email) and is discarded if anyone else signs
+in. Rules and accepted limits: [SECURITY.md](SECURITY.md).
 
 ## Ownership transfer
 
@@ -325,7 +356,8 @@ A Bun-workspace monorepo:
 apps/
   api/        NestJS backend. Prisma schema/migrations/generated client and
               PrismaService stay inside; clients never touch persistence.
-  web/        Next.js — public reading and account navigation; remaining W3 journeys follow.
+  web/        Next.js — reading, Discover, Save a link, collection details,
+              discussion, settings, verification and operations.
   extension/  MV3 capture companion (planned, Track W4).
 packages/
   types/      @nslinkhub/types — hand-curated API wire contracts.
@@ -347,57 +379,27 @@ dedupe or publication rules; bearer-token auth in session-scoped storage.
 
 ## Delivery status and remaining tracks
 
-The backend model above is **built and verified** (one hub per user, Drive
-independent collection sharing and transfer, cross-hub references, heading
-resources, bounded guide exports, tag pruning). Shared contracts
-(`@nslinkhub/types`) and the client boundary check are in place. Codes-only auth,
-verified email handover, auth audit, encrypted email outbox, BullMQ worker,
-capture/Resend adapters and signed webhooks are implemented and verified locally.
-No live deployment or provider acceptance is claimed. Release foundations and
-auth delivery use additive migrations after `0_init`; follow
-`docs/runbooks/migrations.md` for schema changes.
+Nothing is deployed. Locally built and verified (`bun run verify`, the browser
+suite): the whole backend model above, and in the web (W3) public reading,
+Discover, hub pages, first-link and signed-in Save a link, collection details,
+discussion, settings, invitation notifications, the verification flow and
+service operations. The schema is a single squashed `0_init` migration
+(pre-deployment; see `docs/runbooks/migrations.md`). `PRODUCT.md` §9 has the
+capability-by-surface table.
 
-Remaining:
+Next:
 
-- **Foundation adoption gates.** `docs/design-docs/adoption-decisions.md`
-  records the 2026-10 comparison and delivery decisions. Local release
-  foundations, isolated verification, safe wire/error contracts and W3 design
-  and the reviewed local auth-delivery milestone are complete. W3 web
-  implementation proceeds in complete vertical slices; Docker image acceptance belongs to deployment
-  preparation. Browser and public-release gates remain open.
-- **W3 — Web app.** The three web design documents (`web-product-experience`,
-  `web-interface-system`, `web-design-tokens`) are complete. Apply Impeccable
-  under those contracts. Explore → collection → referenced collection/external resource is
-  the first reviewed slice, committed locally as `d556236` with guide pin
-  `9277461` (117 source tests and ten production browser cases passed).
-  Public hub → pretty collection URL → reference/resource is implemented and
-  reviewed in [the public hub reading ExecPlan](exec-plans/completed/deliver-public-hub-reading.md).
-  It reuses the reader and copies immutable ID links. The
-  [service-status journey](exec-plans/completed/deliver-service-status.md) is implemented
-  and reviewed, including aggregate readiness, bounded failures and native
-  rechecks. The service-operator journey now includes reusable email-code
-  sign-in/session support, account restrictions, public moderation and audit.
-  The web root now introduces the product, with public discovery at `/discover`
-  and the signed-in wordmark routing to the current personal hub. Account
-  navigation includes profile, notifications and appearance settings; readiness
-  remains API-only following the removal of the client status page.
-  Later slices include own collections, resource
-  capture, sharing + transfer management, shared/ and saved/. Cookie sessions.
+- **Internals pass** — [final-pass-internals](exec-plans/active/final-pass-internals.md).
+- **W3, remaining journeys** — item management (remove, reorder, sections with
+  headings and references), sharing/publishing/transfer, saved and shared
+  lists, export, the web import page, email change, richer link details and
+  notes.
 - **W4 — Browser extension.** `apps/extension` (MV3) capture companion.
-- **Phase E — tracked alongside W3.** Release prerequisites remain
-  mandatory before public exposure, separately from deferred product features.
-  - nsauth SSO once it exists (users + SSO; see `identity-sso.md`).
-  - Collection/auth audit and API LogTape/Sentry foundations are implemented
-    locally. Browser instrumentation, worker metrics/tracing and live
-    collector/deployment proof remain before public release. Auth delivery has
-    local API/worker acceptance; web email-change/account settings and live sender/domain
-    and webhook validation remain outstanding. Account deletion stays disabled
-    pending its verified ownership and retention workflow.
-  - Explore discovery by **tags + text** (search) beyond the initial recency
-    list; full-text search across collections/resources.
-  - Pending shares for unregistered emails (invitation-style, activated on
-    sign-up).
-  - Resource-level saves — evaluate after collection saves prove the loop.
+- **Before public release** — live email provider and webhook acceptance,
+  browser and worker telemetry, deployment (`docs/design-docs/infra-deployment.md`).
+- **Phase E (deferred)** — "Continue with namestarlit" SSO; Discover search by
+  tags and text and full-text search; pending shares for people without an
+  account; item-level saves; account deletion with export and retention rules.
 
 ## First-link capture command
 
