@@ -9,6 +9,22 @@ summary of what changed after completed work has been promoted out of `ref/`.
 
 ## Unreleased
 
+- Sensitive operator actions that need a fresh code now ask "Confirm it's you"
+  (names the action and the signed-in email; Send code or Cancel, nothing is
+  emailed until chosen), then finish the action by itself once the code is
+  accepted. Code screens say "Didn't receive the code? Send a new code" and
+  accept codes pasted with spaces or dashes. Ops tabs no longer scroll.
+- Service operations redesigned around four accessible tabs (Accounts,
+  Collections, Team, Audit). Accounts: search by email or hub handle, a table
+  with suspend/reactivate and sign-out quick actions. Collections: review from a
+  pasted collection link; held collections listed and released from their row.
+  Team: invite field plus operator and invitation tables with Resend and Revoke.
+  Audit: one filter row (search, action, dates, Clear filters) over a table with
+  hub handles. Confirmation checkboxes removed; search text never appears in
+  page URLs. API: `accounts?q=`, `collections` (held), `collections/resolve`,
+  audit `q`; `POST accounts/lookup` and audit `actor`/`target` removed.
+- "Add a link" sits in a collection's fixed header, under its metadata, so it is
+  always in reach without scrolling.
 - Links must be public web addresses: localhost, loopback, IP, local/internal
   and example/test names (`example.com`, `.test`, …) are refused by the API
   (`link_not_public`, imports report `not_public_url`) and flagged in red in

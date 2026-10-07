@@ -7,6 +7,7 @@ import { OperatorFailure } from "../../../../components/operator-failure";
 import { OperationForm, OperatorNav } from "../../../../components/operator-ui";
 import { failure, queryValue } from "../../../../lib/http";
 import { operatorRead } from "../../../../lib/operator-read";
+import { sealSearch } from "../../../../lib/ops-search";
 import { serverRead } from "../../../../lib/server-api";
 import { isUuid } from "../../../../lib/validation";
 export const metadata: Metadata = { title: "Account details" };
@@ -32,8 +33,8 @@ export default async function Page({
   const mayManage =
     session.ok && (session.data.admin || (!a.operator && !a.admin) || session.data.userId === id);
   return (
-    <section className="reader">
-      <OperatorNav />
+    <section className="reader ops-page">
+      <OperatorNav current="accounts" />
       <h1>{a.name || "Account details"}</h1>
       <FormNotice code={queryValue(query.notice)} />
       <dl className="account-details">
@@ -99,11 +100,14 @@ export default async function Page({
             version={a.version}
             action="revoke"
             label="Remove operator access"
+            returnTo={`/ops/accounts/${id}`}
           />
         </section>
       )}
       <p>
-        <a href={`/ops/audit?target=${id}`}>View this account's operator history</a>
+        <a href={`/ops/audit?${new URLSearchParams({ s: sealSearch(id) })}`}>
+          View this account's operator history
+        </a>
       </p>
     </section>
   );

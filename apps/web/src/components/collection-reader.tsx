@@ -89,6 +89,12 @@ export async function CollectionReader({
           )}
           <Tags tags={collection.tags} />
           <CollectionMeta item={shown} />
+          {/* In the fixed header, so adding a link never needs a scroll. */}
+          {owner && (
+            <a className="button add-resource" href={`/capture?collection=${id}`}>
+              <span aria-hidden="true">+</span> Add a link
+            </a>
+          )}
           {collection.restriction && (
             <p className="form-notice">
               Distribution is on hold ({collection.restriction.reason.replaceAll("_", " ")}). You
@@ -106,11 +112,6 @@ export async function CollectionReader({
             nextCursor={resources.meta?.nextCursor}
             token={token}
           />
-          {owner && (
-            <a className="add-resource" href={`/capture?collection=${id}`}>
-              <span aria-hidden="true">+</span> Add a link
-            </a>
-          )}
         </section>
       </article>
       <div className="reader-side">

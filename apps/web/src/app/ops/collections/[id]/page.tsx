@@ -5,6 +5,7 @@ import { OperatorFailure } from "../../../../components/operator-failure";
 import { OperationForm, OperatorNav } from "../../../../components/operator-ui";
 import { failure, queryValue } from "../../../../lib/http";
 import { operatorRead } from "../../../../lib/operator-read";
+import { sealSearch } from "../../../../lib/ops-search";
 import { isUuid } from "../../../../lib/validation";
 export const metadata: Metadata = { title: "Collection moderation" };
 export const dynamic = "force-dynamic";
@@ -25,23 +26,26 @@ export default async function Page({
   if (!result.ok) return <OperatorFailure error={result} />;
   if (!result.data)
     return (
-      <section className="reader">
-        <OperatorNav />
+      <section className="reader ops-page">
+        <OperatorNav current="collections" />
         <h1>Collection unavailable</h1>
-        <p>There is no public collection or existing enforcement record available for this ID.</p>
+        <p>
+          No public collection or hold matches this address.{" "}
+          <a href="/ops/collections">Paste its link to try again</a>.
+        </p>
       </section>
     );
   const c = result.data;
   return (
-    <section className="reader">
-      <OperatorNav />
+    <section className="reader ops-page">
+      <OperatorNav current="collections" />
       <h1>Collection moderation</h1>
       <FormNotice code={queryValue(query.notice)} />
       <dl className="account-details">
         <dt>Collection ID</dt>
         <dd>{id}</dd>
-        <dt>Hub ID</dt>
-        <dd>{c.hubId}</dd>
+        <dt>Hub</dt>
+        <dd>{c.hubHandle ? `@${c.hubHandle}` : c.hubId}</dd>
         <dt>Distribution</dt>
         <dd>{c.held ? "On hold" : "No direct hold"}</dd>
         {c.reason && (
@@ -68,7 +72,9 @@ export default async function Page({
         }
       />
       <p>
-        <a href={`/ops/audit?target=${id}`}>View this collection's operator history</a>
+        <a href={`/ops/audit?${new URLSearchParams({ s: sealSearch(id) })}`}>
+          View this collection's operator history
+        </a>
       </p>
     </section>
   );

@@ -201,7 +201,7 @@ export function safeReturn(value: unknown): string {
   }
   if (/^\/capture\/[a-f0-9-]{36}$/.test(parsed.pathname)) return parsed.pathname;
   if (
-    /^\/(?:hub|settings|notifications|discover|support|ops(?:\/(?:audit|operators|accounts\/[a-f0-9-]{36}|collections\/[a-f0-9-]{36}))?|invitations\/[a-f0-9-]{36})$/.test(
+    /^\/(?:hub|settings|notifications|discover|support|confirm|ops(?:\/(?:audit|team|collections|accounts\/[a-f0-9-]{36}|collections\/[a-f0-9-]{36}))?|invitations\/[a-f0-9-]{36})$/.test(
       parsed.pathname,
     )
   )

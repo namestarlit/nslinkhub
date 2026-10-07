@@ -3,6 +3,8 @@ import { safeReturn } from "./http";
 
 export interface SignInFlow {
   invitationToken?: string;
+  /** Confirming it's an already signed-in person before a sensitive action. */
+  confirm?: boolean;
   email: string;
   returnTo: string;
   issued: number;

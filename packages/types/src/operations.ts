@@ -54,6 +54,7 @@ export interface OperatorAccount {
 export interface OperatorCollection {
   id: string;
   hubId: string;
+  hubHandle: string | null;
   held: boolean;
   version: number;
   reason: OperationReason | null;
@@ -64,8 +65,12 @@ export interface OperatorAuditEntry {
   createdAt: string;
   actorKind: "user" | "deployment" | "invitee";
   actorUserId: string | null;
+  /** The actor's hub handle, when they have a hub. */
+  actorHandle: string | null;
   authority: string | null;
   targetUserId: string | null;
+  /** The target account's hub handle, when it has a hub. */
+  targetHandle: string | null;
   collectionId: string | null;
   invitationId: string | null;
   action: string;
@@ -116,3 +121,32 @@ export interface InvitationAcceptance {
   state: string;
   signedIn: boolean;
 }
+
+// Every action the operator audit records, grouped for the audit filter.
+export const operatorAuditActions = [
+  "account.suspend",
+  "account.reactivate",
+  "sessions.revoke",
+  "collection.hold",
+  "collection.release",
+  "invitation.create",
+  "invitation.resend",
+  "invitation.cancel",
+  "invitation.accept_requested",
+  "invitation.verified",
+  "invitation.decline",
+  "operator.revoke",
+  "admin.invitation_refreshed",
+  "account.handover",
+  "accounts.list",
+  "accounts.lookup",
+  "collections.list",
+  "account.read",
+  "collection.inspect",
+  "operators.list",
+  "invitations.list",
+  "audit.read",
+  "access.denied",
+  "action.denied",
+] as const;
+export type OperatorAuditAction = (typeof operatorAuditActions)[number];

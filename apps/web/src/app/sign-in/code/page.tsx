@@ -18,9 +18,10 @@ export default async function Page({
   const query = await searchParams;
   return (
     <section className="reader account-flow">
-      <h1>Check your email</h1>
+      <h1>{flow.confirm ? "Confirm it's you" : "Check your email"}</h1>
       <p>
         Enter the code sent to <strong>{flow.email}</strong>. Codes expire after five minutes.
+        {flow.confirm && " Your action continues once it's accepted."}
       </p>
       <FormNotice code={queryValue(query.notice)} wait={queryValue(query.wait)} />
       <NativeForm action="/forms/code-verify">
@@ -30,13 +31,14 @@ export default async function Page({
           name="code"
           autoComplete="one-time-code"
           inputMode="numeric"
-          pattern="[0-9]{8}"
-          minLength={8}
-          maxLength={8}
+          pattern="[0-9\s\-]{8,16}"
+          maxLength={16}
           required
         />
+        {/* Choosing to send the code was the decision; here the only way on
+            is the code (or a new one if it didn't arrive). */}
         <button type="submit" className="button primary">
-          Verify and continue
+          {flow.confirm ? "Confirm and continue" : "Verify and continue"}
         </button>
       </NativeForm>
       <ResendCode

@@ -1506,25 +1506,12 @@ html[data-revalidating="true"] .session-nav {
   padding-inline: 0.75rem;
   border-radius: var(--radius-control);
 }
-.add-resource {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  min-height: var(--control);
-  margin: 0.25rem 0 1.25rem;
-  padding: 0.5rem 0.75rem;
-  border: 1px dashed var(--color-border);
-  border-radius: var(--radius-control);
-  color: var(--color-muted);
-  font-weight: 550;
-}
-.add-resource:hover {
-  color: var(--color-primary);
-  border-color: var(--color-primary);
-  text-decoration: none;
+.page-heading .add-resource {
+  align-self: flex-start;
+  margin-top: 1rem;
 }
 .add-resource span {
-  font-size: 1.25rem;
+  font-size: 1.125rem;
   line-height: 1;
 }
 .collection-sheet > .continuation {
@@ -2399,21 +2386,214 @@ html[data-revalidating="true"] .session-nav {
   font-size: var(--text-section);
   font-weight: 650;
 }
-.audit-filters {
+/* ---------- Service operations ---------- */
+
+.ops-page {
+  max-width: 64rem;
+}
+/* Tabs: one area per page; the current tab is underlined and bolder. */
+.ops-tabs {
+  display: flex;
+  gap: 0.25rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.75rem;
+  border-bottom: 1px solid var(--color-border);
+}
+.ops-tabs a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--control);
+  padding: 0 0.875rem;
+  margin-bottom: -1px;
+  border-bottom: 2px solid transparent;
+  color: var(--color-muted);
+  font-weight: 550;
+  white-space: nowrap;
+  text-decoration: none;
+}
+.ops-tabs a:hover {
+  color: var(--color-ink);
+  text-decoration: none;
+}
+.ops-tabs a[aria-current="page"] {
+  border-bottom-color: var(--color-primary);
+  color: var(--color-ink);
+  font-weight: 650;
+}
+.ops-page > h1 {
+  margin-bottom: 0.25rem;
+}
+/* One horizontal row of filters with the action at its end. */
+.ops-filters {
   display: flex;
   flex-wrap: wrap;
-  align-items: end;
-  gap: 1rem;
-  margin-block: 1.5rem;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+  margin-block: 1.25rem;
 }
-.audit-filters label {
-  display: flex;
-  flex-direction: column;
-  gap: 0.375rem;
-  flex: 1 1 12rem;
+.ops-filters > label {
+  flex: 0 1 auto;
   min-width: 0;
+}
+.ops-filters > .ops-search {
+  flex: 1 1 10rem;
+}
+main .ops-filters select,
+main .ops-filters input[type="date"] {
+  width: auto;
+}
+main .ops-filters select {
+  max-width: 13rem;
+}
+.ops-clear {
+  font-size: 0.9375rem;
+}
+.ops-section-title {
+  margin: 2rem 0 0.5rem;
+  font-size: var(--text-row);
+}
+.ops-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9375rem;
+}
+.ops-table th {
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-muted);
+  font-size: var(--text-meta);
+  font-weight: 600;
+  text-align: left;
+  white-space: nowrap;
+}
+.ops-table td {
+  padding: 0.75rem;
+  border-bottom: 1px solid var(--color-border);
+  vertical-align: top;
+}
+.ops-table th:first-child,
+.ops-table td:first-child {
+  padding-left: 0;
+}
+.ops-primary {
+  display: block;
+  font-weight: 600;
+  color: var(--color-ink);
+  overflow-wrap: anywhere;
+}
+.ops-secondary {
+  display: block;
+  margin-top: 0.125rem;
+  color: var(--color-muted);
+  font-size: var(--text-meta);
+  overflow-wrap: anywhere;
+}
+.ops-id {
+  font-variant-numeric: tabular-nums;
+}
+.ops-status {
+  display: inline-block;
+  padding: 0.0625rem 0.5rem;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  font-size: var(--text-meta);
+}
+.ops-status.suspended {
+  border-color: var(--color-danger);
+  color: var(--color-danger);
+}
+.ops-actions {
+  text-align: right;
+  white-space: nowrap;
+}
+.ops-actions > * {
+  display: inline-block;
+  vertical-align: top;
+}
+.ops-table .action-form {
+  margin: 0;
+}
+.ops-actions .text-button,
+.quick-action > summary {
+  min-height: auto;
+  padding: 0.125rem 0.375rem;
+}
+.text-button.danger,
+.quick-action > summary.danger {
+  color: var(--color-danger);
+}
+/* A row action opens an inline reason and confirm button. */
+.quick-action > summary {
+  list-style: none;
+  cursor: pointer;
+  color: var(--color-primary);
   font-weight: 550;
   font-size: 0.9375rem;
+}
+.quick-action > summary::-webkit-details-marker {
+  display: none;
+}
+.quick-action[open] > summary {
+  color: var(--color-muted);
+}
+.quick-action .action-form {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  white-space: normal;
+}
+.quick-action .action-form > label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+.quick-action select {
+  width: auto;
+}
+/* Narrow screens: each row becomes a labelled block. */
+@media (max-width: 720px) {
+  .ops-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+  .ops-table,
+  .ops-table tbody,
+  .ops-table tr,
+  .ops-table td {
+    display: block;
+  }
+  .ops-table tr {
+    padding-block: 0.75rem;
+    border-bottom: 1px solid var(--color-border);
+  }
+  .ops-table td {
+    display: grid;
+    grid-template-columns: 6.5rem 1fr;
+    gap: 0.75rem;
+    padding: 0.25rem 0;
+    border: 0;
+  }
+  .ops-table td[data-label]::before {
+    content: attr(data-label);
+    color: var(--color-muted);
+    font-size: var(--text-meta);
+  }
+  .ops-table td.ops-actions {
+    display: block;
+    text-align: left;
+    white-space: normal;
+  }
+  .quick-action .action-form {
+    justify-content: flex-start;
+  }
 }
 
 /* ---------- Responsive ---------- */
@@ -2558,4 +2738,14 @@ html[data-revalidating="true"] .session-nav {
   flex-wrap: wrap;
   gap: 0.75rem;
   margin-top: 0.5rem;
+}
+
+.resend-row {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 0.9375rem;
+}
+.resend-row .text-button {
+  min-height: auto;
+  padding: 0;
 }

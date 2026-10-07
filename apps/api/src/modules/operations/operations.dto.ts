@@ -1,8 +1,10 @@
 import {
   type OperationAction,
   type OperationReason,
+  type OperatorAuditAction,
   operationActions,
   operationReasons,
+  operatorAuditActions,
 } from "@nslinkhub/types";
 import {
   IsIn,
@@ -22,13 +24,19 @@ export class OperationDto {
   @IsInt() @Min(0) version!: number;
   @IsUUID() operationId!: string;
 }
-export class AccountLookupDto {
-  @IsString() @MaxLength(254) lookup!: string;
+// Accounts are found the way people know them: an email or a hub handle.
+export class AccountListQueryDto extends CursorQueryDto {
+  @IsOptional() @IsString() @MaxLength(254) q?: string;
+}
+// A collection link as copied from the site: /c/<id> or /@handle/<slug>,
+// with or without the origin.
+export class CollectionLinkQueryDto {
+  @IsString() @MaxLength(2048) link!: string;
 }
 export class AuditQueryDto extends CursorQueryDto {
-  @IsOptional() @IsUUID() actor?: string;
-  @IsOptional() @IsUUID() target?: string;
-  @IsOptional() @IsString() @MaxLength(40) action?: string;
+  // An email, hub handle or id; matches who acted or who was affected.
+  @IsOptional() @IsString() @MaxLength(254) q?: string;
+  @IsOptional() @IsIn(operatorAuditActions) action?: OperatorAuditAction;
   @IsOptional() @IsISO8601() from?: string;
   @IsOptional() @IsISO8601() to?: string;
 }

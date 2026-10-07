@@ -1525,7 +1525,6 @@ async function submitOperation(page: Page, name: string, reason: string) {
     .locator(".operation-section")
     .filter({ has: page.getByRole("heading", { name, exact: true }) });
   await section.getByLabel("Reason", { exact: true }).selectOption(reason);
-  await section.getByRole("checkbox").check();
   await section.getByRole("button", { name, exact: true }).click();
 }
 
@@ -1552,19 +1551,37 @@ describe("service operations: production browser journey", () => {
       const { page, close } = await freshPage(js);
       try {
         await browserSignIn(page, op.email);
-        await browserExpect(page.locator("h1")).toHaveText("Service operations");
-        await page.getByLabel("Find an account by email, user ID or hub handle").fill(targetEmail);
-        await page.getByRole("button", { name: "Find account", exact: true }).click();
-        await browserExpect(page.locator("h1")).toHaveText("Browser target");
+        await browserExpect(page.locator("h1")).toHaveText("Accounts");
+        const tabs = page.getByRole("navigation", { name: "Service operations" });
+        await browserExpect(tabs.getByRole("link", { name: "Accounts" })).toHaveAttribute(
+          "aria-current",
+          "page",
+        );
+        await page.getByLabel("Email or hub handle", { exact: true }).fill(targetEmail);
+        await page.getByRole("button", { name: "Search", exact: true }).click();
+        // The searched email never appears in the address.
         expect(page.url()).not.toContain(targetEmail);
-        await submitOperation(page, "Suspend account", "spam");
+        const row = page.locator(".ops-table tbody tr");
+        await browserExpect(row).toHaveCount(1);
+        await browserExpect(row).toContainText("Browser target");
+        // A quick action from the table: reason, then the labelled button.
+        const suspend = row
+          .locator(".quick-action")
+          .filter({ has: page.locator("summary", { hasText: /^Suspend$/ }) });
+        await suspend.locator("summary").click();
+        await suspend.getByLabel("Reason", { exact: true }).selectOption("spam");
+        await suspend.getByRole("button", { name: "Suspend", exact: true }).click();
         await browserExpect(
           page.getByText("The action is complete.", { exact: true }),
         ).toBeVisible();
+        await browserExpect(page.locator(".ops-table tbody tr")).toContainText("Suspended");
+        expect(page.url()).not.toContain(targetEmail);
         expect(
           (await prisma.user.findUniqueOrThrow({ where: { id: target.body.user.id } }))
             .accountState,
         ).toBe("suspended");
+        await page.locator(".ops-table").getByRole("link", { name: "Browser target" }).click();
+        await browserExpect(page.locator("h1")).toHaveText("Browser target");
         await submitOperation(page, "Reactivate account", "review_completed");
         await browserExpect(
           page.getByRole("button", { name: "Suspend account", exact: true }),
@@ -1573,19 +1590,36 @@ describe("service operations: production browser journey", () => {
         await browserExpect(
           page.getByText("The action is complete.", { exact: true }),
         ).toBeVisible();
-        await ready(page, `/ops/collections/${id}`);
+        // Collections are found by their link, not an id.
+        await tabs.getByRole("link", { name: "Collections" }).click();
+        await page.getByLabel("Collection link", { exact: true }).fill(`${origin}/c/${id}`);
+        await page.getByRole("button", { name: "Review", exact: true }).click();
+        await browserExpect(page).toHaveURL(new RegExp(`/ops/collections/${id}`));
         await submitOperation(page, "Hold distribution", "harmful_content");
         await browserExpect(
           page.getByRole("button", { name: "Release hold", exact: true }),
         ).toBeVisible();
         await request(app.getHttpServer()).get(`/api/v1/collections/${id}`).expect(404);
-        await submitOperation(page, "Release hold", "review_completed");
+        // Held collections are listed and released from their row.
+        await ready(page, "/ops/collections");
+        const held = page.locator(".ops-table tbody tr").filter({ hasText: id });
+        await held.locator(".quick-action summary").click();
+        await held.getByLabel("Reason", { exact: true }).selectOption("review_completed");
+        await held.getByRole("button", { name: "Release", exact: true }).click();
         await browserExpect(
-          page.getByRole("button", { name: "Hold distribution", exact: true }),
+          page.getByText("The action is complete.", { exact: true }),
         ).toBeVisible();
+        await browserExpect(
+          page.locator(".ops-table tbody tr").filter({ hasText: id }),
+        ).toHaveCount(0);
+        await ready(page, `/ops/collections/${id}`);
         await page.getByRole("link", { name: "View this collection's operator history" }).click();
-        await browserExpect(page.locator("h1")).toHaveText("Operator audit");
-        await browserExpect(page.locator("body")).toContainText("collection · hold");
+        await browserExpect(page.locator("h1")).toHaveText("Audit");
+        await browserExpect(page.locator(".ops-table")).toContainText("collection hold");
+        await page.getByLabel("Action", { exact: true }).selectOption("collection.release");
+        await page.getByRole("button", { name: "Filter", exact: true }).click();
+        await browserExpect(page.locator(".ops-table tbody tr")).toHaveCount(1);
+        await browserExpect(page.getByRole("link", { name: "Clear filters" })).toBeVisible();
         for (const width of [320, 390, 768, 1280]) {
           await page.setViewportSize({ width, height: 900 });
           expect(
@@ -1626,15 +1660,46 @@ describe("service operations: production browser journey", () => {
       await page.getByRole("button", { name: "Verify and continue" }).click();
       await browserExpect(page.locator("h1")).toHaveText("Good links deservea place to belong.");
       expect(new URL(page.url()).origin).toBe(origin);
-      await ready(page, `/ops/accounts/${op.id}`);
+      // A sensitive action with a stale verification asks the signed-in
+      // operator to confirm it's them, then finishes the action by itself.
+      const member = await signInWithCode(app.getHttpServer(), {
+        email: `stale-target-${crypto.randomUUID()}@example.com`,
+        name: "Stale target",
+      });
+      const memberId = member.body.user.id;
+      await ready(page, `/ops/accounts/${memberId}`);
       await prisma.session.updateMany({
         where: { userId: op.id },
         data: { verifiedAt: new Date(0) },
       });
       await submitOperation(page, "End all sessions", "owner_request");
-      await browserExpect(page.locator("h1")).toHaveText("Sign in");
-      await browserExpect(page.locator(".form-notice")).toContainText("review and submit");
-      await browserSignIn(page, op.email, `/ops/accounts/${op.id}`);
+      await browserExpect(page.locator("h1")).toHaveText("Confirm it's you");
+      await browserExpect(page.locator("main")).toContainText("sign this account out everywhere");
+      await browserExpect(page.getByLabel("Email address")).toHaveCount(0);
+      // Cancel sends nothing and returns to where the action was started.
+      const mailsBefore = await prisma.emailOutbox.count();
+      await page.getByRole("button", { name: "Cancel", exact: true }).click();
+      await browserExpect(page.locator("h1")).toHaveText("Stale target");
+      expect(await prisma.emailOutbox.count()).toBe(mailsBefore);
+      await submitOperation(page, "End all sessions", "owner_request");
+      await browserExpect(page.locator("h1")).toHaveText("Confirm it's you");
+      await page.getByRole("button", { name: "Send code", exact: true }).click();
+      // Having chosen to send it, the code screen offers a new code, not a cancel.
+      await browserExpect(page.getByRole("button", { name: "Cancel", exact: true })).toHaveCount(0);
+      await browserExpect(page.locator(".resend-row")).toContainText("Didn't receive the code?");
+      await browserExpect(page.locator("h1")).toHaveText("Confirm it's you");
+      // A pasted code with a space ("3368 6575") is accepted.
+      const confirmCode = await capturedCode(op.email);
+      await page
+        .getByLabel("Eight-digit code")
+        .fill(`${confirmCode.slice(0, 4)} ${confirmCode.slice(4)}`);
+      await page.getByRole("button", { name: "Confirm and continue" }).click();
+      await browserExpect(page.locator("h1")).toHaveText("Stale target");
+      await browserExpect(page.getByText("The action is complete.", { exact: true })).toBeVisible();
+      expect(
+        await prisma.session.count({ where: { userId: memberId, expiresAt: { gt: new Date() } } }),
+      ).toBe(0);
+      await ready(page, `/ops/accounts/${op.id}`);
       await browserExpect(page.locator("h1")).toHaveText("browser-recovery");
       await prisma.operatorGrant.delete({ where: { userId: op.id } });
       await page.reload();
@@ -1772,7 +1837,7 @@ describe("email invitation onboarding", () => {
     await browserExpect(page.locator("h1")).toHaveText("Check your email");
     await page.getByLabel("Eight-digit code").fill(await capturedCode(email));
     await page.getByRole("button", { name: "Verify and continue" }).click();
-    await browserExpect(page.locator("h1")).toHaveText("Service operations");
+    await browserExpect(page.locator("h1")).toHaveText("Accounts");
   }
   it("starts from email, creates accounts only on acceptance, and requires fresh OTP for matching sessions with or without JavaScript", async () => {
     const { prepareAdminInvitation } = await import("../../src/operations/invitations.js");
@@ -1803,9 +1868,9 @@ describe("email invitation onboarding", () => {
         expect(account.emailVerified).toBe(false);
         expect(await prisma.session.count({ where: { userId: account.id } })).toBe(0);
         await verifyInvitationCode(page, adminEmail);
-        await page.getByRole("link", { name: "Operators and invitations", exact: true }).click();
+        await page.getByRole("link", { name: "Team", exact: true }).click();
         await page.getByLabel("Operator's email").fill(operatorEmail);
-        await page.getByRole("button", { name: "Send operator invitation" }).click();
+        await page.getByRole("button", { name: "Invite operator" }).click();
         await browserExpect(page.locator(".toast")).toContainText("complete");
         expect(await prisma.user.findUnique({ where: { email: operatorEmail } })).toBeNull();
         // An authenticated account sees a mismatch instead of changing identity.
@@ -1821,18 +1886,17 @@ describe("email invitation onboarding", () => {
         await consent(recipient.page);
         await verifyInvitationCode(recipient.page, operatorEmail);
         await browserExpect(
-          recipient.page.getByRole("link", { name: "Operators and invitations", exact: true }),
+          recipient.page.getByRole("link", { name: "Team", exact: true }),
         ).toHaveCount(0);
         const target = await prisma.user.findUniqueOrThrow({ where: { email: operatorEmail } });
         await ready(page, `/ops/accounts/${target.id}`);
-        await page.getByLabel("I confirm: remove operator access.").check();
         await page.getByRole("button", { name: "Remove operator access", exact: true }).click();
         await browserExpect(page.locator(".toast")).toContainText("complete");
         // Reinvite the same now-existing account. Its matching session accepts
         // with fresh email proof; its existing name is retained.
-        await ready(page, "/ops/operators");
+        await ready(page, "/ops/team");
         await page.getByLabel("Operator's email").fill(operatorEmail);
-        await page.getByRole("button", { name: "Send operator invitation" }).click();
+        await page.getByRole("button", { name: "Invite operator" }).click();
         await browserExpect(page.locator(".toast")).toContainText("complete");
         await openEmail(recipient.page, operatorEmail, js);
         await browserExpect(recipient.page.getByLabel("Your name", { exact: true })).toHaveCount(0);

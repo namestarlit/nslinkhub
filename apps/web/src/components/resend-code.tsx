@@ -20,9 +20,12 @@ export function ResendCode({ remaining }: { remaining: number }) {
   }, [remaining]);
   return (
     <NativeForm action="/forms/code-resend">
-      <button type="submit" className="text-button" disabled={left > 0}>
-        Send a new code
-      </button>
+      <p className="resend-row">
+        Didn't receive the code?{" "}
+        <button type="submit" className="text-button" disabled={left > 0}>
+          Send a new code
+        </button>
+      </p>
       {left > 0 && (
         <p className="field-help" aria-live="off">
           You can request another code in {left}s.

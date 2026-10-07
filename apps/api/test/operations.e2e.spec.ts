@@ -92,15 +92,23 @@ describe("service operator authority (HTTP)", () => {
       .get("/api/v1/operations/accounts")
       .set("Authorization", `Bearer ${operator.token}`)
       .expect(403);
+    // Operator commands carry cookie authority only with the exact Origin.
     await request(server())
-      .post("/api/v1/operations/accounts/lookup")
+      .post("/api/v1/operations/commands")
       .set("Cookie", operator.cookie)
-      .send({ lookup: owner.email })
+      .send({
+        action: "sessions.revoke",
+        targetId: owner.id,
+        version: 1,
+        reason: "account_compromise",
+        operationId: randomUUID(),
+      })
       .expect(403);
-    const lookup = await as("post", "/api/v1/operations/accounts/lookup")
-      .send({ lookup: owner.email })
-      .expect(201);
-    expect(lookup.body.data[0].id).toBe(owner.id);
+    const lookup = await as(
+      "get",
+      `/api/v1/operations/accounts?q=${encodeURIComponent(owner.email.toUpperCase())}`,
+    ).expect(200);
+    expect(lookup.body.data.map((a: { id: string }) => a.id)).toEqual([owner.id]);
     expect(JSON.stringify(lookup.body)).not.toContain("token");
     await prisma.session.updateMany({
       where: { userId: operator.id },
@@ -210,6 +218,33 @@ describe("service operator authority (HTTP)", () => {
     const account = await as("get", `/api/v1/operations/accounts/${operator.id}`).expect(200);
     await command("account.suspend", operator.id, account.body.data.version).expect(403);
   });
+  it("lists held collections and finds a collection from its pasted link", async () => {
+    const c = await create();
+    const hub = await prisma.hub.findUniqueOrThrow({ where: { id: c.hubId } });
+    for (const link of [
+      `http://localhost:3000/c/${c.id}`,
+      `/c/${c.id}`,
+      `https://nslinkhub.dev/@${hub.handle}/${c.slug}`,
+    ]) {
+      const found = await as(
+        "get",
+        `/api/v1/operations/collections/resolve?${new URLSearchParams({ link })}`,
+      ).expect(200);
+      expect(found.body.data).toMatchObject({ id: c.id, hubHandle: hub.handle, held: false });
+    }
+    const missing = await as(
+      "get",
+      `/api/v1/operations/collections/resolve?${new URLSearchParams({ link: "not a link" })}`,
+    ).expect(200);
+    expect(missing.body.data).toBeNull();
+    await command("collection.hold", c.id, 0).expect(201);
+    const held = await as("get", "/api/v1/operations/collections").expect(200);
+    expect(held.body.data[0]).toMatchObject({ id: c.id, held: true, hubHandle: hub.handle });
+    expect(JSON.stringify(held.body)).not.toContain(c.title);
+    await command("collection.release", c.id, 1).expect(201);
+    const after = await as("get", "/api/v1/operations/collections").expect(200);
+    expect(after.body.data.some((row: { id: string }) => row.id === c.id)).toBe(false);
+  });
   it("rolls back restrictions if audit persistence fails", async () => {
     const c = await create();
     // A database trigger exercises the actual transaction client, not a mock
@@ -229,12 +264,11 @@ describe("service operator authority (HTTP)", () => {
     expect(await prisma.collectionHold.findUnique({ where: { collectionId: c.id } })).toBeNull();
   });
   it("audits lookup without its email and cleans history without lifting restrictions", async () => {
-    await as("post", "/api/v1/operations/accounts/lookup")
-      .send({ lookup: owner.email })
-      .expect(201);
-    const audit = await as("get", `/api/v1/operations/audit?target=${owner.id}&limit=1`).expect(
-      200,
-    );
+    await as("get", `/api/v1/operations/accounts?q=${encodeURIComponent(owner.email)}`).expect(200);
+    const audit = await as(
+      "get",
+      `/api/v1/operations/audit?${new URLSearchParams({ q: owner.email, action: "accounts.lookup", limit: "1" })}`,
+    ).expect(200);
     expect(audit.body.data).toHaveLength(1);
     expect(JSON.stringify(audit.body)).not.toContain(owner.email);
     const c = await create();

@@ -21,7 +21,7 @@ import { authorityContext } from "../../database/authority-context";
 import { PrismaService } from "../../database/prisma.service";
 import type { Prisma } from "../../generated/prisma/client";
 import { CollectionPolicyService } from "../hubs/collection-policy.service";
-import type { AuditQueryDto } from "./operations.dto";
+import type { AccountListQueryDto, AuditQueryDto } from "./operations.dto";
 
 export type OperatorRequest = RequestWithId & { user: AuthUser };
 const reasons: Record<OperationAction, readonly OperationReason[]> = {
@@ -139,29 +139,27 @@ export class OperationsService {
       admin: !!u.adminGrant,
     }));
   }
-  listAccounts(req: OperatorRequest, query: CursorQueryDto) {
+  // The account list, optionally narrowed by an email or hub handle fragment.
+  // The search text itself is never written to the audit.
+  listAccounts(req: OperatorRequest, query: AccountListQueryDto) {
     return this.run(req, false, async () => {
-      const page = this.page(query, "accounts");
-      const rows = await this.accounts(page.where, page.limit + 1);
-      await this.audit(req, { action: "accounts.list", outcome: "success" });
-      return this.paged(rows, page);
-    });
-  }
-  lookup(req: OperatorRequest, lookup: string) {
-    return this.run(req, false, async () => {
-      const key = lookup.trim().toLowerCase().replace(/^@/, "");
-      const where: Prisma.UserWhereInput = isUUID(key)
-        ? { id: key }
-        : key.includes("@")
-          ? { email: key }
-          : { hub: { handle: key } };
-      const rows = await this.accounts(where, 1);
+      const key = query.q?.trim().toLowerCase().replace(/^@/, "") ?? "";
+      const page = this.page(query, `accounts:${key}`);
+      const match: Prisma.UserWhereInput = key
+        ? {
+            OR: [
+              { email: { contains: key, mode: "insensitive" } },
+              { hub: { handle: { contains: key } } },
+            ],
+          }
+        : {};
+      const rows = await this.accounts({ AND: [page.where, match] }, page.limit + 1);
       await this.audit(req, {
-        action: "accounts.lookup",
-        targetUserId: rows[0]?.id,
-        outcome: rows.length ? "success" : "no_match",
+        action: key ? "accounts.lookup" : "accounts.list",
+        ...(key && rows.length === 1 ? { targetUserId: rows[0].id } : {}),
+        outcome: !key || rows.length ? "success" : "no_match",
       });
-      return rows;
+      return this.paged(rows, page);
     });
   }
   account(req: OperatorRequest, id: string) {
@@ -186,13 +184,75 @@ export class OperationsService {
       return result;
     });
   }
+  // Collections currently held from public view, newest first. Holds are rare,
+  // so one bounded page; no titles (content may have gone private since).
+  heldCollections(req: OperatorRequest) {
+    return this.run(req, false, async () => {
+      const holds = await this.prisma.collectionHold.findMany({
+        where: { active: true },
+        include: { collection: { select: { hubId: true, hub: { select: { handle: true } } } } },
+        orderBy: { updatedAt: "desc" },
+        take: 100,
+      });
+      await this.audit(req, { action: "collections.list", outcome: "success" });
+      return holds.map(
+        (h): OperatorCollection => ({
+          id: h.collectionId,
+          hubId: h.collection.hubId,
+          hubHandle: h.collection.hub?.handle ?? null,
+          held: true,
+          version: h.version,
+          reason: h.reason as OperationReason,
+          updatedAt: h.updatedAt.toISOString(),
+        }),
+      );
+    });
+  }
+  // A pasted collection link: /c/<id> or /@handle/<slug>, origin optional.
+  collectionByLink(req: OperatorRequest, link: string) {
+    return this.run(req, false, async () => {
+      let path = link.trim();
+      try {
+        path = new URL(path, "http://link.invalid").pathname;
+      } catch {
+        path = "";
+      }
+      const permalink = /^\/c\/([0-9a-f-]{36})\/?$/i.exec(path)?.[1];
+      const pretty = /^\/@([a-z0-9-]{1,60})\/([a-z0-9-]{1,120})\/?$/i.exec(path);
+      const id =
+        permalink && isUUID(permalink)
+          ? permalink
+          : pretty
+            ? (
+                await this.prisma.collection.findFirst({
+                  where: {
+                    slug: pretty[2].toLowerCase(),
+                    hub: { handle: pretty[1].toLowerCase() },
+                  },
+                  select: { id: true },
+                })
+              )?.id
+            : undefined;
+      const result = id ? await this.collectionInfo(id) : null;
+      await this.audit(req, {
+        action: "collection.inspect",
+        collectionId: result?.id,
+        outcome: result ? "success" : "no_match",
+      });
+      return result;
+    });
+  }
   private async collectionInfo(id: string): Promise<OperatorCollection | null> {
-    const c = await this.prisma.collection.findUnique({ where: { id }, include: { hold: true } });
+    const c = await this.prisma.collection.findUnique({
+      where: { id },
+      include: { hold: true, hub: { select: { handle: true } } },
+    });
     if (!c) return null;
     if (!c.hold && !(await this.policy.resolve(c, null)).canRead) return null;
     return {
       id: c.id,
       hubId: c.hubId,
+      hubHandle: c.hub?.handle ?? null,
       held: c.hold?.active ?? false,
       version: c.hold?.version ?? 0,
       reason: (c.hold?.reason as OperationReason) ?? null,
@@ -325,29 +385,38 @@ export class OperationsService {
   }
   auditList(req: OperatorRequest, query: AuditQueryDto) {
     return this.run(req, false, async () => {
-      const filters = {
-        actor: query.actor,
-        target: query.target,
-        action: query.action,
-        from: query.from,
-        to: query.to,
-      };
+      const filters = { q: query.q, action: query.action, from: query.from, to: query.to };
+      // q names a person (email, handle or id) or a collection/invitation id.
+      const key = query.q?.trim().toLowerCase().replace(/^@/, "") ?? "";
+      const person = key
+        ? isUUID(key)
+          ? key
+          : (
+              await this.prisma.user.findFirst({
+                where: key.includes("@") ? { email: key } : { hub: { handle: key } },
+                select: { id: true },
+              })
+            )?.id
+        : undefined;
+      const subject: Prisma.OperatorAuditWhereInput | null = !key
+        ? {}
+        : person
+          ? {
+              OR: [
+                { actorUserId: person },
+                { targetUserId: person },
+                { collectionId: person },
+                { invitationId: person },
+              ],
+            }
+          : null;
       const page = this.page(query, JSON.stringify(filters));
       const rows = await this.prisma.operatorAudit.findMany({
         where: {
           AND: [
             page.where,
             {
-              ...(query.actor ? { actorUserId: query.actor } : {}),
-              ...(query.target
-                ? {
-                    OR: [
-                      { targetUserId: query.target },
-                      { collectionId: query.target },
-                      { invitationId: query.target },
-                    ],
-                  }
-                : {}),
+              ...(subject ?? { id: { in: [] } }),
               ...(query.action ? { action: query.action } : {}),
               createdAt: {
                 ...(query.from ? { gte: new Date(query.from) } : {}),
@@ -360,14 +429,28 @@ export class OperationsService {
         take: page.limit + 1,
       });
       await this.audit(req, { action: "audit.read", outcome: "success" });
+      // Handles make the table readable; ids stay for exact follow-up.
+      const people = [
+        ...new Set(rows.flatMap((r) => [r.actorUserId, r.targetUserId]).filter(Boolean)),
+      ] as string[];
+      const hubs = new Map(
+        (
+          await this.prisma.hub.findMany({
+            where: { ownerUserId: { in: people } },
+            select: { ownerUserId: true, handle: true },
+          })
+        ).map((h) => [h.ownerUserId, h.handle]),
+      );
       const items = rows.map(
         (r): OperatorAuditEntry => ({
           id: r.id,
           createdAt: r.createdAt.toISOString(),
           actorKind: r.actorKind as "user" | "deployment" | "invitee",
           actorUserId: r.actorUserId,
+          actorHandle: (r.actorUserId && hubs.get(r.actorUserId)) || null,
           authority: r.authority,
           targetUserId: r.targetUserId,
+          targetHandle: (r.targetUserId && hubs.get(r.targetUserId)) || null,
           collectionId: r.collectionId,
           invitationId: r.invitationId,
           action: r.action,

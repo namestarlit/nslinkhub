@@ -4,7 +4,6 @@ import type {
   CaptureLink,
   InvitationAcceptance,
   OperationCommand,
-  OperatorAccount,
   Profile,
 } from "@nslinkhub/types";
 import {
@@ -27,6 +26,12 @@ import {
   sealInvitationFlow,
 } from "../../../lib/form-server";
 import { type ApiPath, safeDocumentReturn, safeReturn, sessionCookie } from "../../../lib/http";
+import { sealSearch } from "../../../lib/ops-search";
+import {
+  type PendingAction,
+  pendingActionCookie,
+  readPendingAction,
+} from "../../../lib/pending-action";
 import { readSession } from "../../../lib/session";
 import { resendTiming } from "../../../lib/sign-in-flow";
 import { appearanceCookie } from "../../../lib/theme";
@@ -299,6 +304,36 @@ export async function POST(request: Request, { params }: { params: Promise<{ act
       ),
     ]);
   }
+  if (action === "confirm-cancel") {
+    // Drop the waiting action and go back to where it was started.
+    const pending = await readPendingAction();
+    return redirectResponse(pending?.target ?? "/ops", [
+      pendingActionCookie(null),
+      flowCookie("", 0),
+    ]);
+  }
+  if (action === "confirm-send") {
+    // A signed-in person confirms it's them: the code goes to their own email.
+    const [session, pending] = await Promise.all([readSession(), readPendingAction()]);
+    if (!session) return redirectResponse("/sign-in?notice=signin");
+    if (!pending) return redirectResponse("/ops?notice=expired");
+    const result = await formPost(
+      request,
+      "/api/v1/auth/code/send",
+      { email: session.email },
+      true,
+    );
+    const flow = {
+      email: session.email,
+      returnTo: pending.target,
+      confirm: true,
+      ...resendTiming(null, result, webServerConfig().codeResendSeconds),
+    };
+    return redirectResponse(
+      `/sign-in/code?notice=${result.ok ? "sent" : result.status === 429 ? "limited" : "unavailable"}${!result.ok && result.retryAfter ? `&wait=${Math.min(result.retryAfter, 600)}` : ""}`,
+      [flowCookie(sealFlow(flow))],
+    );
+  }
   if (action === "code-send" || action === "code-resend") {
     const previous = action === "code-resend" ? await readFlow() : null;
     const email = previous?.email ?? form.get("email")?.trim().toLowerCase();
@@ -317,6 +352,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ act
       returnTo,
       ...resendTiming(previous, result, webServerConfig().codeResendSeconds),
       ...(previous?.invitationToken ? { invitationToken: previous.invitationToken } : {}),
+      ...(previous?.confirm ? { confirm: true } : {}),
     };
     return redirectResponse(
       `/sign-in/code?notice=${result.ok ? "sent" : result.status === 429 ? "limited" : "unavailable"}${!result.ok && result.retryAfter ? `&wait=${Math.min(result.retryAfter, 600)}` : ""}`,
@@ -326,8 +362,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ act
   if (action === "code-verify") {
     const flow = await readFlow();
     if (!flow) return redirectResponse("/sign-in?notice=expired");
-    const code = form.get("code");
-    if (!code || !/^\d{8}$/.test(code)) return redirectResponse("/sign-in/code?notice=invalid");
+    // Pasted codes often carry spaces or dashes ("3368 6575"); only digits count.
+    const code = (form.get("code") ?? "").replace(/[\s-]/g, "");
+    if (!/^\d{8}$/.test(code)) return redirectResponse("/sign-in/code?notice=invalid");
     const result = await formPost(
       request,
       flow.invitationToken ? "/api/v1/auth/invitations/verify" : "/api/v1/auth/code/verify",
@@ -338,15 +375,32 @@ export async function POST(request: Request, { params }: { params: Promise<{ act
       return redirectResponse(
         `/sign-in/code?notice=${result.status === 429 ? "limited" : result.status >= 500 || !result.status ? "unavailable" : "invalid"}${result.retryAfter ? `&wait=${Math.min(result.retryAfter, 600)}` : ""}`,
       );
+    const verified = (result.setCookies ?? []).map((cookie) => cookie.split(";")[0]).join("; ");
+    // Confirmed: run the action that asked for it, with the new session.
+    if (flow.confirm) {
+      const pending = await readPendingAction();
+      const done = [...(result.setCookies ?? []), flowCookie("", 0), pendingActionCookie(null)];
+      if (!pending || pending.target !== flow.returnTo)
+        return redirectResponse(flow.returnTo, done);
+      const headers = new Headers(request.headers);
+      headers.set("cookie", verified);
+      const replay = await formPost(
+        new Request(request.url, { headers }),
+        pending.path,
+        pending.body,
+      );
+      const join = pending.target.includes("?") ? "&" : "?";
+      return redirectResponse(
+        `${pending.target}${join}notice=${replay.ok ? "done" : replay.status === 409 ? "conflict" : replay.status === 403 ? "forbidden" : replay.status === 429 ? "limited" : "unavailable"}`,
+        done,
+      );
+    }
     const captureId = /^\/capture\/([a-f0-9-]{36})$/.exec(flow.returnTo)?.[1];
     if (!flow.invitationToken && captureId) {
       const draft = await readDraft(captureId);
       if (draft) {
         const headers = new Headers(request.headers);
-        headers.set(
-          "cookie",
-          (result.setCookies ?? []).map((cookie) => cookie.split(";")[0]).join("; "),
-        );
+        headers.set("cookie", verified);
         return saveDraft(new Request(request.url, { headers }), draft, [
           ...(result.setCookies ?? []),
           flowCookie("", 0),
@@ -365,24 +419,19 @@ export async function POST(request: Request, { params }: { params: Promise<{ act
       ? redirectResponse("/?notice=signed-out", result.setCookies)
       : redirectResponse("/sign-in?notice=signout-failed");
   }
-  if (action === "account-lookup") {
-    const lookup = form.get("lookup");
-    if (!lookup || lookup.length > 254) return redirectResponse("/ops?notice=invalid");
-    const result = await formPost<OperatorAccount[]>(
-      request,
-      "/api/v1/operations/accounts/lookup",
-      { lookup },
-    );
-    if (!result.ok)
-      return redirectResponse(`/ops?notice=${result.status === 401 ? "signin" : "unavailable"}`);
-    return redirectResponse(
-      result.data[0] ? `/ops/accounts/${result.data[0].id}` : "/ops?notice=no-match",
-    );
-  }
-  if (action === "collection-lookup") {
-    const id = form.get("collectionId");
-    if (!id || !isUuid(id)) return redirectResponse("/ops?notice=invalid");
-    return redirectResponse(`/ops/collections/${encodeURIComponent(id)}`);
+  if (action === "ops-search") {
+    // Accounts and audit searches: the free text is sealed, other filters stay
+    // readable. An empty search clears it.
+    const page = form.get("page") === "audit" ? "/ops/audit" : "/ops";
+    const query = new URLSearchParams();
+    const text = (form.get("q") ?? "").trim().slice(0, 254);
+    if (text) query.set("s", sealSearch(text));
+    if (page === "/ops/audit")
+      for (const key of ["action", "from", "to"]) {
+        const value = (form.get(key) ?? "").slice(0, 40);
+        if (value) query.set(key, value);
+      }
+    return redirectResponse(`${page}${query.size ? `?${query}` : ""}`);
   }
   if (action === "invitation-create" || action === "invitation-action") {
     const id = form.get("id"),
@@ -391,12 +440,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ act
     if (
       !isUuid(operationId ?? "") ||
       (action === "invitation-action" &&
-        (!isUuid(id ?? "") ||
-          !["resend", "cancel", "revoke"].includes(verb ?? "") ||
-          !form.has("confirm")))
+        (!isUuid(id ?? "") || !["resend", "cancel", "revoke"].includes(verb ?? "")))
     )
-      return redirectResponse("/ops/operators?notice=invalid");
-    const target = verb === "revoke" ? `/ops/accounts/${id}` : "/ops/operators";
+      return redirectResponse("/ops/team?notice=invalid");
+    // Actions return to the page they were taken from (a table row or detail).
+    const target = opsReturn(form.get("returnTo"), "/ops/team");
     const path =
       action === "invitation-create"
         ? "/api/v1/operations/operator-invitations"
@@ -412,10 +460,25 @@ export async function POST(request: Request, { params }: { params: Promise<{ act
             ...(verb === "revoke" ? {} : { action: verb }),
           };
     const result = await formPost(request, path, body);
-    if (!result.ok && (result.status === 401 || result.code === "recent_auth_required"))
+    if (!result.ok && result.code === "recent_auth_required")
+      return confirmFirst({
+        path,
+        body,
+        target,
+        label:
+          action === "invitation-create"
+            ? "invite this operator"
+            : verb === "resend"
+              ? "resend this invitation"
+              : verb === "cancel"
+                ? "revoke this invitation"
+                : "remove this operator",
+        issued: Date.now(),
+      });
+    if (!result.ok && result.status === 401)
       return redirectResponse(`/sign-in?returnTo=${encodeURIComponent(target)}&notice=reauth`);
     return redirectResponse(
-      `${target}?notice=${result.ok ? "done" : result.status === 409 ? "conflict" : result.status === 403 ? "forbidden" : result.status === 400 ? "invalid" : result.status === 429 ? "limited" : "unavailable"}`,
+      `${target}${target.includes("?") ? "&" : "?"}notice=${result.ok ? "done" : result.status === 409 ? "conflict" : result.status === 403 ? "forbidden" : result.status === 400 ? "invalid" : result.status === 429 ? "limited" : "unavailable"}`,
     );
   }
   if (action === "operation") {
@@ -430,17 +493,54 @@ export async function POST(request: Request, { params }: { params: Promise<{ act
       !operationActions.includes(command.action as OperationCommand["action"]) ||
       !operationReasons.includes(command.reason as OperationCommand["reason"]) ||
       !isUuid(command.targetId ?? "") ||
-      !isUuid(command.operationId ?? "") ||
-      !form.has("confirm")
+      !isUuid(command.operationId ?? "")
     )
       return redirectResponse("/ops?notice=invalid");
-    const target = `/ops/${command.action?.startsWith("collection.") ? "collections" : "accounts"}/${command.targetId}`;
+    const target = opsReturn(
+      form.get("returnTo"),
+      `/ops/${command.action?.startsWith("collection.") ? "collections" : "accounts"}/${command.targetId}`,
+    );
     const result = await formPost(request, "/api/v1/operations/commands", command);
-    if (!result.ok && (result.status === 401 || result.code === "recent_auth_required"))
+    if (!result.ok && result.code === "recent_auth_required")
+      return confirmFirst({
+        path: "/api/v1/operations/commands",
+        body: command,
+        target,
+        label: operationLabels[command.action as OperationCommand["action"]],
+        issued: Date.now(),
+      });
+    if (!result.ok && result.status === 401)
       return redirectResponse(`/sign-in?returnTo=${encodeURIComponent(target)}&notice=reauth`);
     return redirectResponse(
-      `${target}?notice=${result.ok ? "done" : result.status === 409 ? "conflict" : result.status === 403 ? "forbidden" : result.status === 429 ? "limited" : "unavailable"}`,
+      `${target}${target.includes("?") ? "&" : "?"}notice=${result.ok ? "done" : result.status === 409 ? "conflict" : result.status === 403 ? "forbidden" : result.status === 429 ? "limited" : "unavailable"}`,
     );
   }
   return new Response("Not found", { status: 404 });
 }
+
+// An operations page to come back to, keeping only its own query (filters,
+// search, page); anything else falls back to the action's own page.
+function opsReturn(value: string | null, fallback: string) {
+  const path = safeReturn(value);
+  const parsed = new URL(value ?? "", "http://local.invalid");
+  if (!path.startsWith("/ops") || parsed.pathname !== path) return fallback;
+  const query = new URLSearchParams();
+  for (const key of ["s", "cursor", "action", "from", "to"]) {
+    const v = parsed.searchParams.get(key);
+    if (v) query.set(key, v.slice(0, 254));
+  }
+  return `${path}${query.size ? `?${query}` : ""}`;
+}
+
+// Sensitive actions confirm it's the signed-in person with a fresh email code,
+// then continue where they left off.
+function confirmFirst(action: PendingAction) {
+  return redirectResponse("/confirm", [pendingActionCookie(action)]);
+}
+const operationLabels: Record<OperationCommand["action"], string> = {
+  "account.suspend": "suspend this account",
+  "account.reactivate": "reactivate this account",
+  "sessions.revoke": "sign this account out everywhere",
+  "collection.hold": "hold this collection",
+  "collection.release": "release this collection",
+};

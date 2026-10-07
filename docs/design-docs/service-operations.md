@@ -25,11 +25,11 @@ admins manage operator accounts. Admin account suspension is unavailable.
 
 | Operation | Information and authority | Boundary |
 | --- | --- | --- |
-| Find accounts | Paginated account list; exact email, user ID or hub handle lookup; name, email/verification, immutable user/hub IDs, handle, creation date, account status and session count | Email is operational personal data; no bulk export, secrets, private collection titles or browsing history |
+| Find accounts | Paginated account table searchable by email or hub handle fragment (`GET /operations/accounts?q=`); name, email/verification, immutable user/hub IDs, handle, creation date, account status and session count; row quick actions (suspend/reactivate, sign out everywhere) | Email is operational personal data; no bulk export, secrets, private collection titles or browsing history; the search text is not written to the audit |
 | Suspend/reactivate | Change account availability with a required reason; suspension revokes all sessions and operator access | No deletion, ownership reassignment or credential editing |
 | Revoke sessions | End all cookie and bearer sessions for the target account | Does not suspend it; a fresh sign-in is allowed |
-| Hold/release publication | Restrict distribution of a currently public collection and its sections; later release an existing hold by ID | Does not confer permission to read or edit its content |
-| Review operator audit | Cursor-paginated events filtered by actor, target, action and time | No generic database browser or access to other users' hub audit feeds |
+| Hold/release publication | Find a collection from its pasted link (`/c/<id>` or `/@handle/slug`, `GET /operations/collections/resolve?link=`); restrict distribution of a currently public collection; list active holds (`GET /operations/collections`: id, hub handle, reason, since — no titles) and release from the row | Does not confer permission to read or edit its content |
+| Review operator audit | Cursor-paginated table filtered by one search (email, hub handle or id; matches actor or target), an action from `operatorAuditActions`, and dates; rows show hub handles where known | No generic database browser or access to other users' hub audit feeds |
 
 Use ordinary public collection reads to inspect reported public material.
 Once the owner unpublishes it or a hold hides it, operators retain only the
@@ -255,12 +255,17 @@ retention decision, not a claim of legal compliance or tamper-proof storage.
 
 The implemented journey begins with **startup admin invitation → explicit
 acceptance and session verification → admin-owned operator invitations → explicit acceptance**. The
-operating journey is **operator sign-in → account lookup →
+operating journey is **operator sign-in → account search →
 account/session action or public-content hold → audit → recovery**. It includes
 the reusable email-code sign-in/session journey; do not ship a separate admin
 login protocol or a dashboard of inactive controls. The web uses `/ops` and
-`/api/v1/operations/*` for the API, with immutable target IDs. All operator responses are private and no-store; search inputs stay out of
-URLs/logs (use a bounded POST lookup for email). Route existence must not leak
+`/api/v1/operations/*` for the API, with immutable target IDs. The web area is
+four tabs — Accounts (`/ops`), Collections, Team (admin only, `/ops/team`) and
+Audit — with listings as minimal tables and row actions that return to the same
+listing. A required reason plus a clearly labelled button is the deliberate
+step (no confirmation checkbox). All operator responses are private and
+no-store; search text stays out of page URLs and logs: the web posts it and
+carries it only as a short-lived encrypted `s` value. Route existence must not leak
 user metadata to ordinary users. Add these literal routes ahead
 of the dynamic handle route. Detailed screen contracts and Impeccable work
 belong to implementation, under the existing web design documents.
