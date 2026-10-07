@@ -5,6 +5,7 @@ import request from "supertest";
 import { App } from "supertest/types";
 import { AppModule } from "../src/app.module";
 import { configureApp } from "../src/app.setup";
+import { PrismaService } from "../src/database/prisma.service";
 import { signInWithCode } from "./fixtures/sign-in";
 
 // Drive-style collection ownership transfer: only the owner can transfer, only
@@ -120,7 +121,7 @@ describe("Collection transfer (e2e)", () => {
     await request(app.getHttpServer())
       .post(`/api/v1/collections/${cid}/resources/external`)
       .set("Authorization", `Bearer ${dave.bearer}`)
-      .send({ url: `https://example.com/dave-${sfx}`, position: 0 })
+      .send({ url: `https://fixture-links.dev/dave-${sfx}`, position: 0 })
       .expect(201);
 
     // Eve still has reader access — can read, cannot write.
@@ -131,7 +132,7 @@ describe("Collection transfer (e2e)", () => {
     await request(app.getHttpServer())
       .post(`/api/v1/collections/${cid}/resources/external`)
       .set("Authorization", `Bearer ${eve.bearer}`)
-      .send({ url: `https://example.com/eve-${sfx}`, position: 1 })
+      .send({ url: `https://fixture-links.dev/eve-${sfx}`, position: 1 })
       .expect(403);
   });
 
@@ -155,33 +156,16 @@ describe("Collection transfer (e2e)", () => {
       .expect(400);
   });
 
-  it("rejects transferring a section (only top-level collections transfer)", async () => {
-    const alice = await signUp("owner_sec");
-    const root = await createCollection(alice.bearer, `sroot-${sfx}`);
-    const cid = await createCollection(alice.bearer, `ssec-${sfx}`);
-    await request(app.getHttpServer())
-      .post(`/api/v1/collections/${root}/collections`)
-      .set("Authorization", `Bearer ${alice.bearer}`)
-      .send({ collectionId: cid })
-      .expect(201);
-
-    await request(app.getHttpServer())
-      .post(`/api/v1/collections/${cid}/transfer`)
-      .set("Authorization", `Bearer ${alice.bearer}`)
-      .send({ email: `nobody_${sfx}@example.com` })
-      .expect(400);
-  });
-
-  it("transfers a root together with its sections and section entries", async () => {
+  it("transfers only the chosen collection and preserves its references", async () => {
     const alice = await signUp("xowner");
     const bob = await signUp("xnewowner");
     const root = await createCollection(alice.bearer, `xroot-${sfx}`);
     const section = await createCollection(alice.bearer, `xsec-${sfx}`);
 
     await request(app.getHttpServer())
-      .post(`/api/v1/collections/${root}/collections`)
+      .post(`/api/v1/collections/${root}/resources/collection`)
       .set("Authorization", `Bearer ${alice.bearer}`)
-      .send({ collectionId: section })
+      .send({ linkedCollectionId: section, position: 0 })
       .expect(201);
     await request(app.getHttpServer())
       .post(`/api/v1/collections/${root}/shares`)
@@ -194,17 +178,23 @@ describe("Collection transfer (e2e)", () => {
       .send({ email: bob.email })
       .expect(201);
 
-    // Bob now owns the section too (it moved with the root): he can manage it.
+    // The referenced collection stays with Alice. Bob cannot manage it.
     await request(app.getHttpServer())
       .post(`/api/v1/collections/${section}/publish`)
       .set("Authorization", `Bearer ${bob.bearer}`)
-      .expect(201);
+      .expect(403);
 
-    // The section entry survived the move and still points to the section.
+    // The reference survived the move and still points to the section, but Bob
+    // cannot open the section, so its id and any stored title stay hidden from him.
+    const stored = await app
+      .get(PrismaService)
+      .resource.findMany({ where: { collectionId: root }, select: { linkedCollectionId: true } });
+    expect(stored).toEqual([{ linkedCollectionId: section }]);
     const resources = await request(app.getHttpServer())
       .get(`/api/v1/collections/${root}/resources`)
       .set("Authorization", `Bearer ${bob.bearer}`)
       .expect(200);
-    expect(JSON.stringify(resources.body)).toContain(section);
+    expect(resources.body.data).toHaveLength(1);
+    expect(JSON.stringify(resources.body)).not.toContain(section);
   });
 });

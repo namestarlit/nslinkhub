@@ -7,6 +7,7 @@ export function maskVerificationOverrides<T extends Record<string, string | unde
 ): T & Record<string, string | undefined> {
   const isolated = { ...env } as T & Record<string, string | undefined>;
   for (const key of [
+    "BOOTSTRAP_ADMIN_EMAIL",
     "DATABASE_URL_FILE",
     "REDIS_URL_FILE",
     "BETTER_AUTH_SECRET_FILE",

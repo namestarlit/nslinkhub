@@ -54,6 +54,24 @@ export async function enqueueEmail(
       : input.kind === "current-email"
         ? await renderEmailChangeConfirmation({ ...base, newEmail: input.newEmail ?? "" })
         : await renderNewEmailVerification(base);
+  return enqueueRenderedEmail(tx, {
+    ...input,
+    rendered,
+    expiresAt: new Date(Date.now() + 300_000),
+  });
+}
+
+export async function enqueueRenderedEmail(
+  tx: Prisma.TransactionClient,
+  input: {
+    secret: string;
+    suppressionSecret: string;
+    to: string;
+    identifier: string;
+    rendered: RenderedEmail;
+    expiresAt: Date;
+  },
+) {
   const challengeKey = emailKey(input.secret, "challenge", input.identifier);
   const recipientKey = emailKey(
     input.suppressionSecret,
@@ -69,9 +87,9 @@ export async function enqueueEmail(
     data: {
       challengeKey,
       recipientKey,
-      expiresAt: new Date(Date.now() + 300_000),
+      expiresAt: input.expiresAt,
       state: suppressed ? "suppressed" : "pending",
-      payload: suppressed ? null : seal({ to: input.to, ...rendered }, input.secret),
+      payload: suppressed ? null : seal({ to: input.to, ...input.rendered }, input.secret),
     },
   });
 }

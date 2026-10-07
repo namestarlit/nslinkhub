@@ -1,4 +1,14 @@
-import { Body, Container, Head, Hr, Html, Preview, render, Text } from "@react-email/components";
+import {
+  Body,
+  Container,
+  Head,
+  Hr,
+  Html,
+  Link,
+  Preview,
+  render,
+  Text,
+} from "@react-email/components";
 
 // Codes-only authentication mail. Navigation links never carry proof.
 
@@ -69,15 +79,41 @@ const styles = {
   validity: { fontSize: "16px", lineHeight: "24px", color: "#1a1a1a", margin: "24px 0 0" },
   note: { fontSize: "14px", lineHeight: "21px", color: "#6b7280", margin: "24px 0 0" },
   warning: { fontSize: "15px", lineHeight: "23px", fontWeight: 700, margin: "32px 0 0" },
-  hr: { borderColor: "#e5e7eb", margin: "40px 0 16px" },
-  footer: {
-    fontSize: "12px",
-    lineHeight: "18px",
-    color: "#9ca3af",
-    textAlign: "center" as const,
-    margin: 0,
-  },
 } as const;
+
+const footerStyles = {
+  hr: { borderColor: "#e5e7eb", margin: "40px 0 20px" },
+  prompt: { fontSize: "14px", lineHeight: "21px", color: "#4b5563", margin: "0 0 4px" },
+  support: { fontSize: "14px", lineHeight: "21px", color: "#4b5563", margin: "0 0 20px" },
+  link: { color: "#1e5ba1", textDecoration: "underline" },
+  brand: { fontSize: "13px", lineHeight: "18px", fontWeight: 600, color: "#1a1a1a", margin: 0 },
+  series: { fontSize: "12px", lineHeight: "18px", color: "#6b7280", margin: "2px 0 0" },
+} as const;
+
+// The same footer as the web: a support prompt linking the support page (which
+// lists how to reach us), then "© <year> nslinkhub" over "an ns series product".
+export function EmailFooter({
+  supportUrl,
+  prompt = "Didn't request this? You can safely ignore this email.",
+}: {
+  supportUrl: string;
+  prompt?: string;
+}) {
+  return (
+    <>
+      <Hr style={footerStyles.hr} />
+      <Text style={footerStyles.prompt}>{prompt}</Text>
+      <Text style={footerStyles.support}>
+        Need help?{" "}
+        <Link href={supportUrl} style={footerStyles.link}>
+          Visit support
+        </Link>
+      </Text>
+      <Text style={footerStyles.brand}>© {new Date().getUTCFullYear()} nslinkhub</Text>
+      <Text style={footerStyles.series}>an ns series product</Text>
+    </>
+  );
+}
 
 export interface CodeEmailCopy {
   /** Inbox preview line; never contains the code. */
@@ -103,16 +139,8 @@ export function CodeEmail({ input, copy }: { input: CodeEmailBaseInput; copy: Co
             the app to continue.
           </Text>
           {copy.note ? <Text style={styles.note}>{copy.note}</Text> : null}
-          <Text style={styles.warning}>
-            Do not share this code with anyone. Do not forward this email. nslinkhub will never ask
-            you for this code.
-          </Text>
-          <Hr style={styles.hr} />
-          <Text style={styles.footer}>
-            Didn't request this? {input.supportUrl}
-            <br />
-            nslinkhub — an ns series product
-          </Text>
+          <Text style={styles.warning}>Do not share this code with anyone.</Text>
+          <EmailFooter supportUrl={input.supportUrl} />
         </Container>
       </Body>
     </Html>

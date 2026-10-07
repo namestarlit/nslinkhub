@@ -5,6 +5,7 @@ import type {
   CollectionShareView,
   CursorMeta,
   HubPage,
+  OperationReason,
   SavedCollection,
   SharedCollection,
   Collection as WireCollection,
@@ -12,7 +13,6 @@ import type {
 import { auditActions } from "@nslinkhub/types";
 import { isUUID } from "class-validator";
 import { CursorQueryDto } from "src/common/dto/cursor-query.dto";
-import { ResourceKind } from "src/common/enums/resource-kind.enum";
 import { AuthUser } from "src/common/interfaces/auth-user.interface";
 import { decodeCursor, encodeCursor } from "src/common/utils/cursor.util";
 import { parseIfMatchVersion, toVersionEtag } from "src/common/utils/etag.util";
@@ -22,11 +22,12 @@ import { Collection, Hub, Prisma } from "src/generated/prisma/client";
 import { type AuditInput, recordAudit } from "../../common/audit";
 import { appError } from "../../common/errors/app-exception";
 import { wireToken } from "../../common/utils/wire-token";
+import { emailConfig } from "../../email/config";
+import { availableCollections } from "../hubs/availability";
 import { CollectionPolicyService } from "../hubs/collection-policy.service";
 import { HubsService } from "../hubs/hubs.service";
 import { CreateCollectionDto } from "./dto/create-collection.dto";
 import { CreateShareDto } from "./dto/create-share.dto";
-import { NestCollectionDto } from "./dto/nest-collection.dto";
 import { SetLinkSharingDto } from "./dto/set-link-sharing.dto";
 import { TransferCollectionDto } from "./dto/transfer-collection.dto";
 import { UpdateCollectionDto } from "./dto/update-collection.dto";
@@ -46,68 +47,13 @@ export class CollectionsService {
     return this.createInHub(user, hubId, dto);
   }
 
-  // Nest an existing collection into another as a section. This is the single
-  // way to create nesting: a collection must exist first, then it is added into
-  // a container. Nesting is one relationship with two faces — the structural
-  // parent link and the section entry in the container — created atomically.
-  async nestCollection(containerId: string, user: AuthUser, dto: NestCollectionDto) {
-    const container = await this.requireCollection(containerId, "Collection not found");
-    await this.policy.requireManage(container, user); // owner-only
-
-    if (dto.collectionId === container.id) {
-      throw appError("invalid_nesting");
-    }
-
-    const target = await this.requireCollection(dto.collectionId, "Collection not found");
-    // Same hub — since the caller owns the container's hub, this is their hub.
-    if (target.hubId !== container.hubId) {
-      throw appError("invalid_nesting");
-    }
-    // Two-level rules (also enforced by the check_collection_hierarchy trigger).
-    if (container.parentCollectionId) {
-      throw appError("invalid_nesting");
-    }
-    if (target.parentCollectionId) {
-      throw appError("invalid_nesting");
-    }
-    const targetSections = await this.prisma.collection.count({
-      where: { parentCollectionId: target.id },
-    });
-    if (targetSections > 0) {
-      throw appError("invalid_nesting");
-    }
-
-    const maxPositionResult = await this.prisma.resource.aggregate({
-      where: { collectionId: container.id },
-      _max: { position: true },
-    });
-    const nextPosition = (maxPositionResult._max.position ?? -1) + 1;
-
-    await this.prisma.$transaction([
-      this.prisma.collection.update({
-        where: { id: target.id },
-        data: { parentCollectionId: container.id },
-      }),
-      this.prisma.resource.create({
-        data: {
-          collectionId: container.id,
-          kind: ResourceKind.COLLECTION_LINK,
-          linkedCollectionId: target.id,
-          position: nextPosition,
-          titleOverride: target.title,
-        },
-      }),
-    ]);
-
-    return { containerId: container.id, collectionId: target.id, position: nextPosition };
-  }
-
   // --- settings / lifecycle ----------------------------------------------
 
   async update(id: string, user: AuthUser, dto: UpdateCollectionDto, ifMatch?: string) {
     const collection = await this.requireCollection(id);
     await this.policy.requireManage(collection, user);
 
+    if (dto.published === true) await this.policy.requireUnrestricted(collection);
     const versionFromHeader = parseIfMatchVersion(ifMatch);
     if (versionFromHeader !== null && versionFromHeader !== Number(collection.version)) {
       throw appError("version_conflict");
@@ -126,8 +72,6 @@ export class CollectionsService {
       }
     }
 
-    // Nesting is not changed here — it is managed only by nestCollection /
-    // removing a section entry, so there is one way to nest and un-nest.
     const saved = await this.mutateOwned(
       collection,
       user,
@@ -149,6 +93,7 @@ export class CollectionsService {
             description: dto.description ?? collection.description,
             ...(dto.tags !== undefined ? { tags: normalizeTags(dto.tags) } : {}),
             published: dto.published ?? collection.published,
+            commentsEnabled: dto.commentsEnabled ?? collection.commentsEnabled,
             version: { increment: 1 },
           },
         });
@@ -169,6 +114,7 @@ export class CollectionsService {
   async setPublished(id: string, user: AuthUser, published: boolean) {
     const collection = await this.requireCollection(id);
     await this.policy.requireManage(collection, user);
+    if (published) await this.policy.requireUnrestricted(collection);
     const saved = await this.mutateOwned(
       collection,
       user,
@@ -202,6 +148,7 @@ export class CollectionsService {
       return { collectionId: collection.id, linkSharingEnabled: false };
     }
 
+    await this.policy.requireUnrestricted(collection);
     let token: string | undefined;
     await this.mutateOwned(
       collection,
@@ -243,8 +190,9 @@ export class CollectionsService {
     const collection = await this.requireCollection(id);
     await this.policy.requireManage(collection, user);
 
-    const target = await this.prisma.user.findUnique({
-      where: { email: dto.email.trim().toLowerCase() },
+    await this.policy.requireUnrestricted(collection);
+    const target = await this.prisma.user.findFirst({
+      where: { email: dto.email.trim().toLowerCase(), accountState: "active" },
       select: { id: true },
     });
     if (!target) {
@@ -314,22 +262,16 @@ export class CollectionsService {
   // --- ownership transfer -------------------------------------------------
 
   // Google-Drive ownership transfer: only the current owner can transfer, and
-  // only to a user who is already an editor. The collection subtree moves into
+  // only to a user who is already an editor. The collection moves into
   // the recipient's hub (their "MyDrive"); the previous owner keeps editor
   // access (lands in their shared/); the immutable creator is untouched.
   async transfer(id: string, user: AuthUser, dto: TransferCollectionDto) {
     const collection = await this.requireCollection(id);
     await this.policy.requireManage(collection, user); // owner-only
 
-    // Only a top-level collection can be transferred — it moves with its whole
-    // subtree (sections). Transferring a section alone would strand the parent's
-    // section link and split third parties' inherited access.
-    if (collection.parentCollectionId) {
-      throw appError("invalid_transfer");
-    }
-
-    const recipient = await this.prisma.user.findUnique({
-      where: { email: dto.email.trim().toLowerCase() },
+    await this.policy.requireUnrestricted(collection);
+    const recipient = await this.prisma.user.findFirst({
+      where: { email: dto.email.trim().toLowerCase(), accountState: "active" },
       select: { id: true },
     });
     if (!recipient) {
@@ -356,19 +298,10 @@ export class CollectionsService {
       throw appError("invalid_transfer");
     }
 
-    const subtreeIds = await this.collectSubtreeIds(collection.id);
-
-    // The recipient's hub cannot already hold a collection whose slug collides
-    // with one in the moving subtree ((hubId, slug) is unique).
-    const subtree = await this.prisma.collection.findMany({
-      where: { id: { in: subtreeIds } },
-      select: { slug: true },
-    });
     const conflict = await this.prisma.collection.findFirst({
       where: {
         hubId: recipientHub.id,
-        slug: { in: subtree.map((c) => c.slug) },
-        id: { notIn: subtreeIds },
+        slug: collection.slug,
       },
       select: { slug: true },
     });
@@ -396,31 +329,24 @@ export class CollectionsService {
           targetUserId: recipient.id,
           action: "collection.transferred_in",
         });
-        // Move the whole subtree into the recipient's hub.
-        await tx.collection.updateMany({
-          where: { id: { in: subtreeIds } },
+        await tx.collection.update({
+          where: { id: collection.id, hubId: collection.hubId },
           data: { hubId: recipientHub.id, version: { increment: 1 } },
         });
-        // Detach the transferred root from its old parent (which stayed behind).
-        await tx.collection.update({
-          where: { id: collection.id },
-          data: { parentCollectionId: null },
-        });
-        // The recipient now owns the subtree, so their shares on it are redundant.
+        // The recipient now owns the collection, so their shares on it are redundant.
         await tx.collectionShare.deleteMany({
-          where: { collectionId: { in: subtreeIds }, userId: recipient.id },
+          where: { collectionId: collection.id, userId: recipient.id },
         });
-        // Give the previous owner editor access across the subtree (their shared/).
-        await tx.collectionShare.deleteMany({
-          where: { collectionId: { in: subtreeIds }, userId: previousOwnerId },
-        });
-        await tx.collectionShare.createMany({
-          data: subtreeIds.map((collectionId) => ({
-            collectionId,
+        // Give the previous owner editor access on this collection (their shared/).
+        await tx.collectionShare.upsert({
+          where: { collectionId_userId: { collectionId: collection.id, userId: previousOwnerId } },
+          update: { role: "editor", source: "direct" },
+          create: {
+            collectionId: collection.id,
             userId: previousOwnerId,
             role: "editor",
             source: "direct",
-          })),
+          },
         });
       },
     );
@@ -429,35 +355,15 @@ export class CollectionsService {
       collectionId: collection.id,
       transferredTo: recipient.id,
       previousOwner: previousOwnerId,
-      movedCollections: subtreeIds.length,
     };
-  }
-
-  // Collect a collection and all its descendants (bounded by the depth-8
-  // hierarchy trigger, so the iteration terminates quickly).
-  private async collectSubtreeIds(rootId: string): Promise<string[]> {
-    const ids = [rootId];
-    let frontier = [rootId];
-    while (frontier.length > 0) {
-      const children = await this.prisma.collection.findMany({
-        where: { parentCollectionId: { in: frontier } },
-        select: { id: true },
-      });
-      const childIds = children.map((c) => c.id);
-      if (childIds.length === 0) {
-        break;
-      }
-      ids.push(...childIds);
-      frontier = childIds;
-    }
-    return ids;
   }
 
   // --- saves --------------------------------------------------------------
 
   async save(id: string, user: AuthUser) {
     const collection = await this.requireCollection(id);
-    if (!collection.published) {
+    await this.policy.requireRead(collection, user);
+    if (!collection.published || !(await this.policy.resolve(collection, null)).canRead) {
       throw appError("collection_not_published");
     }
     await this.prisma.collectionSave.upsert({
@@ -484,7 +390,7 @@ export class CollectionsService {
 
   async listShared(user: AuthUser): Promise<SharedCollection[]> {
     const shares = await this.prisma.collectionShare.findMany({
-      where: { userId: user.userId },
+      where: { userId: user.userId, collection: availableCollections(user.userId) },
       include: { collection: true },
       orderBy: { createdAt: "desc" },
     });
@@ -506,16 +412,23 @@ export class CollectionsService {
     });
     // Dormant handling: an unpublished save stays listed but marked
     // unavailable, and revives when the collection is republished.
-    return saves.map((s) => ({
-      ...this.toPublicCollection(s.collection),
-      savedAt: s.savedAt.toISOString(),
-      available: s.collection.published,
-    }));
+    return Promise.all(
+      saves.map(async (s) => {
+        const available =
+          s.collection.published && (await this.policy.resolve(s.collection, null)).canRead;
+        return {
+          ...this.toPublicCollection(s.collection),
+          ...(!available ? { description: null, tags: [] } : {}),
+          savedAt: s.savedAt.toISOString(),
+          available,
+        };
+      }),
+    );
   }
 
   // --- discovery / lookup -------------------------------------------------
 
-  async explore(query: CursorQueryDto) {
+  async discover(query: CursorQueryDto) {
     return this.listPublishedCollections(query, {});
   }
 
@@ -536,12 +449,30 @@ export class CollectionsService {
     hub: Hub | null,
     query: CursorQueryDto,
   ): Promise<HubPage & { meta: CursorMeta }> {
-    if (!hub) {
-      throw new NotFoundException("Hub not found");
-    }
-    const collections = await this.listPublishedCollections(query, { hubId: hub.id });
+    const visible =
+      hub &&
+      (await this.prisma.hub.findFirst({
+        where: { id: hub.id, owner: { accountState: "active" } },
+        select: { owner: { select: { name: true, showNameOnHub: true } } },
+      }));
+    if (!hub || !visible) throw new NotFoundException("Hub not found");
+    const [collections, publishedCollectionCount] = await Promise.all([
+      this.listPublishedCollections(query, { hubId: hub.id }),
+      this.prisma.collection.count({
+        where: { hubId: hub.id, published: true, ...availableCollections() },
+      }),
+    ]);
     return {
-      hub: { id: hub.id, handle: hub.handle, description: hub.description },
+      hub: {
+        id: hub.id,
+        handle: hub.handle,
+        name: hub.name,
+        ownerName: visible.owner.showNameOnHub ? visible.owner.name.trim() || null : null,
+        description: hub.description,
+        publishedCollectionCount,
+        createdAt: hub.createdAt.toISOString(),
+        updatedAt: hub.updatedAt.toISOString(),
+      },
       collections: collections.items,
       meta: collections.meta,
     };
@@ -552,7 +483,12 @@ export class CollectionsService {
       where: { id: hubId },
       select: { id: true },
     });
-    if (!hub) {
+    if (
+      !hub ||
+      !(await this.prisma.hub.findFirst({
+        where: { id: hub.id, owner: { accountState: "active" } },
+      }))
+    ) {
       throw new NotFoundException("Hub not found");
     }
 
@@ -561,7 +497,9 @@ export class CollectionsService {
     // The owner sees every collection; everyone else sees the published subset.
     return this.listCollectionsKeyset(query, {
       hubId,
-      ...(isOwner ? {} : { published: true }),
+      ...(isOwner
+        ? availableCollections(viewer?.userId)
+        : { published: true, ...availableCollections() }),
     });
   }
 
@@ -594,32 +532,39 @@ export class CollectionsService {
   ) {
     const access = await this.policy.requireRead(collection, viewer, shareToken);
     if (access.viaLinkToken && viewer) {
-      await this.policy.recordLinkAccess(
-        access.linkSourceCollectionId ?? collection.id,
-        viewer.userId,
-      );
+      await this.policy.recordLinkAccess(collection.id, viewer.userId);
     }
 
+    const reason = access.isOwner ? await this.policy.holdReason(collection) : null;
+    const creator = collection.creatorUserId
+      ? await this.prisma.user.findFirst({
+          where: { id: collection.creatorUserId, accountState: "active" },
+          select: { name: true, showNameOnHub: true, hub: { select: { id: true, handle: true } } },
+        })
+      : null;
     return {
-      collection: this.toPublicCollection(collection),
+      collection: {
+        ...this.toPublicCollection(collection),
+        creator: creator?.hub
+          ? {
+              hubId: creator.hub.id,
+              handle: creator.hub.handle,
+              name: creator.showNameOnHub ? creator.name.trim() || null : null,
+            }
+          : null,
+        capabilities: { canManage: access.isOwner },
+        ...(reason
+          ? {
+              restriction: {
+                reason: reason as OperationReason,
+                supportUrl: emailConfig().supportUrl,
+              },
+            }
+          : {}),
+      },
       etag: toVersionEtag(Number(collection.version)),
       lastModified: collection.updatedAt.toUTCString(),
     };
-  }
-
-  async getChildren(id: string, viewer: AuthUser | null, shareToken: string | undefined) {
-    const parent = await this.requireCollection(id);
-    await this.policy.requireRead(parent, viewer, shareToken);
-
-    // Access inherits down the ancestor chain, so any grant that reads the
-    // parent covers every child — no per-child policy check. Sections are
-    // human-curated and bounded by the two-level cap, so the list is small
-    // and unpaginated; section *order* lives in the parent's resources.
-    const children = await this.prisma.collection.findMany({
-      where: { parentCollectionId: id },
-      orderBy: { updatedAt: "desc" },
-    });
-    return children.map((child) => this.toPublicCollection(child));
   }
 
   async listAudit(user: AuthUser, query: CursorQueryDto) {
@@ -693,8 +638,7 @@ export class CollectionsService {
 
   // --- internals ----------------------------------------------------------
 
-  // Collections are always created as top-level. Nesting is a separate action
-  // on an existing collection (nestCollection).
+  // Collections are independent containers.
   private async createInHub(user: AuthUser, hubId: string, dto: CreateCollectionDto) {
     const exists = await this.prisma.collection.findUnique({
       where: { hubId_slug: { hubId, slug: dto.slug } },
@@ -733,14 +677,12 @@ export class CollectionsService {
   private async listPublishedCollections(query: CursorQueryDto, extraWhere: { hubId?: string }) {
     return this.listCollectionsKeyset(query, {
       published: true,
+      ...availableCollections(),
       ...extraWhere,
     });
   }
 
-  private async listCollectionsKeyset(
-    query: CursorQueryDto,
-    where: { hubId?: string; published?: boolean },
-  ) {
+  private async listCollectionsKeyset(query: CursorQueryDto, where: Prisma.CollectionWhereInput) {
     const limit = query.limit ?? 20;
     const cursor = query.cursor ? decodeCursor<{ u: string; id: string }>(query.cursor) : null;
     if (
@@ -756,15 +698,29 @@ export class CollectionsService {
 
     const rows = await this.prisma.collection.findMany({
       where: {
-        ...where,
-        ...(cursor
-          ? {
-              OR: [
-                { updatedAt: { lt: new Date(cursor.u) } },
-                { updatedAt: new Date(cursor.u), id: { lt: cursor.id } },
-              ],
-            }
-          : {}),
+        AND: [
+          where,
+          ...(cursor
+            ? [
+                {
+                  OR: [
+                    { updatedAt: { lt: new Date(cursor.u) } },
+                    { updatedAt: new Date(cursor.u), id: { lt: cursor.id } },
+                  ],
+                },
+              ]
+            : []),
+        ],
+      },
+      include: {
+        hub: {
+          select: {
+            id: true,
+            handle: true,
+            name: true,
+            owner: { select: { name: true, showNameOnHub: true } },
+          },
+        },
       },
       orderBy: [{ updatedAt: "desc" }, { id: "desc" }],
       take: limit + 1,
@@ -778,7 +734,15 @@ export class CollectionsService {
         : null;
 
     return {
-      items: items.map((item) => this.toPublicCollection(item)),
+      items: items.map((item) => ({
+        ...this.toPublicCollection(item),
+        hub: {
+          id: item.hub.id,
+          handle: item.hub.handle,
+          name: item.hub.name,
+          ownerName: item.hub.owner.showNameOnHub ? item.hub.owner.name.trim() || null : null,
+        },
+      })),
       meta: { limit, nextCursor },
     };
   }
@@ -814,7 +778,7 @@ export class CollectionsService {
       tags: collection.tags,
       published: collection.published,
       linkSharingEnabled: collection.linkSharingEnabled,
-      parentCollectionId: collection.parentCollectionId,
+      commentsEnabled: collection.commentsEnabled,
       version: Number(collection.version),
       createdAt: collection.createdAt.toISOString(),
       updatedAt: collection.updatedAt.toISOString(),

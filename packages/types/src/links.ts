@@ -1,0 +1,28 @@
+// Saved links must be reachable on the public web by anyone they are shared
+// with. A host fails when it is an IP literal, a single label ("localhost",
+// "intranet"), a private or local name, or a name reserved for examples and
+// testing (RFC 2606 / RFC 6761). Shared by the API (authoritative) and the web
+// form (early feedback).
+const localSuffixes = [
+  "localhost",
+  "local",
+  "internal",
+  "intranet",
+  "lan",
+  "home.arpa",
+  "test",
+  "invalid",
+  "example",
+  "onion",
+];
+const reservedNames = ["example.com", "example.net", "example.org"];
+
+export function isPublicLinkHost(hostname: string): boolean {
+  const host = hostname.toLowerCase().replace(/\.$/, "");
+  if (!host || host.startsWith("[") || /^[\d.]+$/.test(host) || host.includes(":")) return false;
+  const labels = host.split(".");
+  const tld = labels[labels.length - 1];
+  if (labels.length < 2 || !/^(?:[a-z]{2,63}|xn--[a-z0-9-]{1,59})$/.test(tld)) return false;
+  const under = (suffix: string) => host === suffix || host.endsWith(`.${suffix}`);
+  return !localSuffixes.some(under) && !reservedNames.some(under);
+}

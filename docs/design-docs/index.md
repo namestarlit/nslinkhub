@@ -16,6 +16,9 @@ frequently for the root `ARCHITECTURE.md`. The **authoritative system design**
   (the namestarlit account, "Continue with namestarlit") whose first slice is
   authentication + SSO; the four-pillar scope, the domain-vs-identity
   authorization boundary, and the constraints current auth work must respect.
+- [service-operations.md](service-operations.md): implemented service-operator contract,
+  account suspension, public-content holds, accepted admin/operator invitations and recovery boundaries and audit;
+  includes the reusable sign-in/session journey and operator runbook.
 - `infra-deployment.md`: ns-series deployment — namestarlit VPS, Dokploy
   Stack mode (docker swarm), GHCR images via GitHub Actions, topology-file
   conventions (`compose.yml`, `docker-stack.<env>.yml`), and the
@@ -31,6 +34,10 @@ frequently for the root `ARCHITECTURE.md`. The **authoritative system design**
   compatibility evidence, enforced profile/deletion boundaries and the implemented
   transactional better-auth delivery and verified email-change integration.
 
+- [monetization.md](monetization.md): for review — what people might pay for
+  (link-rot protection, bulk import, curator tools), an illustrative tier sketch
+  and an early valuation take.
+
 - [web-product-experience.md](web-product-experience.md): first reading
   journeys, recency discovery, unavailable collections, later account flows
   and dormant-save presentation.
@@ -40,9 +47,10 @@ frequently for the root `ARCHITECTURE.md`. The **authoritative system design**
   variables, light palette, typography, spacing and contrast evidence.
 
 The W3 documents define implementation contracts. The first implemented vertical
-slice is explore → collection → section/external resource.
+slice is explore → collection → referenced collection/external resource.
 The [public hub reading plan](../exec-plans/completed/deliver-public-hub-reading.md)
 records the completed, reviewed hub/pretty-URL journey. The
 [service-status plan](../exec-plans/completed/deliver-service-status.md) records the
-completed, reviewed status journey. Account and editing journeys follow
-separately under adoption gate #2.
+completed, reviewed status journey. The [operator implementation plan](../exec-plans/active/deliver-service-operations.md)
+records sign-in/session support, account actions, moderation and audit. Personal
+collection editing follows separately under adoption gate #2.

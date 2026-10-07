@@ -84,14 +84,13 @@ happened, in order.
 Read, in this order:
 
 1. [PRODUCT.md](../../PRODUCT.md) — end to end. Hold: one hub per user
-   (Drive model); a collection is created standalone and **nesting is a
-   separate action** (one way to nest, two levels max); a resource's kind is
+   (Drive-style sharing); collections are independent; references grant no
+   access to their destinations; a resource's kind is
    set by *how it was added*, never URL inspection; tags are plain arrays;
    sharing = link / direct / publish; export reads like a Google Doc;
    sign-in is code-first; account handover = double-verified email change.
 2. [SYSTEM_DESIGN.md](../SYSTEM_DESIGN.md) — especially the access model
-   (owner → direct share → active link → published, **inheriting down** the
-   ancestor chain), Identity and handles, and the Web URL scheme
+   (owner → direct share → active link → published, independently per collection), Identity and handles, and the Web URL scheme
    (`/c/<id>` permalink vs `/@handle/<slug>` pretty URL).
 3. [AGENTS.md](../../AGENTS.md) § Non-Negotiable Invariants — all of them.
 4. [ARCHITECTURE.md](../../ARCHITECTURE.md) — the codemap table + data flow.
@@ -100,11 +99,9 @@ Read, in this order:
 
 - [ ] Why does `/c/<id>` survive a slug rename and a transfer while
       `/@handle/<slug>` may not?
-- [ ] Why is there exactly one way to nest, and what bug did the second way
-      cause?
+- [ ] Why does adding a collection reference never grant destination access?
 - [ ] Why does a route never carry `hubId` on writes?
-- [ ] What are the four access sources, and in which direction do they
-      inherit?
+- [ ] What are the four access sources, and why do references not propagate them?
 
 ---
 
@@ -128,30 +125,29 @@ export T="<token>"
 # Profile is the client entry point: displayName, handle, hubId
 curl -s localhost:4000/api/v1/profile -H "Authorization: Bearer $T" | jq
 
-# Create a guide + a section, then NEST (two steps by design)
+# Create two independent collections, then add a reference
 curl -s localhost:4000/api/v1/collections -H "Authorization: Bearer $T" \
   -H 'content-type: application/json' \
   -d '{"slug":"se-guide","title":"Software Engineering"}' | jq .data.id
 curl -s localhost:4000/api/v1/collections -H "Authorization: Bearer $T" \
   -H 'content-type: application/json' \
   -d '{"slug":"essentials","title":"Essentials"}' | jq .data.id
-export GUIDE="<id1>" SECTION="<id2>"
-curl -s localhost:4000/api/v1/collections/$SECTION/resources/external \
+export GUIDE="<id1>" TARGET="<id2>"
+curl -s localhost:4000/api/v1/collections/$TARGET/resources/external \
   -H "Authorization: Bearer $T" -H 'content-type: application/json' \
   -d '{"url":"https://roadmap.sh","position":0,"tags":["Tool"]}' | jq .data.tags
-curl -s localhost:4000/api/v1/collections/$GUIDE/collections \
+curl -s localhost:4000/api/v1/collections/$GUIDE/resources/collection \
   -H "Authorization: Bearer $T" -H 'content-type: application/json' \
-  -d "{\"collectionId\":\"$SECTION\"}" | jq
-# Note: tags came back lowercased. Now try nesting $GUIDE under a third
-# collection → 400 (a collection with sections cannot itself be nested).
+  -d "{\"linkedCollectionId\":\"$TARGET\",\"position\":0}" | jq
+# Tags come back lowercased. Reuse/cycles are allowed; permissions stay independent.
 
 # Publish → discovery → the URL-scheme reads
 curl -s -X POST localhost:4000/api/v1/collections/$GUIDE/publish \
   -H "Authorization: Bearer $T" > /dev/null
-curl -s localhost:4000/api/v1/explore | jq '.data[].slug'
+curl -s localhost:4000/api/v1/discover | jq '.data[].slug'
 curl -s localhost:4000/api/v1/hubs/by-handle/paul | jq .data.hub
 curl -s localhost:4000/api/v1/collections/$GUIDE | jq .data.slug     # permalink
-curl -s localhost:4000/api/v1/collections/$SECTION | jq .data.id    # publish inherits down
+curl -s localhost:4000/api/v1/collections/$TARGET | jq .error.code # not_found: target is still private
 
 # Link sharing: enable, note the ONE-TIME token, read anonymously with ?s=
 curl -s -X PUT localhost:4000/api/v1/collections/$GUIDE/link-sharing \
@@ -162,10 +158,10 @@ curl -s "localhost:4000/api/v1/collections/$GUIDE?s=<token>" | jq .data.title
 # Export: the response IS the file (-OJ honors Content-Disposition)
 curl -s -OJ localhost:4000/api/v1/exports -H "Authorization: Bearer $T" \
   -H 'content-type: application/json' \
-  -d "{\"format\":\"pdf\",\"collectionIds\":[\"$GUIDE\"]}"
+  -d "{\"format\":\"pdf\",\"collectionIds\":[\"$GUIDE\"],\"expand\":true}"
 ls *.pdf   # open it: H1 guide, H2 section, hyperlinked lines
-# Repeat with "format":"markdown","expand":false → the section collapses
-# to one line. Two collectionIds → a zip.
+# Default expand:false keeps references as links. Explicit expansion stops after
+# one reference level; every target is authorized. Two collectionIds → a zip.
 
 # Import: the universal CSV, with a bad row flagged instead of failing
 printf 'url,title\nhttps://xyproblem.info,The XY Problem\nnot-a-url,Bad\n' > /tmp/links.csv
@@ -191,7 +187,7 @@ Goal: see the failure modes, then read the code that decides access.
 # Drill 1: degrade the queue Redis — the product keeps working
 docker stop nslinkhub-redis
 curl -s localhost:4000/api/v1/status | jq        # "degraded"; redis_queue "unavailable"
-curl -s localhost:4000/api/v1/explore | jq '.data | length'   # still serves
+curl -s localhost:4000/api/v1/discover | jq '.data | length'   # still serves
 docker start nslinkhub-redis
 curl -s localhost:4000/api/v1/status | jq        # "ready" again
 
@@ -210,18 +206,17 @@ Now trace why, through five files (read in this order):
    Redis connection.
 3. [collection-policy.service.ts](../../apps/api/src/modules/hubs/collection-policy.service.ts)
    — **the heart of the product's security.** Read `resolve()` and the
-   ancestor-chain walk slowly; note `requireRead` throws 404, not 403.
+   independent grant checks slowly; note `requireRead` throws 404, not 403.
 4. [collections.service.ts](../../apps/api/src/modules/collections/collections.service.ts)
    — find `readCollectionView` (permalink + slug reads share it) and
-   `getChildren` (why there is no per-child policy check).
+   resource references (each destination is authorized separately).
 5. [SECURITY.md](../SECURITY.md) — all of it, especially § Origins, CORS,
    and CSRF (why *no* CORS config is deliberate and complete).
 
 **Checkpoint 4**:
 
 - [ ] Why 404 instead of 403 for a collection you cannot read?
-- [ ] Why is a child of a readable parent always readable — and where does
-      code rely on that?
+- [ ] Why may a reference in a readable collection have an unavailable target?
 - [ ] Why does the absence of CORS configuration protect browser users, and
       what does it deliberately not protect against?
 
@@ -318,7 +313,12 @@ The first W3 explore-to-resource journey is reviewed and committed. The
 [public hub/pretty-URL reading journey](../exec-plans/completed/deliver-public-hub-reading.md)
 is implemented and reviewed. The
 [service-status journey](../exec-plans/completed/deliver-service-status.md) is
-implemented and reviewed. Account journeys follow as subsequent slices.
+implemented and reviewed. The user then requested service administration:
+[service operations](../design-docs/service-operations.md) now implements separate
+operator authority, account restrictions, public-content holds and audit, with
+reusable sign-in/session support. Its milestone is awaiting review; operator
+authority never grants private collection access. The walkthrough pin below
+remains the reviewed status baseline until the operator milestone is committed.
 Continue with one complete vertical MLP journey at a time.
 Local PostgreSQL/Redis run in containers; the API,
 worker and Next.js dev server run on the host. Keep application builds

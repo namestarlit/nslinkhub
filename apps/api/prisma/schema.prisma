@@ -1,7 +1,7 @@
 // Schema for the hub tenancy model (Hub → Collections → Resources).
 // The migration SQL remains the source of truth for objects Prisma cannot
 // model: the app_uuid_v7() function, set_updated_at triggers, the
-// collection-hierarchy trigger, CHECK constraints, and the partial unique
+// CHECK constraints and the partial unique
 // index uq_resources_collection_link. Future migrations: use `prisma migrate
 // dev --create-only` and review the SQL so those objects are never dropped.
 
@@ -16,21 +16,34 @@ datasource db {
 }
 
 model User {
-  id            String   @id @default(dbgenerated("app_uuid_v7()")) @db.Uuid
-  name          String   @db.VarChar(255)
-  email         String   @unique @db.VarChar(255)
-  emailVerified Boolean  @default(false) @map("email_verified")
-  image         String?
-  bio           String?
-  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt     DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
+  id                     String    @id @default(dbgenerated("app_uuid_v7()")) @db.Uuid
+  name                   String    @db.VarChar(255)
+  email                  String    @unique @db.VarChar(255)
+  emailVerified          Boolean   @default(false) @map("email_verified")
+  image                  String?
+  showNameOnHub          Boolean   @default(true) @map("show_name_on_hub")
+  // Notification center: the badge counts items newer than seenAt; items at or
+  // before clearedAt are hidden from the list.
+  notificationsSeenAt    DateTime? @map("notifications_seen_at") @db.Timestamptz(6)
+  notificationsClearedAt DateTime? @map("notifications_cleared_at") @db.Timestamptz(6)
+  createdAt              DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt              DateTime  @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  accountState      String         @default("active") @map("account_state") @db.VarChar(16)
+  operationsVersion Int            @default(1) @map("operations_version")
+  suspensionReason  String?        @map("suspension_reason") @db.VarChar(32)
+  suspendedAt       DateTime?      @map("suspended_at") @db.Timestamptz(6)
+  operatorGrant     OperatorGrant?
+  adminGrant        AdminGrant?
 
   hub                Hub?
-  createdCollections Collection[]      @relation("CollectionCreator")
+  createdCollections Collection[]        @relation("CollectionCreator")
   shares             CollectionShare[]
   saves              CollectionSave[]
   sessions           Session[]
   accounts           Account[]
+  comments           CollectionComment[] @relation("CommentAuthor")
+  hiddenComments     CollectionComment[] @relation("CommentHider")
 
   @@map("users")
 }
@@ -39,12 +52,15 @@ model Hub {
   id          String   @id @default(dbgenerated("app_uuid_v7()")) @db.Uuid
   ownerUserId String   @unique @map("owner_user_id") @db.Uuid
   handle      String   @unique @db.VarChar(60)
+  name        String   @default("My hub") @db.VarChar(255)
   description String?
   createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt   DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
 
-  owner       User         @relation(fields: [ownerUserId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  collections Collection[]
+  owner                    User         @relation(fields: [ownerUserId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  collections              Collection[]
+  firstCaptureCollectionId String?      @map("first_capture_collection_id") @db.Uuid
+  firstCaptureCollection   Collection?  @relation("FirstCapture", fields: [firstCaptureCollectionId], references: [id], onDelete: SetNull, onUpdate: NoAction)
 
   @@map("hubs")
 }
@@ -58,25 +74,25 @@ model Collection {
   tags               String[] @default([])
   published          Boolean  @default(false)
   linkSharingEnabled Boolean  @default(false) @map("link_sharing_enabled")
+  commentsEnabled    Boolean  @default(true) @map("comments_enabled")
   shareTokenHash     String?  @map("share_token_hash") @db.VarChar(255)
-  parentCollectionId String?  @map("parent_collection_id") @db.Uuid
   creatorUserId      String?  @map("creator_user_id") @db.Uuid
   version            BigInt   @default(1)
   createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt          DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
 
-  hub              Hub               @relation(fields: [hubId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  creator          User?             @relation("CollectionCreator", fields: [creatorUserId], references: [id], onDelete: SetNull, onUpdate: NoAction)
-  parentCollection Collection?       @relation("CollectionHierarchy", fields: [parentCollectionId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  children         Collection[]      @relation("CollectionHierarchy")
-  resources        Resource[]        @relation("CollectionResources")
-  linkedBy         Resource[]        @relation("ResourceLinkedCollection")
+  firstCaptureHubs Hub[]               @relation("FirstCapture")
+  hold             CollectionHold?
+  hub              Hub                 @relation(fields: [hubId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  creator          User?               @relation("CollectionCreator", fields: [creatorUserId], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  resources        Resource[]          @relation("CollectionResources")
+  linkedBy         Resource[]          @relation("ResourceLinkedCollection")
   shares           CollectionShare[]
   saves            CollectionSave[]
+  comments         CollectionComment[]
 
   @@unique([hubId, slug], map: "collections_hub_slug_unique")
   @@index([published, updatedAt(sort: Desc)], map: "idx_collections_published_updated_at")
-  @@index([parentCollectionId], map: "idx_collections_parent_collection_id")
   @@map("collections")
 }
 
@@ -123,7 +139,7 @@ model Resource {
   updatedAt          DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
 
   collection       Collection  @relation("CollectionResources", fields: [collectionId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  linkedCollection Collection? @relation("ResourceLinkedCollection", fields: [linkedCollectionId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  linkedCollection Collection? @relation("ResourceLinkedCollection", fields: [linkedCollectionId], references: [id], onDelete: SetNull, onUpdate: NoAction)
 
   @@unique([collectionId, position], map: "resources_collection_position_unique")
   @@index([collectionId, updatedAt(sort: Desc)], map: "idx_resources_collection_updated_at")
@@ -131,14 +147,15 @@ model Resource {
 }
 
 model Session {
-  id        String   @id @default(dbgenerated("app_uuid_v7()")) @db.Uuid
-  expiresAt DateTime @map("expires_at") @db.Timestamptz(6)
-  token     String   @unique
-  ipAddress String?  @map("ip_address")
-  userAgent String?  @map("user_agent")
-  userId    String   @map("user_id") @db.Uuid
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  verifiedAt DateTime? @map("verified_at") @db.Timestamptz(6)
+  id         String    @id @default(dbgenerated("app_uuid_v7()")) @db.Uuid
+  expiresAt  DateTime  @map("expires_at") @db.Timestamptz(6)
+  token      String    @unique
+  ipAddress  String?   @map("ip_address")
+  userAgent  String?   @map("user_agent")
+  userId     String    @map("user_id") @db.Uuid
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
@@ -208,30 +225,32 @@ model RequestBudget {
 
 // Workflow binding only: better-auth Verification owns all proof material.
 model EmailChangeIntent {
-  userId String @id @map("user_id") @db.Uuid
-  sessionId String @map("session_id") @db.Uuid
-  currentEmail String @map("current_email")
-  newEmail String @map("new_email")
-  phase String @db.VarChar(16)
-  expiresAt DateTime @map("expires_at") @db.Timestamptz(6)
+  userId       String   @id @map("user_id") @db.Uuid
+  sessionId    String   @map("session_id") @db.Uuid
+  currentEmail String   @map("current_email")
+  newEmail     String   @map("new_email")
+  phase        String   @db.VarChar(16)
+  expiresAt    DateTime @map("expires_at") @db.Timestamptz(6)
+
   @@index([expiresAt])
   @@map("email_change_intents")
 }
 
 model EmailOutbox {
-  id String @id @default(dbgenerated("app_uuid_v7()")) @db.Uuid
-  challengeKey String @map("challenge_key") @db.VarChar(64)
-  recipientKey String @map("recipient_key") @db.VarChar(64)
-  payload String?
-  state String @default("pending") @db.VarChar(16)
-  attempts Int @default(0)
-  availableAt DateTime @default(now()) @map("available_at") @db.Timestamptz(6)
-  expiresAt DateTime @map("expires_at") @db.Timestamptz(6)
-  leaseUntil DateTime? @map("lease_until") @db.Timestamptz(6)
-  leaseToken String? @map("lease_token") @db.Uuid
-  providerId String? @unique @map("provider_id")
-  outcome String? @db.VarChar(24)
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  id           String    @id @default(dbgenerated("app_uuid_v7()")) @db.Uuid
+  challengeKey String    @map("challenge_key") @db.VarChar(64)
+  recipientKey String    @map("recipient_key") @db.VarChar(64)
+  payload      String?
+  state        String    @default("pending") @db.VarChar(16)
+  attempts     Int       @default(0)
+  availableAt  DateTime  @default(now()) @map("available_at") @db.Timestamptz(6)
+  expiresAt    DateTime  @map("expires_at") @db.Timestamptz(6)
+  leaseUntil   DateTime? @map("lease_until") @db.Timestamptz(6)
+  leaseToken   String?   @map("lease_token") @db.Uuid
+  providerId   String?   @unique @map("provider_id")
+  outcome      String?   @db.VarChar(24)
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
   @@index([state, availableAt])
   @@index([expiresAt])
   @@index([challengeKey])
@@ -239,24 +258,155 @@ model EmailOutbox {
 }
 
 model EmailWebhook {
-  id String @id
+  id        String   @id
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
   @@map("email_webhooks")
 }
 
 model EmailSuppression {
-  recipientKey String @id @map("recipient_key") @db.VarChar(64)
-  reason String @db.VarChar(24)
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  recipientKey String   @id @map("recipient_key") @db.VarChar(64)
+  reason       String   @db.VarChar(24)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
   @@map("email_suppressions")
 }
 
 model AuthAudit {
-  id String @id @default(dbgenerated("app_uuid_v7()")) @db.Uuid
-  userId String? @map("user_id") @db.Uuid
-  action String @db.VarChar(32)
-  outcome String @db.VarChar(16)
+  id        String   @id @default(dbgenerated("app_uuid_v7()")) @db.Uuid
+  userId    String?  @map("user_id") @db.Uuid
+  action    String   @db.VarChar(32)
+  outcome   String   @db.VarChar(16)
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
   @@index([createdAt])
   @@map("auth_audit")
+}
+
+model OperatorGrant {
+  userId    String   @id @map("user_id") @db.Uuid
+  grantedAt DateTime @default(now()) @map("granted_at") @db.Timestamptz(6)
+  authority String   @db.VarChar(128)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@map("operator_grants")
+}
+
+model CollectionHold {
+  collectionId String     @id @map("collection_id") @db.Uuid
+  active       Boolean    @default(true)
+  reason       String     @db.VarChar(32)
+  actorUserId  String     @map("actor_user_id") @db.Uuid
+  updatedAt    DateTime   @default(now()) @map("updated_at") @db.Timestamptz(6)
+  version      Int        @default(1)
+  collection   Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@map("collection_holds")
+}
+
+model OperatorAudit {
+  invitationId  String?  @map("invitation_id") @db.Uuid
+  id            String   @id @default(dbgenerated("app_uuid_v7()")) @db.Uuid
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  actorKind     String   @map("actor_kind") @db.VarChar(16)
+  actorUserId   String?  @map("actor_user_id") @db.Uuid
+  authority     String?  @db.VarChar(128)
+  targetUserId  String?  @map("target_user_id") @db.Uuid
+  collectionId  String?  @map("collection_id") @db.Uuid
+  action        String   @db.VarChar(40)
+  reason        String?  @db.VarChar(32)
+  outcome       String   @db.VarChar(16)
+  beforeState   String?  @map("before_state") @db.VarChar(16)
+  afterState    String?  @map("after_state") @db.VarChar(16)
+  requestId     String?  @map("request_id") @db.VarChar(64)
+  operationId   String?  @map("operation_id") @db.Uuid
+  payloadHash   String?  @map("payload_hash") @db.VarChar(64)
+  resultVersion Int?     @map("result_version")
+
+  @@unique([actorUserId, operationId])
+  @@unique([authority, operationId])
+  @@index([createdAt(sort: Desc), id(sort: Desc)])
+  @@index([targetUserId, createdAt(sort: Desc)])
+  @@index([collectionId, createdAt(sort: Desc)])
+  @@map("operator_audit")
+}
+
+model AdminGrant {
+  userId       String   @id @map("user_id") @db.Uuid
+  grantedAt    DateTime @default(now()) @map("granted_at") @db.Timestamptz(6)
+  invitationId String   @map("invitation_id") @db.Uuid
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@map("admin_grants")
+}
+
+model AdminBootstrap {
+  id           Int       @id
+  invitationId String    @map("invitation_id") @db.Uuid
+  claimedById  String?   @map("claimed_by_id") @db.Uuid
+  claimedAt    DateTime? @map("claimed_at") @db.Timestamptz(6)
+
+  @@map("admin_bootstrap")
+}
+
+model ServiceInvitation {
+  tokenHash     String?  @unique @map("token_hash") @db.VarChar(64)
+  id            String   @id @default(dbgenerated("app_uuid_v7()")) @db.Uuid
+  role          String   @db.VarChar(16)
+  email         String   @db.VarChar(254)
+  inviteeUserId String?  @map("invitee_user_id") @db.Uuid
+  invitedById   String?  @map("invited_by_id") @db.Uuid
+  acceptedById  String?  @map("accepted_by_id") @db.Uuid
+  state         String   @default("pending") @db.VarChar(16)
+  version       Int      @default(1)
+  deliveryId    String?  @map("delivery_id") @db.Uuid
+  expiresAt     DateTime @map("expires_at") @db.Timestamptz(6)
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([email, state])
+  @@index([invitedById, state])
+  @@index([createdAt(sort: Desc), id(sort: Desc)])
+  @@map("service_invitations")
+}
+
+// Retry receipts contain only immutable identifiers and an input digest. They
+// survive content deletion so replay cannot silently recreate removed content.
+model CaptureReceipt {
+  userId       String   @map("user_id") @db.Uuid
+  operationId  String   @map("operation_id") @db.Uuid
+  collectionId String   @map("collection_id") @db.Uuid
+  fingerprint  String   @db.VarChar(64)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@id([userId, operationId])
+  @@map("capture_receipts")
+}
+
+// Discussion on one collection: top-level comments with one level of replies.
+// Access follows the collection policy; moderation is owner/editor hiding and,
+// for the author, edit/delete. A deleted comment with replies keeps its place.
+model CollectionComment {
+  id             String    @id @default(dbgenerated("app_uuid_v7()")) @db.Uuid
+  collectionId   String    @map("collection_id") @db.Uuid
+  authorUserId   String?   @map("author_user_id") @db.Uuid
+  parentId       String?   @map("parent_id") @db.Uuid
+  body           String
+  state          String    @default("visible") @db.VarChar(16)
+  accepted       Boolean   @default(false)
+  hiddenByUserId String?   @map("hidden_by_user_id") @db.Uuid
+  version        BigInt    @default(1)
+  editedAt       DateTime? @map("edited_at") @db.Timestamptz(6)
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime  @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  collection Collection          @relation(fields: [collectionId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  author     User?               @relation("CommentAuthor", fields: [authorUserId], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  hiddenBy   User?               @relation("CommentHider", fields: [hiddenByUserId], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  parent     CollectionComment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  replies    CollectionComment[] @relation("CommentReplies")
+
+  @@index([collectionId, createdAt(sort: Desc)], map: "idx_collection_comments_collection_created")
+  @@index([parentId, createdAt], map: "idx_collection_comments_parent_created")
+  @@map("collection_comments")
 }

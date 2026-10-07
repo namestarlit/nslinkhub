@@ -1,7 +1,7 @@
 import "server-only";
 import { webServerConfig } from "@nslinkhub/config/web-server";
 import { headers } from "next/headers";
-import { type ApiPath, readJson, safePath, sessionCookie } from "./http";
+import { type ApiPath, postJson, readJson, safePath, sessionCookie } from "./http";
 
 export async function serverRead<T>(path: ApiPath, shareToken?: string) {
   const incoming = await headers();
@@ -16,4 +16,22 @@ export async function serverRead<T>(path: ApiPath, shareToken?: string) {
     headers: outgoing,
     timeout: 8000,
   });
+}
+
+// A POST preview keeps the emailed token out of request URLs. It is read-only
+// and uses the same signed source attribution as ordinary server reads.
+export async function invitationPreview<T>(token: string) {
+  const incoming = await headers(),
+    config = webServerConfig();
+  const outgoing = new Headers({ "Content-Type": "application/json", Origin: config.publicOrigin });
+  const source = incoming.get("x-web-read-source");
+  if (!source) throw new Error("Web server source attribution is missing");
+  outgoing.set("x-web-read-source", source);
+  const cookie = sessionCookie(incoming.get("cookie") ?? "");
+  if (cookie) outgoing.set("cookie", cookie);
+  return postJson<T>(
+    `${config.apiOrigin}/api/v1/auth/invitations/preview`,
+    { token },
+    { headers: outgoing, raw: true },
+  );
 }

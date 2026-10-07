@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
+import { isPublicLinkHost } from "@nslinkhub/types";
 import { ResourceKind } from "src/common/enums/resource-kind.enum";
 import { AuthUser } from "src/common/interfaces/auth-user.interface";
 import { canonicalizeUrl } from "src/common/utils/url.util";
@@ -98,21 +99,27 @@ export class ImportsService {
     for (const row of rows) {
       try {
         const url = canonicalizeUrl(row.url);
+        if (!isPublicLinkHost(new URL(url).hostname)) {
+          errors.push({ row: row.index, reason: "not_public_url", value: row.url.slice(0, 128) });
+          continue;
+        }
 
         if (existingUrls.has(url)) {
           skippedCount += 1;
           continue;
         }
 
-        await this.prisma.resource.create({
-          data: {
-            collectionId,
-            kind: ResourceKind.EXTERNAL_LINK,
-            url,
-            titleOverride: row.title ?? null,
-            position: nextPosition,
-          },
-        });
+        await this.prisma.withSavepoint((tx) =>
+          tx.resource.create({
+            data: {
+              collectionId,
+              kind: ResourceKind.EXTERNAL_LINK,
+              url,
+              titleOverride: row.title ?? null,
+              position: nextPosition,
+            },
+          }),
+        );
 
         existingUrls.add(url);
         importedCount += 1;

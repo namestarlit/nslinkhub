@@ -178,6 +178,16 @@ tests remain responsible for proving that sensitive content stays out of
 ordinary logs, Redis payloads, and external telemetry
 (`docs/design-docs/observability.md`).
 
+### Shared footer and warning (2026-10-07)
+
+Code emails carry one warning line, “Do not share this code with anyone.”, and
+every email (codes and invitations) ends with the same footer as the web: a
+support prompt (“Didn't request this? You can safely ignore this email. Need
+help? Contact <support>”), then “© <year> nslinkhub” over “an ns series
+product”. The prompt always links `EMAIL_SUPPORT_URL`, the web `/support` page,
+which shows the support address (`SUPPORT_EMAIL`, web server config). Emails
+never carry the address themselves, so changing it needs no email change.
+
 ## Idempotency
 
 Every send must have an application-owned idempotency key. Do not include raw

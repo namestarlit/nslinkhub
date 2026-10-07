@@ -3,6 +3,8 @@ import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/commo
 import { AuthUser } from "src/common/interfaces/auth-user.interface";
 import { PrismaService } from "src/database/prisma.service";
 import { Collection } from "src/generated/prisma/client";
+import { appError } from "../../common/errors/app-exception";
+import { availableCollections } from "./availability";
 
 export interface CollectionAccess {
   canRead: boolean;
@@ -10,9 +12,6 @@ export interface CollectionAccess {
   canManage: boolean; // publish, share, delete, settings (owner only)
   viaLinkToken: boolean; // access came from a presented share token
   isOwner: boolean; // the viewer owns the hub holding this collection
-  // The ancestor collection whose link token matched (where link access came
-  // from), so a recorded link share attaches to the shared collection itself.
-  linkSourceCollectionId: string | null;
 }
 
 const NO_ACCESS: CollectionAccess = {
@@ -21,22 +20,9 @@ const NO_ACCESS: CollectionAccess = {
   canManage: false,
   viaLinkToken: false,
   isOwner: false,
-  linkSourceCollectionId: null,
 };
 
-type ChainLink = {
-  id: string;
-  published: boolean;
-  linkSharingEnabled: boolean;
-  shareTokenHash: string | null;
-};
-
-// The single source of truth for collection access (design "Sharing Model").
-// Individual/Drive model: the hub owner has full authority; everyone else gets
-// at most what a direct share -> active link (row or token) -> publication
-// grants. Access inherits DOWN the tree — a grant on any ancestor applies to a
-// descendant, exactly like sharing a Drive folder shares its contents. No
-// memberships, no admin bypass.
+// Collection access is independent: owner, direct grant, active link, publication.
 @Injectable()
 export class CollectionPolicyService {
   constructor(private readonly prisma: PrismaService) {}
@@ -46,8 +32,22 @@ export class CollectionPolicyService {
     viewer: AuthUser | null,
     shareToken?: string,
   ): Promise<CollectionAccess> {
-    // Owner of the hub holding the collection has full authority over the whole
-    // subtree (a subtree always lives in a single hub).
+    if (
+      viewer &&
+      !(await this.prisma.user.findFirst({ where: { id: viewer.userId, accountState: "active" } }))
+    )
+      return NO_ACCESS;
+    if (
+      !(await this.prisma.collection.findFirst({
+        where: {
+          id: collection.id,
+          hubId: collection.hubId,
+          ...availableCollections(viewer?.userId),
+        },
+      }))
+    )
+      return NO_ACCESS;
+    // The owner of this collection's hub has full authority.
     if (viewer) {
       const hub = await this.prisma.hub.findUnique({
         where: { id: collection.hubId },
@@ -60,53 +60,37 @@ export class CollectionPolicyService {
           canManage: true,
           viaLinkToken: false,
           isOwner: true,
-          linkSourceCollectionId: null,
         };
       }
     }
 
-    // Non-owner: a grant on the collection OR any ancestor applies. Walk the
-    // ancestor chain (same hub, depth-bounded by the hierarchy trigger).
-    const chain = await this.ancestorChain(collection);
-    const chainById = new Map(chain.map((c) => [c.id, c]));
-    const chainIds = chain.map((c) => c.id);
-
     let canRead = false;
     let canWriteContent = false;
     let viaLinkToken = false;
-    let linkSourceCollectionId: string | null = null;
 
     if (viewer) {
-      const shares = await this.prisma.collectionShare.findMany({
-        where: { userId: viewer.userId, collectionId: { in: chainIds } },
-        select: { collectionId: true, role: true, source: true },
+      const share = await this.prisma.collectionShare.findUnique({
+        where: { collectionId_userId: { userId: viewer.userId, collectionId: collection.id } },
+        select: { role: true, source: true },
       });
-      for (const share of shares) {
-        if (share.source === "direct") {
-          canRead = true;
-          if (share.role === "editor") {
-            canWriteContent = true;
-          }
-        } else if (
-          share.source === "link" &&
-          chainById.get(share.collectionId)?.linkSharingEnabled
-        ) {
-          canRead = true;
-        }
+      if (share?.source === "direct") {
+        canRead = true;
+        canWriteContent = share.role === "editor";
+      } else if (share?.source === "link" && collection.linkSharingEnabled) {
+        canRead = true;
       }
     }
 
     if (shareToken) {
       const hash = createHash("sha256").update(shareToken).digest("hex");
-      const match = chain.find((c) => c.linkSharingEnabled && c.shareTokenHash === hash);
+      const match = collection.linkSharingEnabled && collection.shareTokenHash === hash;
       if (match) {
         canRead = true;
         viaLinkToken = true;
-        linkSourceCollectionId = match.id;
       }
     }
 
-    if (chain.some((c) => c.published)) {
+    if (collection.published) {
       canRead = true;
     }
 
@@ -120,47 +104,18 @@ export class CollectionPolicyService {
       canManage: false,
       viaLinkToken,
       isOwner: false,
-      linkSourceCollectionId,
     };
   }
 
-  // The collection plus its ancestors (root last), carrying the fields access
-  // resolution needs. Bounded by the depth-8 hierarchy trigger.
-  private async ancestorChain(collection: Collection): Promise<ChainLink[]> {
-    const chain: ChainLink[] = [
-      {
-        id: collection.id,
-        published: collection.published,
-        linkSharingEnabled: collection.linkSharingEnabled,
-        shareTokenHash: collection.shareTokenHash,
-      },
-    ];
-    let parentId = collection.parentCollectionId;
-    let guard = 0;
-    while (parentId && guard < 8) {
-      const parent = await this.prisma.collection.findUnique({
-        where: { id: parentId },
-        select: {
-          id: true,
-          published: true,
-          linkSharingEnabled: true,
-          shareTokenHash: true,
-          parentCollectionId: true,
-        },
-      });
-      if (!parent) {
-        break;
-      }
-      chain.push({
-        id: parent.id,
-        published: parent.published,
-        linkSharingEnabled: parent.linkSharingEnabled,
-        shareTokenHash: parent.shareTokenHash,
-      });
-      parentId = parent.parentCollectionId;
-      guard += 1;
-    }
-    return chain;
+  async holdReason(collection: Collection): Promise<string | null> {
+    const hold = await this.prisma.collectionHold.findUnique({
+      where: { collectionId: collection.id },
+    });
+    return hold?.active ? hold.reason : null;
+  }
+
+  async requireUnrestricted(collection: Collection): Promise<void> {
+    if (await this.holdReason(collection)) throw appError("collection_held");
   }
 
   async requireRead(
@@ -193,8 +148,7 @@ export class CollectionPolicyService {
   }
 
   // When a signed-in non-owner opens a valid share link, remember it under their
-  // shared/ surface — against the collection whose link was actually used (which
-  // may be an ancestor of the one they navigated to). Never overwrite an
+  // shared/ surface against that collection only. Never overwrite an
   // existing (e.g. direct) share.
   async recordLinkAccess(collectionId: string, userId: string): Promise<void> {
     const existing = await this.prisma.collectionShare.findUnique({

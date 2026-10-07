@@ -13,6 +13,14 @@
 - Reorder writes use the two-pass temporary-offset transaction to respect the
   unique `(collection, position)` constraint without transient conflicts.
 
+- Imports isolate each resource insert with a PostgreSQL savepoint inside the
+  authority transaction. A database-invalid row rolls back to its savepoint;
+  valid preceding and following rows commit together, matching the reported
+  counts. A transaction-wide failure still fails the request.
+- Sign-in flow issuance and resend eligibility are separate timestamps. A
+  refused resend preserves issuance/expiry and stores the server cooldown as
+  a retry deadline, including waits longer than the normal resend interval.
+
 ## Jobs And Queues
 
 - Email uses an encrypted PostgreSQL transactional outbox relayed to BullMQ,
@@ -55,6 +63,27 @@
   30 days. Collection audit has no automatic expiry. Account deletion and
   collection-audit retention require an explicit policy before public exposure;
   account deletion is disabled until a verified workflow and that policy exist.
+
+## Service operations
+
+The [operator contract](design-docs/service-operations.md) is implemented.
+Account restrictions, session/proof/grant revocation and audit writes
+commit atomically with the auth transaction boundary. Content holds
+serialize with publication, resource-reference, sharing and transfer mutations. Actions
+use expected versions and scoped operation IDs; stale/conflicting submissions
+fail safely, and the web never replays actions automatically. Operator audit
+expires after 365 days in bounded cleanup, independently of active restrictions
+and the existing auth/hub audit policies.
+
+Authenticated product mutations, auth mutations and service-role invitations and operator commands
+acquire the same PostgreSQL transaction advisory lock before domain row locks.
+The product request transaction rechecks the live session after acquiring it;
+existing nested service transactions join that transaction. This deliberately
+serializes writes at the current scale. Read-only product traffic remains
+concurrent, including read-only commands sent as POST (`@ReadOnlyCommand()`,
+currently exports): they must not write, and run outside the lock so slow
+rendering never queues other writes or meets the transaction timeout; operator reads also serialize so access decisions and audit commit
+together. Revisit contention with measured traffic before increasing scale.
 
 ## Observability and release verification
 

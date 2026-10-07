@@ -47,17 +47,21 @@ describe("Resource + tag fields (e2e)", () => {
     const resource = await request(app.getHttpServer())
       .post(`/api/v1/collections/${cid}/resources/external`)
       .set("Authorization", `Bearer ${bearer}`)
-      .send({ url: `https://example.com/rf-${sfx}`, position: 0, tags: ["Video", "VIDEO", "free"] })
+      .send({
+        url: `https://fixture-links.dev/rf-${sfx}`,
+        position: 0,
+        tags: ["Video", "VIDEO", "free"],
+      })
       .expect(201);
     const body = resource.body as { data: { url: string; tags: string[] } };
-    expect(body.data.url).toBe(`https://example.com/rf-${sfx}`);
+    expect(body.data.url).toBe(`https://fixture-links.dev/rf-${sfx}`);
     expect(body.data.tags).toEqual(["video", "free"]);
 
     // The same url cannot be added twice to one collection.
     await request(app.getHttpServer())
       .post(`/api/v1/collections/${cid}/resources/external`)
       .set("Authorization", `Bearer ${bearer}`)
-      .send({ url: `https://example.com/rf-${sfx}`, position: 1 })
+      .send({ url: `https://fixture-links.dev/rf-${sfx}`, position: 1 })
       .expect(409);
   });
 });

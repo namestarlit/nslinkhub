@@ -2,6 +2,12 @@ import type { ShareRole, ShareSource } from "./common.js";
 import type { IsoTimestamp } from "./envelope.js";
 
 export interface Collection {
+  hub?: { id: string; handle: string; name: string; ownerName: string | null };
+  // Who created the collection (immutable provenance; may differ from the owner
+  // after a transfer). Present on single-collection reads; null if unavailable.
+  creator?: import("./envelope.js").PersonRef | null;
+  capabilities?: { canManage: boolean };
+  restriction?: { reason: import("./operations.js").OperationReason; supportUrl: string };
   id: string;
   hubId: string;
   slug: string;
@@ -10,7 +16,7 @@ export interface Collection {
   tags: string[];
   published: boolean;
   linkSharingEnabled: boolean;
-  parentCollectionId: string | null;
+  commentsEnabled: boolean;
   version: number;
   createdAt: IsoTimestamp;
   updatedAt: IsoTimestamp;
@@ -50,11 +56,6 @@ export interface UpdateCollectionRequest {
   description?: string;
   tags?: string[];
   published?: boolean;
-}
-
-// Nest an existing collection into another as a section (the one nesting path).
-export interface NestCollectionRequest {
-  collectionId: string;
 }
 
 export interface SetLinkSharingRequest {

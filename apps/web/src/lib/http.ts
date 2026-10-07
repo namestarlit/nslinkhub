@@ -9,6 +9,34 @@ export function failure(code = "unavailable", status = 0, retryAfter = 0): Failu
   return { ok: false, code, status, retryAfter };
 }
 
+// Progressive enhancement for native forms: same origin, bounded wait and no
+// automatic redirect that could turn a sign-in document into a successful save.
+export async function submitForm<T>(
+  path: `/forms/${string}`,
+  body: URLSearchParams,
+  fetcher: typeof fetch = fetch,
+): Promise<Result<T>> {
+  if (!/^\/forms\/[a-z-]+$/.test(path)) throw new Error("Invalid form path");
+  const signal = AbortSignal.timeout(10000);
+  try {
+    const response = await fetcher(path, {
+      method: "POST",
+      headers: { Accept: "application/json" },
+      body,
+      credentials: "same-origin",
+      cache: "no-store",
+      signal,
+      redirect: "error",
+    });
+    const payload = await response.json();
+    if (response.ok && payload?.ok === true && "data" in payload)
+      return { ok: true, data: payload.data as T };
+    return failure(isApiErrorCode(payload?.code) ? payload.code : "unavailable", response.status);
+  } catch {
+    return failure(signal.aborted ? "request_timeout" : "unavailable");
+  }
+}
+
 export function safePath(path: ApiPath): string {
   const parsed = new URL(path, "http://internal.invalid");
   if (
@@ -101,4 +129,100 @@ export function sessionCookie(raw: string): string {
     .map((v) => v.trim())
     .filter((v) => /^(?:__Secure-)?better-auth\.session_token=[^;\r\n]+$/.test(v))
     .join("; ");
+}
+
+// Server form actions use the same bounded, no-store HTTP boundary. Auth owns
+// its raw protocol; only allowlisted session Set-Cookie headers cross back.
+export async function postJson<T>(
+  url: string,
+  body: unknown,
+  options: { headers: Headers; raw?: boolean; method?: "POST" | "PATCH" | "DELETE" },
+): Promise<Result<T> & { setCookies?: string[] }> {
+  const signal = AbortSignal.timeout(8000);
+  try {
+    const response = await fetch(url, {
+      method: options.method ?? "POST",
+      headers: options.headers,
+      ...(options.method === "DELETE" ? {} : { body: JSON.stringify(body) }),
+      signal,
+      redirect: "error",
+      cache: "no-store",
+    });
+    const payload = await response.json();
+    if (!response.ok) {
+      const retry = response.headers.get("retry-after");
+      return failure(
+        isApiErrorCode(payload?.error?.code) ? payload.error.code : "unavailable",
+        response.status,
+        retry && /^\d+$/.test(retry) ? Number(retry) : 0,
+      );
+    }
+    if (!options.raw && (!payload || !("data" in payload))) return failure();
+    return {
+      ok: true,
+      data: (options.raw ? payload : payload.data) as T,
+      setCookies: response.headers
+        .getSetCookie()
+        .filter((v) => /^(?:__Secure-)?better-auth\.session_token=/.test(v)),
+    };
+  } catch {
+    return failure(signal.aborted ? "request_timeout" : "unavailable");
+  }
+}
+export function safeDocumentReturn(value: unknown): string {
+  if (
+    typeof value !== "string" ||
+    value.length > 4096 ||
+    !value.startsWith("/") ||
+    value.startsWith("//") ||
+    value.includes("\\") ||
+    [...value].some((character) => character.charCodeAt(0) <= 32) ||
+    /%2f|%5c/i.test(value.split("?")[0])
+  )
+    return "/";
+  const url = new URL(value, "http://local.invalid");
+  if (url.origin !== "http://local.invalid" || /^\/forms(\/|$)/.test(url.pathname)) return "/";
+  return url.pathname + url.search;
+}
+
+export function safeReturn(value: unknown): string {
+  const path = safeDocumentReturn(value);
+  const parsed = new URL(path, "http://local.invalid");
+  if (
+    /^\/c\/[a-f0-9-]{36}$/.test(parsed.pathname) ||
+    /^\/@[a-z0-9-]{3,60}\/[a-z0-9-]{2,120}$/.test(parsed.pathname)
+  ) {
+    const token = parsed.searchParams.get("s");
+    const query = new URLSearchParams();
+    if (token && /^[A-Za-z0-9_-]{1,512}$/.test(token)) query.set("s", token);
+    const composing = parsed.searchParams.get("compose") === "comment";
+    if (composing) query.set("compose", "comment");
+    return `${parsed.pathname}${query.size ? `?${query}` : ""}${composing ? "#comment-composer" : ""}`;
+  }
+  if (/^\/capture\/[a-f0-9-]{36}$/.test(parsed.pathname)) return parsed.pathname;
+  if (
+    /^\/(?:hub|settings|notifications|discover|support|ops(?:\/(?:audit|operators|accounts\/[a-f0-9-]{36}|collections\/[a-f0-9-]{36}))?|invitations\/[a-f0-9-]{36})$/.test(
+      parsed.pathname,
+    )
+  )
+    return parsed.pathname;
+  return "/";
+}
+
+// Background POST to one of the web's own native-form actions (same origin,
+// URL-encoded like a form, no API path). Used where a page records something
+// on view, e.g. Notifications marking items seen.
+export async function postFormAction(action: string) {
+  if (!/^[a-z-]+$/.test(action)) throw new Error("Invalid form action");
+  try {
+    const response = await fetch(`/forms/${action}`, {
+      method: "POST",
+      credentials: "same-origin",
+      redirect: "manual",
+      body: new URLSearchParams(),
+    });
+    return response.ok;
+  } catch {
+    return false;
+  }
 }

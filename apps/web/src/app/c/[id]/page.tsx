@@ -1,9 +1,11 @@
 import type { Collection } from "@nslinkhub/types";
+import type { Metadata } from "next";
+import { CollectionFeedback } from "../../../components/collection-feedback";
 import { CollectionReader } from "../../../components/collection-reader";
-import { Feedback } from "../../../components/feedback";
-import { collectionPath, failure, queryValue } from "../../../lib/http";
+import { collectionPath, failure, permalink, queryValue } from "../../../lib/http";
 import { serverRead } from "../../../lib/server-api";
 
+export const metadata: Metadata = { title: "Collection" };
 export const dynamic = "force-dynamic";
 export default async function Page({
   params,
@@ -14,9 +16,10 @@ export default async function Page({
 }) {
   const { id } = await params;
   if (!/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(id))
-    return <Feedback collection error={failure("not_found", 404)} />;
+    return <CollectionFeedback error={failure("not_found", 404)} returnTo={permalink(id)} />;
   const query = await searchParams;
   const result = await serverRead<Collection>(collectionPath(id), queryValue(query.s, 512));
-  if (!result.ok) return <Feedback collection error={result} />;
+  if (!result.ok)
+    return <CollectionFeedback error={result} returnTo={permalink(id, queryValue(query.s, 512))} />;
   return <CollectionReader collection={result.data} query={query} />;
 }

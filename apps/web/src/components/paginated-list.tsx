@@ -1,6 +1,6 @@
 "use client";
 import type { Collection, HubPage, Resource } from "@nslinkhub/types";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { browserRead } from "../lib/browser-api";
 import { type ApiPath, type Failure, withCursor } from "../lib/http";
 import { Retry } from "./feedback";
@@ -10,8 +10,7 @@ type Props = {
   path: ApiPath;
   nextCursor?: string | null;
   token?: string;
-  titles?: Record<string, string>;
-  publicHub?: { handle: string };
+  publicHub?: { handle: string; preview?: boolean };
 } & ({ kind: "collections"; initial: Collection[] } | { kind: "resources"; initial: Resource[] });
 export function PaginatedList(props: Props) {
   const [items, setItems] = useState<(Collection | Resource)[]>(props.initial);
@@ -19,12 +18,98 @@ export function PaginatedList(props: Props) {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<Failure>();
   const [announcement, setAnnouncement] = useState("");
+  const list = useRef<HTMLUListElement>(null);
+  const [desktop, setDesktop] = useState(false);
+  const [pageStart, setPageStart] = useState(0);
+  const [pageCount, setPageCount] = useState(0);
+  const [history, setHistory] = useState<number[]>([]);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Refit when the rendered page or its content changes.
+  useLayoutEffect(() => {
+    if (props.kind !== "collections" || !list.current) return;
+    const element = list.current;
+    const media = matchMedia("(min-width: 640px) and (min-height: 481px)");
+    const fit = () => {
+      const rows = Array.from(element.children) as HTMLElement[];
+      for (const row of rows) row.hidden = false;
+      if (!media.matches) {
+        setDesktop(false);
+        setPageStart(0);
+        setHistory([]);
+        return;
+      }
+      const main = document.querySelector("main");
+      if (main) main.scrollTop = 0;
+      const controls = continuation.current;
+      const bottom = main
+        ? main.getBoundingClientRect().bottom -
+          Number.parseFloat(getComputedStyle(main).paddingBottom) -
+          (controls?.getBoundingClientRect().height ?? 44) -
+          16
+        : element.getBoundingClientRect().bottom;
+      let count = 0;
+      for (const row of rows) {
+        if (row.getBoundingClientRect().bottom > bottom + 1) break;
+        count++;
+      }
+      // Zoom/very long content must remain reachable even when one row cannot fit.
+      const fits = count > 0;
+      element.closest(".collection-browser")?.classList.toggle("fits-desktop", fits);
+      if (fits) for (let i = count; i < rows.length; i++) rows[i].hidden = true;
+      setDesktop(fits);
+      setPageCount(count);
+      if (fits && main) main.scrollTop = 0;
+    };
+    element.closest(".collection-browser")?.classList.add("sized-collections");
+    const observer = new ResizeObserver(fit);
+    observer.observe(element);
+    media.addEventListener("change", fit);
+    fit();
+    return () => {
+      observer.disconnect();
+      media.removeEventListener("change", fit);
+    };
+  }, [props.kind, items, pageStart]);
+  // Links without a title are looked up when the collection opens; read the
+  // first page once more shortly after and fill in the titles that arrived.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: One follow-up read per opened list.
+  useEffect(() => {
+    if (props.kind !== "resources") return;
+    const untitled = (props.initial as Resource[]).some(
+      (r) => r.kind === "external_link" && !r.titleOverride,
+    );
+    if (!untitled) return;
+    const controller = new AbortController();
+    const timer = setTimeout(async () => {
+      const result = await browserRead<Resource[]>(
+        props.path,
+        controller.signal,
+        props.token,
+      ).catch(() => null);
+      if (!result?.ok) return;
+      const titles = new Map(result.data.map((r) => [r.id, r.titleOverride]));
+      setItems((current) =>
+        current.map((item) => {
+          const title = titles.get(item.id);
+          return title && !(item as Resource).titleOverride
+            ? { ...item, titleOverride: title }
+            : item;
+        }),
+      );
+    }, 2500);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, []);
   const active = useRef<AbortController | null>(null);
   const continuation = useRef<HTMLDivElement>(null);
   const restoreFocus = useRef(false);
   useEffect(() => {
     if (!restoreFocus.current) return;
-    continuation.current?.querySelector<HTMLElement>("a,button")?.focus({ preventScroll: true });
+    (
+      continuation.current?.querySelector<HTMLElement>("[data-next-page]") ??
+      continuation.current?.querySelector<HTMLElement>("a,button")
+    )?.focus({ preventScroll: true });
     if (!pending) restoreFocus.current = false;
   }, [pending]);
   useEffect(() => {
@@ -35,7 +120,7 @@ export function PaginatedList(props: Props) {
       window.removeEventListener("reader:suspend", stop);
     };
   }, []);
-  async function more() {
+  async function more(nextPage = false) {
     if (!cursor || active.current) return;
     restoreFocus.current = continuation.current?.contains(document.activeElement) ?? false;
     const controller = new AbortController();
@@ -71,27 +156,33 @@ export function PaginatedList(props: Props) {
     setItems((current) => [...current, ...additions]);
     setCursor(result.meta?.nextCursor);
     setAnnouncement(`${additions.length} more ${props.kind} loaded.`);
+    if (nextPage && additions.length) {
+      setHistory((current) => [...current, pageStart]);
+      setPageStart(items.length);
+    }
   }
-  const fallback = `?${new URLSearchParams({ cursor: cursor ?? "", ...(props.token ? { s: props.token } : {}) })}`;
+  const viewParams = {
+    ...(props.token ? { s: props.token } : {}),
+    ...(props.publicHub?.preview ? { view: "public" } : {}),
+  };
+  const fallback = `?${new URLSearchParams({ cursor: cursor ?? "", ...viewParams })}`;
+  const hasPages = history.length > 0 || pageStart + pageCount < items.length || Boolean(cursor);
   return (
     <>
-      <ul className={props.kind === "collections" ? "collection-list" : "resource-list"}>
-        {items.map((item) =>
-          props.kind === "collections" ? (
-            <CollectionRow
-              key={item.id}
-              item={item as Collection}
-              handle={props.publicHub?.handle}
-            />
-          ) : (
-            <ResourceRow
-              key={item.id}
-              item={item as Resource}
-              titles={props.titles ?? {}}
-              token={props.token}
-            />
-          ),
-        )}
+      <ul ref={list} className={props.kind === "collections" ? "collection-list" : "resource-list"}>
+        {items
+          .slice(desktop ? pageStart : 0)
+          .map((item) =>
+            props.kind === "collections" ? (
+              <CollectionRow
+                key={item.id}
+                item={item as Collection}
+                handle={props.publicHub?.handle}
+              />
+            ) : (
+              <ResourceRow key={item.id} item={item as Resource} />
+            ),
+          )}
       </ul>
       {!items.length && (
         <p className="empty">
@@ -114,11 +205,46 @@ export function PaginatedList(props: Props) {
           </p>
         )}
         {error?.code === "invalid_cursor" ? (
-          <a className="button" href={props.token ? `?s=${encodeURIComponent(props.token)}` : "?"}>
+          <a className="button" href={`?${new URLSearchParams(viewParams)}`}>
             Reload list
           </a>
         ) : error ? (
-          <Retry seconds={error.retryAfter} action={more} />
+          <Retry seconds={error.retryAfter} action={() => more(desktop)} />
+        ) : desktop ? (
+          hasPages ? (
+            <div className="collection-pagination">
+              <button
+                className="button"
+                type="button"
+                disabled={!history.length || pending}
+                onClick={() => {
+                  setPageStart(history.at(-1) ?? 0);
+                  setHistory((current) => current.slice(0, -1));
+                }}
+              >
+                Previous
+              </button>
+              <span className="sr-only" role="status">
+                {items.length
+                  ? `${pageStart + 1}–${Math.min(pageStart + pageCount, items.length)}`
+                  : "0"}
+              </span>
+              <button
+                className="button"
+                type="button"
+                data-next-page
+                disabled={pending || (pageStart + pageCount >= items.length && !cursor)}
+                onClick={() => {
+                  if (pageStart + pageCount < items.length) {
+                    setHistory((current) => [...current, pageStart]);
+                    setPageStart(pageStart + pageCount);
+                  } else void more(true);
+                }}
+              >
+                {pending ? "Loading…" : "Next"}
+              </button>
+            </div>
+          ) : null
         ) : cursor || announcement ? (
           <a
             className="button"

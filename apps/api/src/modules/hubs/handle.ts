@@ -12,6 +12,7 @@ export const HANDLE_RE = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 // Format is enforced again by a DB CHECK constraint.
 export const RESERVED_HANDLES = new Set([
   "api",
+  "discover",
   "explore",
   "me",
   "hubs",

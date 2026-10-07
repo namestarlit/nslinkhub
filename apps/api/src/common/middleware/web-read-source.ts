@@ -7,12 +7,13 @@ export function verifiedWebReadSource(
   proof: string | undefined,
   secret: string | undefined,
   now = Date.now(),
+  purpose: "read" | "form" = "read",
 ): string | undefined {
   if (!secret || !proof || proof.length > 512) return;
   const [payload, signature, extra] = proof.split(".");
   if (!payload || !signature || extra !== undefined) return;
   const expected = createHmac("sha256", secret)
-    .update(`web-read-source:${payload}`)
+    .update(`web-${purpose}-source:${payload}`)
     .digest("base64url");
   if (
     Buffer.byteLength(signature) !== Buffer.byteLength(expected) ||

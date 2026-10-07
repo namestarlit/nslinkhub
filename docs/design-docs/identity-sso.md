@@ -249,3 +249,13 @@ When nsauth exists, NSLinkHub's integration is: add the provider button, map
 `sub` → existing user by verified email or linking step, run the same
 onboarding for new users, and (optionally, later) read identity-scoped claims.
 The hub/collection model is untouched.
+
+## Product service-operator authority (2026-10-06)
+
+The implemented [NSLinkHub operator capability](service-operations.md) is
+product-owned. It does not depend on nsauth or expand
+the ns identity-provider scope. Future global claims do not automatically grant
+it: the initial admin accepts a startup invitation, then admins invite operators
+who must also explicitly accept. Grants use immutable local user IDs. Verified
+email handover revokes both product grants so operational authority does not pass
+to the new mailbox holder. None of this grants access to private collections.

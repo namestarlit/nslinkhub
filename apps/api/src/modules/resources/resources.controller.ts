@@ -21,6 +21,10 @@ import { OptionalAuthGuard } from "src/common/guards/optional-auth.guard";
 import type { AuthUser } from "src/common/interfaces/auth-user.interface";
 import { apiOk } from "src/common/utils/response.util";
 import { shareTokenFrom } from "src/common/utils/token.util";
+import {
+  CreateCollectionResourceDto,
+  CreateHeadingResourceDto,
+} from "./dto/create-collection-resource.dto";
 import { CreateExternalResourceDto } from "./dto/create-external-resource.dto";
 import { ReorderResourcesDto } from "./dto/reorder-resources.dto";
 import { UpdateResourceDto } from "./dto/update-resource.dto";
@@ -41,6 +45,28 @@ export class ResourcesController {
   ) {
     const data = await this.resourcesService.createExternal(collectionId, user, dto);
     return apiOk(data);
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(AuthGuard)
+  @Post("collection")
+  async createCollectionLink(
+    @Param("id", new ParseUUIDPipe()) id: string,
+    @CurrentUser() user: AuthUser,
+    @Body() dto: CreateCollectionResourceDto,
+  ) {
+    return apiOk(await this.resourcesService.createCollectionLink(id, user, dto));
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(AuthGuard)
+  @Post("heading")
+  async createHeading(
+    @Param("id", new ParseUUIDPipe()) id: string,
+    @CurrentUser() user: AuthUser,
+    @Body() dto: CreateHeadingResourceDto,
+  ) {
+    return apiOk(await this.resourcesService.createHeading(id, user, dto));
   }
 
   @UseGuards(OptionalAuthGuard)

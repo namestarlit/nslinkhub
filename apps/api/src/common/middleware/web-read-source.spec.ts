@@ -22,3 +22,13 @@ it("accepts only authenticated, bounded source proofs with an IP address", () =>
   expect(verifiedWebReadSource(sign("192.0.2.1"), "wrong-key", now)).toBeUndefined();
   expect(verifiedWebReadSource(sign("192.0.2.1"), undefined, now)).toBeUndefined();
 });
+
+it("separates form attribution from read attribution", () => {
+  const secret = "synthetic-form-source-secret",
+    now = Date.now();
+  const payload = Buffer.from(JSON.stringify([1, "192.0.2.8", now])).toString("base64url");
+  const proof = `${payload}.${createHmac("sha256", secret).update(`web-form-source:${payload}`).digest("base64url")}`;
+  expect(verifiedWebReadSource(proof, secret, now)).toBeUndefined();
+  expect(verifiedWebReadSource(proof, secret, now, "form")).toBe("192.0.2.8");
+  expect(verifiedWebReadSource(proof, secret, now + 31000, "form")).toBeUndefined();
+});

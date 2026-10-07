@@ -29,3 +29,11 @@ export type ApiResponse<T, M = undefined> = ApiSuccess<T, M> | ApiError;
 export function isApiError<T, M>(response: ApiResponse<T, M>): response is ApiError {
   return (response as ApiError).error !== undefined;
 }
+
+// How a person appears anywhere in the product: their hub handle always, their
+// name only when they chose "Show my name on my hub". Clients link it to /h/:hubId.
+export interface PersonRef {
+  hubId: string;
+  handle: string;
+  name: string | null;
+}

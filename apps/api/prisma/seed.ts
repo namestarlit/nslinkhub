@@ -1,0 +1,112 @@
+// Seeds the toolkit curator's hub with real, curated collections (see
+// prisma/seed/toolkit.ts). Rerunnable: the curator's collections are replaced.
+//
+//   bun run db:seed                       # curator account seed-curator@nslinkhub.dev
+//   SEED_OWNER_EMAIL=you@… bun run db:seed  # seed into the account you sign in with
+//   SEED_OFFLINE=1 bun run db:seed        # skip page-title lookups (fallback titles)
+import { publicLinkUrl } from "../src/common/utils/url.util";
+import { PrismaService } from "../src/database/prisma.service";
+import { fetchPageTitle } from "../src/modules/resources/page-title";
+import { type SeedItem, seedCollections, seedHub } from "./seed/toolkit";
+
+const email = (process.env.SEED_OWNER_EMAIL ?? "seed-curator@nslinkhub.dev").toLowerCase();
+const offline = process.env.SEED_OFFLINE === "1";
+const prisma = new PrismaService();
+
+// Titles come from the pages, as for any saved link; the curated text is the
+// fallback when a page can't be read. A few lookups run at a time.
+async function resolveTitles(urls: string[]) {
+  const titles = new Map<string, string | null>();
+  const queue = [...new Set(urls)];
+  await Promise.all(
+    Array.from({ length: 6 }, async () => {
+      for (let url = queue.shift(); url; url = queue.shift())
+        titles.set(url, offline ? null : await fetchPageTitle(url));
+    }),
+  );
+  return titles;
+}
+
+async function main() {
+  const user =
+    (await prisma.user.findUnique({ where: { email } })) ??
+    (await prisma.user.create({ data: { email, name: seedHub.userName, emailVerified: true } }));
+  const hub =
+    (await prisma.hub.findUnique({ where: { ownerUserId: user.id } })) ??
+    (await prisma.hub.create({
+      data: { ownerUserId: user.id, handle: seedHub.handle, name: seedHub.hubName },
+    }));
+  await prisma.hub.update({
+    where: { id: hub.id },
+    data: { name: seedHub.hubName, description: seedHub.description },
+  });
+  await prisma.collection.deleteMany({ where: { hubId: hub.id } });
+
+  const links = seedCollections.flatMap((c) =>
+    c.items.filter((item): item is Extract<SeedItem, ["l", ...unknown[]]> => item[0] === "l"),
+  );
+  const titles = await resolveTitles(links.map((item) => publicLinkUrl(item[1])));
+
+  const ids = new Map<string, string>();
+  for (const c of seedCollections) {
+    const created = await prisma.collection.create({
+      data: {
+        hubId: hub.id,
+        slug: c.slug,
+        title: c.title,
+        description: c.description,
+        tags: c.tags,
+        published: c.published,
+        creatorUserId: user.id,
+      },
+    });
+    ids.set(c.slug, created.id);
+  }
+  let resolved = 0;
+  for (const c of seedCollections) {
+    const collectionId = ids.get(c.slug) as string;
+    for (const [position, item] of c.items.entries()) {
+      if (item[0] === "h") {
+        await prisma.resource.create({
+          data: { collectionId, position, kind: "heading", titleOverride: item[1] },
+        });
+      } else if (item[0] === "c") {
+        const target = ids.get(item[1]);
+        if (!target) throw new Error(`Unknown collection reference: ${item[1]}`);
+        await prisma.resource.create({
+          data: {
+            collectionId,
+            position,
+            kind: "collection_link",
+            linkedCollectionId: target,
+            tags: item[2] ?? [],
+          },
+        });
+      } else {
+        const url = publicLinkUrl(item[1]);
+        const title = titles.get(url);
+        if (title) resolved++;
+        await prisma.resource.create({
+          data: {
+            collectionId,
+            position,
+            kind: "external_link",
+            url,
+            titleOverride: title ?? item[2],
+            tags: item[3] ?? [],
+          },
+        });
+      }
+    }
+  }
+  console.log(
+    `Seeded @${hub.handle} (${email}): ${seedCollections.length} collections, ${links.length} links, ${resolved} titles read from their pages.`,
+  );
+}
+
+main()
+  .catch((error) => {
+    console.error(error);
+    process.exitCode = 1;
+  })
+  .finally(() => prisma.$disconnect());

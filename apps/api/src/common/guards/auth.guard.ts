@@ -17,7 +17,7 @@ export async function resolveSessionUser(request: Request): Promise<AuthUser | n
     return null;
   }
 
-  return toAuthUser(session.user);
+  return { ...toAuthUser(session.user), sessionId: session.session.id };
 }
 
 @Injectable()

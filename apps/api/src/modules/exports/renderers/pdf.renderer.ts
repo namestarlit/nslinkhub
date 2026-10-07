@@ -1,5 +1,5 @@
 import PDFDocument from "pdfkit";
-import { ExportDocument, ExportLink } from "../export-document";
+import { ExportDocument, ExportLink, exportLines } from "../export-document";
 
 const LINK_COLOR = "#1155cc";
 const TEXT_COLOR = "#111111";
@@ -28,23 +28,16 @@ export function renderPdf(document: ExportDocument): Promise<Buffer> {
       doc.moveDown(0.75);
     }
 
-    for (const item of document.items) {
-      if (item.kind === "link") {
-        writeLink(doc, item);
-      } else if (item.kind === "collection_ref") {
-        doc.font("Helvetica-Oblique").fontSize(11).fillColor(TEXT_COLOR).text(item.title);
-        doc.moveDown(0.35);
-      } else {
+    for (const item of exportLines(document)) {
+      if (item.kind === "link") writeLink(doc, item);
+      else {
         doc.moveDown(0.5);
-        doc.font("Helvetica-Bold").fontSize(15).fillColor(TEXT_COLOR).text(item.title);
+        doc
+          .font(item.kind === "heading" ? "Helvetica-Bold" : "Helvetica")
+          .fontSize(item.kind === "heading" ? (item.level === 2 ? 15 : 12) : 11)
+          .fillColor(TEXT_COLOR)
+          .text(item.title);
         doc.moveDown(0.5);
-        if (item.description) {
-          doc.font("Helvetica").fontSize(11).fillColor(TEXT_COLOR).text(item.description);
-          doc.moveDown(0.5);
-        }
-        for (const link of item.links) {
-          writeLink(doc, link);
-        }
       }
     }
 

@@ -1,10 +1,15 @@
-import type { Collection, HubPage, HubSummary, Resource } from "@nslinkhub/types";
-import { collectionPath, hubPath, permalink, queryValue, withCursor } from "../lib/http";
+import { webServerConfig } from "@nslinkhub/config/web-server";
+import type { Collection, CommentThreads, HubPage, HubSummary, Resource } from "@nslinkhub/types";
+import { collectionPath, permalink, queryValue, withCursor } from "../lib/http";
 import { serverRead } from "../lib/server-api";
-import { CopyLink } from "./copy-link";
-import { Feedback } from "./feedback";
+import { readSession } from "../lib/session";
+import { CollectionFeedback } from "./collection-feedback";
+import { CollectionHeading } from "./collection-heading";
+import { Comments } from "./comments";
+import { ShareAside, ShareMenu } from "./copy-link";
+import { FormNotice } from "./form-notice";
 import { PaginatedList } from "./paginated-list";
-import { Tags } from "./primitives";
+import { CollectionMeta, Tags } from "./primitives";
 
 export async function CollectionReader({
   collection,
@@ -20,49 +25,112 @@ export async function CollectionReader({
   const { id } = collection;
   const path = collectionPath(id);
   const token = queryValue(query.s, 512);
-  const [resources, children, parent, hubResult] = await Promise.all([
+  const commentCursor = queryValue(query.cc);
+  const commentPath = withCursor(`${path}/comments`, commentCursor);
+  const replyTo = queryValue(query.rt),
+    replyCursor = queryValue(query.rc);
+  const replyQuery =
+    replyTo && replyCursor ? `&${new URLSearchParams({ replyTo, replyCursor })}` : "";
+  const [resources, hubResult, comments, session] = await Promise.all([
     serverRead<Resource[]>(withCursor(`${path}/resources`, queryValue(query.cursor)), token),
-    serverRead<Collection[]>(`${path}/children`, token),
-    collection.parentCollectionId
-      ? serverRead<Collection>(collectionPath(collection.parentCollectionId), token)
-      : Promise.resolve(null),
     hub?.id === collection.hubId
       ? Promise.resolve({ ok: true as const, data: { hub } })
       : serverRead<HubPage>(`/api/v1/hubs/${encodeURIComponent(collection.hubId)}?limit=1`),
+    serverRead<CommentThreads>(`${commentPath}${replyQuery}`, token),
+    readSession(),
   ]);
   if (!resources.ok)
-    return <Feedback collection error={resources} resetPath={resetPath ?? permalink(id, token)} />;
-  // A concurrent revocation must not leave the formerly authorized title visible.
-  if (!children.ok && [401, 403, 404].includes(children.status))
-    return <Feedback collection error={children} />;
-  const titles = Object.fromEntries(
-    children.ok ? children.data.map((child) => [child.id, child.title]) : [],
-  );
+    return <CollectionFeedback error={resources} returnTo={resetPath ?? permalink(id, token)} />;
+  const shown = { ...collection, ...(hubResult.ok ? { hub: hubResult.data.hub } : {}) };
+  const owner = collection.capabilities?.canManage;
+  const notice = queryValue(query.notice);
+  const discussionNotice = notice?.startsWith("comment") || notice === "comments-off";
+  const returnTo = resetPath ?? permalink(id, token);
+  const older = comments.ok ? comments.meta?.nextCursor : null;
+  const olderHref = older
+    ? `${returnTo}${returnTo.includes("?") ? "&" : "?"}${new URLSearchParams({ cc: older })}#comments`
+    : undefined;
   return (
-    <article className="reader" data-reader>
-      <nav className="context" aria-label="Collection context">
-        <a href="/">← Explore</a>
-        {hubResult.ok && (
-          <a href={hubPath(hubResult.data.hub.handle)}> @{hubResult.data.hub.handle}</a>
-        )}
-        {parent?.ok && <a href={permalink(parent.data.id, token)}>{parent.data.title}</a>}
-      </nav>
-      <div className="page-heading">
-        <div className="title-actions">
+    <div className="reader-layout" data-reader>
+      <article className="reader collection-sheet">
+        {!discussionNotice && <FormNotice code={notice} />}
+        <header className="sheet-bar">
+          {hubResult.ok ? (
+            <nav className="context" aria-label="Collection context">
+              <a href={`/h/${encodeURIComponent(hubResult.data.hub.id)}`}>
+                {hubResult.data.hub.name}
+              </a>
+            </nav>
+          ) : (
+            <span />
+          )}
+          <div className="collection-actions">
+            <ShareMenu
+              id={id}
+              token={token}
+              title={collection.title}
+              origin={webServerConfig().publicOrigin}
+            />
+            {owner && (
+              <a className="button" href={`/c/${id}/edit`}>
+                Edit
+              </a>
+            )}
+          </div>
+        </header>
+        <CollectionHeading>
           <h1>{collection.title}</h1>
-          <CopyLink id={id} token={token} />
-        </div>
-        {collection.description && <p className="description">{collection.description}</p>}
-        <Tags tags={collection.tags} />
+          {collection.description && (
+            <div className="collection-overview">
+              <div className="collection-overview-content">
+                <p className="description">{collection.description}</p>
+              </div>
+            </div>
+          )}
+          <Tags tags={collection.tags} />
+          <CollectionMeta item={shown} />
+          {collection.restriction && (
+            <p className="form-notice">
+              Distribution is on hold ({collection.restriction.reason.replaceAll("_", " ")}). You
+              can correct your content.{" "}
+              <a href={collection.restriction.supportUrl}>Contact support</a> for review.
+            </p>
+          )}
+        </CollectionHeading>
+        {/* biome-ignore lint/a11y/noNoninteractiveTabindex: The resource list scrolls under a fixed header on desktop and needs keyboard focus for scrolling. */}
+        <section className="sheet-body" aria-label="Resources" tabIndex={0}>
+          <PaginatedList
+            kind="resources"
+            path={`${path}/resources`}
+            initial={resources.data}
+            nextCursor={resources.meta?.nextCursor}
+            token={token}
+          />
+          {owner && (
+            <a className="add-resource" href={`/capture?collection=${id}`}>
+              <span aria-hidden="true">+</span> Add a link
+            </a>
+          )}
+        </section>
+      </article>
+      <div className="reader-side">
+        <ShareAside
+          id={id}
+          token={token}
+          title={collection.title}
+          origin={webServerConfig().publicOrigin}
+        />
+        <Comments
+          collectionId={id}
+          threads={comments.ok ? comments.data : null}
+          returnTo={returnTo}
+          signedIn={Boolean(session)}
+          notice={discussionNotice ? notice : undefined}
+          olderHref={olderHref}
+          commentCursor={commentCursor}
+          composerOpen={queryValue(query.compose) === "comment"}
+        />
       </div>
-      <PaginatedList
-        kind="resources"
-        path={`${path}/resources`}
-        initial={resources.data}
-        nextCursor={resources.meta?.nextCursor}
-        token={token}
-        titles={titles}
-      />
-    </article>
+    </div>
   );
 }

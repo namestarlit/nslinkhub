@@ -24,7 +24,7 @@ async function message(to = `worker-${randomUUID()}@example.com`, authSecret = s
     enqueueEmail(tx, {
       secret: authSecret,
       suppressionSecret,
-      supportUrl: "https://example.com/support",
+      supportUrl: "https://fixture-links.dev/support",
       to,
       code: "12345678",
       kind: "sign-in",

@@ -34,21 +34,31 @@ async function main() {
     for (const email of addresses.slice(0, 4))
       assert.equal((await post("/code/send", { email })).status, 200, "distinct-address issuance");
 
+    const prisma = app.get(PrismaService);
+    // An immediate resend waits out the per-address gap and says how long.
+    const early = await post("/code/send", { email: addresses[0] });
+    assert.equal(early.status, 429, "resend inside the gap");
+    assert.ok(Number(early.headers.get("retry-after")) > 0, "resend gap retry-after");
+    const elapseGap = () =>
+      prisma.$executeRaw`UPDATE request_budgets SET expires_at = clock_timestamp() WHERE key = ${emailKey(process.env.BETTER_AUTH_SECRET ?? "", "issue-gap", addresses[0])}`;
+
     // The first address can receive five issues total, then the identity budget
     // rejects its sixth without limiting unrelated recipients.
-    for (let i = 0; i < 4; i++)
+    for (let i = 0; i < 4; i++) {
+      await elapseGap();
       assert.equal(
         (await post("/code/send", { email: addresses[0] })).status,
         200,
         "resend within budget",
       );
+    }
+    await elapseGap();
     assert.equal(
       (await post("/code/send", { email: addresses[0] })).status,
       429,
       "sixth identity issue",
     );
 
-    const prisma = app.get(PrismaService);
     const row = await prisma.emailOutbox.findFirstOrThrow({
       where: {
         recipientKey: emailKey(
@@ -81,8 +91,8 @@ async function main() {
       "sixteenth identity verification",
     );
 
-    // Twenty-six HTTP requests so far, including rejected identity requests.
-    for (const email of addresses.slice(5))
+    // Twenty-seven HTTP requests so far, including rejected gap and identity requests.
+    for (const email of addresses.slice(6))
       assert.equal(
         (await post("/code/send", { email })).status,
         200,
@@ -105,10 +115,12 @@ async function main() {
           },
         },
       }),
-      12,
+      11,
       "only accepted issuance persists mail",
     );
   } finally {
+    // This fixture owns the listener; pooled fetch sockets must not delay shutdown.
+    app.getHttpServer().closeAllConnections();
     await app.close();
   }
 }

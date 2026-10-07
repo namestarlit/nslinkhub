@@ -1,0 +1,89 @@
+import { Toast } from "./toast";
+
+const messages: Record<string, string> = {
+  "link-saved": "Link saved.",
+  "links-saved": "Links saved.",
+  "link-not-public":
+    "Use a public web address. Local, private and example addresses can't be opened by the people you share with.",
+  "too-many-links": "Save up to 2 links at a time, or shorten very long addresses.",
+  "link-invalid":
+    "Check the links: each must be a full http:// or https:// address without a username or password.",
+  "choose-destination": "Choose where to save your link, or create a private collection.",
+  "save-failed": "We couldn't confirm the save. Your link is still here. Try saving it again.",
+  "collection-saved": "Collection saved.",
+  "profile-saved": "Your profile has been saved.",
+  "profile-invalid": "Enter a name and a valid hub handle, then try again.",
+  "handle-unavailable": "That hub handle is already in use. Choose another.",
+  "handle-invalid": "Choose a different hub handle using lowercase letters, numbers and hyphens.",
+  "invitation-accepted":
+    "Enter the emailed code to finish accepting the invitation and activate your role.",
+  "wrong-account": "Sign out before accepting an invitation for another account.",
+  declined: "You declined the invitation. No account or role was created.",
+  sent: "We requested an email with your code. Check your inbox and spam folder.",
+  invalid: "Check your details. The code may be incorrect or expired.",
+  expired: "This email verification expired. Request a new code.",
+  limited: "Too many attempts. Wait before trying again.",
+  unavailable:
+    "We couldn't confirm the result. Reload to check the current state before trying again.",
+  "signout-failed": "We couldn't confirm sign-out. Try again.",
+  reauth: "Continue with email to verify again. Then review and submit your action again.",
+  "no-match": "No matching account was found.",
+  done: "The action is complete.",
+  conflict: "This changed since you opened it. Review the latest state before submitting again.",
+  forbidden: "This action isn't available for this account or collection.",
+  signin: "Your session ended. Continue with email to return.",
+  "signed-out": "You're signed out.",
+  cleared: "Notifications cleared.",
+  "comment-posted": "Comment posted.",
+  "comment-saved": "Comment updated.",
+  "comment-deleted": "Comment deleted.",
+  "comment-answer": "Marked as the answer.",
+  "comment-empty": "Write something before posting (up to 2,000 characters).",
+  "comment-unavailable": "We couldn't update that comment. Reload the page and try again.",
+  "comments-off": "Comments are turned off for this collection.",
+};
+// Transient confirmations become a top toast; anything the reader must act on
+// stays inline beside the form, in an info, warning or error tone.
+const toasts = new Set([
+  "link-saved",
+  "links-saved",
+  "collection-saved",
+  "profile-saved",
+  "done",
+  "sent",
+  "signed-out",
+  "cleared",
+  "comment-posted",
+  "comment-saved",
+  "comment-deleted",
+  "comment-answer",
+]);
+const info = new Set(["invitation-accepted", "declined", "reauth", "signin", "comments-off"]);
+const errors = new Set([
+  "link-invalid",
+  "link-not-public",
+  "too-many-links",
+  "save-failed",
+  "profile-invalid",
+  "handle-unavailable",
+  "handle-invalid",
+  "invalid",
+  "unavailable",
+  "signout-failed",
+  "forbidden",
+  "comment-empty",
+  "comment-unavailable",
+]);
+export function FormNotice({ code, wait }: { code?: string; wait?: string }) {
+  const message = code ? messages[code] : undefined;
+  if (!code || !message) return null;
+  const seconds = Math.min(600, Math.max(0, Number(wait) || 0));
+  const text = `${message}${seconds > 0 ? ` Wait at least ${seconds} seconds.` : ""}`;
+  if (toasts.has(code)) return <Toast message={text} tone={code === "sent" ? "info" : "success"} />;
+  const tone = info.has(code) ? " info" : errors.has(code) ? " error" : "";
+  return (
+    <div className={`form-notice${tone}`} role="status">
+      <p>{text}</p>
+    </div>
+  );
+}

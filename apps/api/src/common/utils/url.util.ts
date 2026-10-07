@@ -1,3 +1,6 @@
+import { isPublicLinkHost } from "@nslinkhub/types";
+import { appError } from "../errors/app-exception";
+
 export function canonicalizeUrl(url: string) {
   const parsed = new URL(url);
 
@@ -25,4 +28,11 @@ export function canonicalizeUrl(url: string) {
   }
 
   return parsed.toString();
+}
+
+// The canonical form of a link people may save: reachable on the public web.
+export function publicLinkUrl(url: string) {
+  const canonical = canonicalizeUrl(url);
+  if (!isPublicLinkHost(new URL(canonical).hostname)) throw appError("link_not_public");
+  return canonical;
 }

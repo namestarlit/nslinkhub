@@ -37,6 +37,7 @@ if (stage === "root" || stage === "api-parent") {
       telemetry: telemetryConfig().dsn ?? null,
       databaseFile: process.env.DATABASE_URL_FILE,
       trustedProxies: process.env.TRUSTED_PROXY_CIDRS,
+      bootstrapAdmin: process.env.BOOTSTRAP_ADMIN_EMAIL,
     }),
   );
 } else if (stage === "web") {

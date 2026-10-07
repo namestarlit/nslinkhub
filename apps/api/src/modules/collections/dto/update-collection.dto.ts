@@ -41,6 +41,10 @@ export class UpdateCollectionDto {
   @IsBoolean()
   published?: boolean;
 
+  @IsOptional()
+  @IsBoolean()
+  commentsEnabled?: boolean;
+
   @IsInt()
   @Min(1)
   version: number;

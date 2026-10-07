@@ -51,7 +51,7 @@ describe("Foundation conventions (e2e)", () => {
       await request(server)
         .post(`/api/v1/collections/${collectionId}/resources/external`)
         .set("Authorization", `Bearer ${bearer}`)
-        .send({ url: `https://example.com/fnd-${sfx}-${position}`, position })
+        .send({ url: `https://fixture-links.dev/fnd-${sfx}-${position}`, position })
         .expect(201);
     }
   });
@@ -135,7 +135,7 @@ describe("Foundation conventions (e2e)", () => {
   });
 
   it("paginates the explore listing by cursor", async () => {
-    const res = await request(app.getHttpServer()).get("/api/v1/explore?limit=1").expect(200);
+    const res = await request(app.getHttpServer()).get("/api/v1/discover?limit=1").expect(200);
     const body = res.body as {
       data: unknown[];
       meta: { limit: number; nextCursor: string | null };

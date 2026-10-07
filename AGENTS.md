@@ -14,7 +14,7 @@ sessions; commit-pinned and freshness-enforced by `bun run verify`). Then:
 2. Read `PRODUCT.md` for the product definition and acceptance criteria.
 3. Read `docs/SYSTEM_DESIGN.md` — the authoritative architecture
    (the Google-Drive individual model: one hub per user, collection-level
-   sharing with downward inheritance, discovery, workspace). The backend is
+   independent collection sharing, discovery, workspace). The backend is
    built; W3 (web) and W4 (extension) remain.
 4. Read the focused document for the area being changed
    (`docs/design-docs/index.md`).
@@ -76,7 +76,7 @@ authoritative.
   `apps/api/prisma.config.ts`; the datasource URL lives there, not in the
   schema).
 - Schema changes use `prisma migrate dev --create-only` + review: the
-  `app_uuid_v7()` function, `set_updated_at` triggers, the hierarchy trigger,
+  `app_uuid_v7()` function, `set_updated_at` triggers,
   CHECK constraints, and partial unique indexes exist only in migration SQL
   and must never be dropped by an auto-generated diff.
 - `compose.yml` is local development only. Production topology is
@@ -105,7 +105,9 @@ authoritative.
   collection access flows through the single policy service — Google-Drive
   model: hub owner (full) → direct share (reader/editor) → active link →
   published. One hub per user; no memberships, no roles beyond owner/reader/
-  editor, no admin bypass.
+  editor for collection access, no admin bypass. Service-operator
+  permissions are separate and never grant private-content access; see
+  `docs/design-docs/service-operations.md`.
 - NestJS route order: literal routes are declared before parameter routes in
   the same controller, and catch-all lookups never share a prefix with
   `:id/*` subresources.

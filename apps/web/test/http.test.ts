@@ -7,9 +7,39 @@ import {
   routeSegment,
   safePath,
   sessionCookie,
+  submitForm,
 } from "../src/lib/http";
 
 describe("web HTTP boundary", () => {
+  it("submits native form enhancements with bounded same-origin requests and safe errors", async () => {
+    const body = new URLSearchParams({ displayName: "Draft" });
+    const success = await submitForm("/forms/profile-save", body, (async (
+      url: string | URL | Request,
+      options?: RequestInit,
+    ) => {
+      expect(url).toBe("/forms/profile-save");
+      expect(options?.credentials).toBe("same-origin");
+      expect(options?.redirect).toBe("error");
+      expect(options?.cache).toBe("no-store");
+      expect(options?.signal).toBeInstanceOf(AbortSignal);
+      expect(options?.body).toBe(body);
+      return Response.json({ ok: true, data: { displayName: "Draft" } });
+    }) as unknown as typeof fetch);
+    expect(success).toEqual({ ok: true, data: { displayName: "Draft" } });
+    const failed = await submitForm("/forms/profile-save", body, (async () =>
+      Response.json(
+        { ok: false, code: "handle_unavailable" },
+        { status: 400 },
+      )) as unknown as typeof fetch);
+    expect(failed).toMatchObject({ ok: false, code: "handle_unavailable", status: 400 });
+    const malformed = await submitForm(
+      "/forms/profile-save",
+      body,
+      (async () => new Response("sign-in HTML")) as unknown as typeof fetch,
+    );
+    expect(malformed.ok).toBe(false);
+    await expect(submitForm("/forms/../../external", body)).rejects.toThrow("Invalid form path");
+  });
   it("decodes literal hub prefixes once without accepting encoded separators or unrelated routes", () => {
     expect(routeHandle(routeSegment("%40reader"))).toBe("reader");
     expect(routeHandle(routeSegment("@reader"))).toBe("reader");
@@ -36,7 +66,7 @@ describe("web HTTP boundary", () => {
       expect(() => safePath(path as `/api/v1/${string}`)).toThrow();
     for (const origin of [
       "https://secret@example.com",
-      "https://example.com/path",
+      "https://fixture-links.dev/path",
       "file:///etc/passwd",
     ])
       expect(() => webServerConfig({ API_INTERNAL_ORIGIN: origin })).toThrow();
@@ -47,7 +77,7 @@ describe("web HTTP boundary", () => {
       port: 0,
       fetch(req) {
         const path = new URL(req.url).pathname;
-        if (path === "/redirect") return Response.redirect("https://example.com");
+        if (path === "/redirect") return Response.redirect("https://fixture-links.dev");
         if (path === "/slow")
           return new Response(
             new ReadableStream({
@@ -79,4 +109,48 @@ describe("web HTTP boundary", () => {
       await server.stop(true);
     }
   });
+});
+
+it("restricts post-login returns to local documents without authentication loops", async () => {
+  const { safeReturn, safeDocumentReturn } = await import("../src/lib/http");
+  for (const input of [
+    "https://evil.test/",
+    "//evil.test/",
+    "/\\evil.test/",
+    "/%2f%2fevil.test/",
+    "/sign-in?returnTo=/ops",
+    "/forms/operation",
+    "/\n/evil.test/",
+    "/@reader//evil.test",
+    "/@reader/%2fexample",
+  ])
+    expect(safeReturn(input)).toBe("/");
+  expect(safeDocumentReturn("/sign-in/code?notice=sent")).toBe("/sign-in/code?notice=sent");
+  expect(safeDocumentReturn("//evil.test")).toBe("/");
+  expect(safeDocumentReturn("/forms/theme")).toBe("/");
+  expect(safeReturn("/ops/accounts/019f0000-0000-7000-8000-000000000001")).toBe(
+    "/ops/accounts/019f0000-0000-7000-8000-000000000001",
+  );
+  expect(safeReturn("/c/019f0000-0000-7000-8000-000000000001")).toBe(
+    "/c/019f0000-0000-7000-8000-000000000001",
+  );
+  expect(safeReturn("/@reader/my-guide?s=abc_123&returnTo=https://evil.test")).toBe(
+    "/@reader/my-guide?s=abc_123",
+  );
+  expect(safeReturn("/@reader/my-guide?s=bad%26token")).toBe("/@reader/my-guide");
+  expect(safeReturn("/@reader/my-guide?s=abc_123&compose=comment&next=https://evil.test")).toBe(
+    "/@reader/my-guide?s=abc_123&compose=comment#comment-composer",
+  );
+  expect(safeReturn("/@reader/my-guide?compose=anything#other")).toBe("/@reader/my-guide");
+  expect(safeReturn(safeReturn("/@reader/my-guide?compose=comment"))).toBe(
+    "/@reader/my-guide?compose=comment#comment-composer",
+  );
+  for (const origin of [
+    "https://secret@example.test",
+    "https://example.test/path",
+    "file:///tmp/test",
+  ])
+    expect(() =>
+      webServerConfig({ WEB_SOURCE_SECRET: "s".repeat(32), BETTER_AUTH_URL: origin }),
+    ).toThrow();
 });

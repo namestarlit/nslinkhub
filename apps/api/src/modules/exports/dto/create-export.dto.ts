@@ -24,9 +24,9 @@ export class CreateExportDto {
   collectionIds!: string[];
 
   @ApiPropertyOptional({
-    default: true,
+    default: false,
     description:
-      "Expand sub-collections as sections (default). When false they collapse to a single line.",
+      "Include readable linked collections as sections, one level only. Defaults to links.",
   })
   @IsOptional()
   @IsBoolean()

@@ -43,9 +43,7 @@ export function createAuth({ prisma, secret, baseURL, plugins = [] }: AuthDepend
     ],
     user: {
       deleteUser: { enabled: false },
-      additionalFields: {
-        bio: { type: "string", required: false, input: false },
-      },
+      additionalFields: {},
     },
     advanced: {
       database: {
@@ -63,7 +61,6 @@ export function createAuth({ prisma, secret, baseURL, plugins = [] }: AuthDepend
             await createPersonalHub(prisma, {
               userId: user.id,
               name: user.name,
-              email: user.email,
             });
           },
         },

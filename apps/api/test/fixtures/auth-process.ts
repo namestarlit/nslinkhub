@@ -12,7 +12,7 @@ async function main() {
     secret: input.secret,
     suppressionSecret: input.suppressionSecret,
     baseURL: "http://localhost:4000",
-    supportUrl: "https://example.com/support",
+    supportUrl: "https://fixture-links.dev/support",
   });
   const response = await auth.handler(
     new Request("http://localhost:4000/api/v1/auth/code/verify", {

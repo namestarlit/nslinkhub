@@ -6,16 +6,12 @@ import {
   IsString,
   MaxLength,
   Min,
-  MinLength,
 } from "class-validator";
 
+// Only what people add to an item is editable (tags, position). What belongs
+// to it — a link's address and resolved title, a reference's target, a
+// heading's text — is fixed: to change it, remove the item and add it again.
 export class UpdateResourceDto {
-  @IsOptional()
-  @IsString()
-  @MinLength(1)
-  @MaxLength(255)
-  titleOverride?: string;
-
   @IsOptional()
   @IsArray()
   @ArrayMaxSize(30)

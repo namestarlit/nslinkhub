@@ -1,6 +1,7 @@
 import { Body, Controller, Post, Res, StreamableFile, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import type { Response } from "express";
+import { ReadOnlyCommand } from "src/common/authority.interceptor";
 import { CurrentUser } from "src/common/decorators/current-user.decorator";
 import { AuthGuard } from "src/common/guards/auth.guard";
 import type { AuthUser } from "src/common/interfaces/auth-user.interface";
@@ -16,6 +17,8 @@ export class ExportsController {
 
   // Synchronous export: the response body IS the file (or a zip when several
   // collections are selected) — no job to poll, nothing stored server-side.
+  // Read-only, so rendering runs outside the global write lock.
+  @ReadOnlyCommand()
   @Post()
   async export(
     @Body() dto: CreateExportDto,

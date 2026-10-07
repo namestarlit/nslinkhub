@@ -26,9 +26,9 @@ This repository is a greenfield NestJS v2 rewrite. The old Flask v1 is retained 
 ## Implemented So Far
 
 - **The entire backend** (tracks W1→A→B→C→D→W2 + the Drive-model reshape):
-  one hub per user, collections with two-level nesting (one nest action),
+  one hub per user, independent collections with references and headings,
   external resources with canonical URLs + tags, collection-level sharing
-  (link/direct/publish with downward inheritance), top-level ownership
+  (link/direct/publish per collection), collection ownership
   transfer, saves, explore, id permalinks + handle resolution
 - Auth via self-hosted [better-auth](https://better-auth.com) (email codes, DB-backed sessions, bearer tokens for API clients); one personal hub auto-created at sign-up
 - Synchronous export (Markdown/PDF/Word; multi-collection, zipped) and
@@ -36,9 +36,19 @@ This repository is a greenfield NestJS v2 rewrite. The old Flask v1 is retained 
 - `@nslinkhub/types` (wire contracts) and `@nslinkhub/email` (code-email
   templates); liveness + per-dependency readiness endpoints; `_FILE`
   deployment-secret contract with zero-config dev
-- First W3 journey: explore → collection permalink → section/external resource,
+- First W3 journey: explore → collection permalink → referenced collection/external resource,
   with responsive reading and explicit pagination. Other web journeys and W4
   (extension) follow as complete vertical slices. Swagger stays at `/api/docs`.
+
+## Generated avatars
+
+Generated profile avatars are served by `GET /api/v1/avatars/:seed.svg?size=64`
+(size 16–512) with immutable caching and conditional ETags. Account clients use
+the immutable user UUID as the seed, never email or name.
+`GET /api/v1/users/:id/avatar` redirects a UUID to its generated image without
+looking up an account. The generator's tuned palette, shapes and hash constants
+must not change casually: changing them changes users' avatars and requires a
+versioned image URL. Uploaded photos are not implemented.
 
 ## Tech Stack
 
@@ -110,7 +120,7 @@ cd apps/api && bunx prisma migrate deploy
 To evolve the schema, edit `apps/api/prisma/schema.prisma` and use
 `bunx prisma migrate dev --create-only`, then review the generated SQL —
 several database objects (the `app_uuid_v7()` function, `set_updated_at`
-triggers, the collection-hierarchy trigger, CHECK constraints, and partial
+triggers, CHECK constraints, and partial
 unique indexes) exist only in migration SQL and must never be dropped by an
 auto-generated diff.
 
@@ -163,9 +173,10 @@ When server is running:
 ## Web development and browser acceptance
 
 `bun run dev` starts local PostgreSQL/Redis containers, API/worker watchers and
-Next.js. Open `http://localhost:3000`; browse existing published collections or
-open `/@handle`, `/@handle/<slug>` or an authorized `/c/<id>` link.
-The navigation also links to `/status` for aggregate readiness and rechecking. No synthetic content is seeded into dev data.
+Next.js. Open `http://localhost:3000` for the landing page; browse published
+collections at `/discover`, or open `/@handle`, `/@handle/<slug>` or an authorized `/c/<id>` link.
+Readiness stays available at `/api/v1/status` for monitoring, without a client
+status page. No synthetic content is seeded into dev data.
 See [local development](docs/runbooks/local-development.md) for individual
 process commands, email settings and the same-origin configuration.
 

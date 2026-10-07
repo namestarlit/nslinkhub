@@ -11,14 +11,41 @@
 ## Authorization
 
 - The API is the source of truth. UI hiding is never a security rule.
-- Each user owns one hub. There are no hub memberships, admin roles, or
-  administrative access bypasses.
+- Each user owns one hub. There are no hub memberships or administrative
+  content-access bypasses. Service-operator authority is separate; it
+  grants account operations and distribution restrictions, never private reads.
 - Collection access resolves through `CollectionPolicyService`: hub owner
   (full access) → direct share (reader/editor) → active link → published;
-  grants inherit down the collection ancestor chain. Otherwise return not found.
+  grants apply only to that collection. References grant no access, and share
+  tokens never travel to referenced targets. A reference whose target the
+  reader cannot open carries no target id, title or stored title override.
+  Otherwise return not found.
 - `editor` shares are content-only: no publication, no share management, no
   deletion, no wider hub access.
 - Prefer `404` over `403` for resources the caller cannot know exist.
+
+## Service-operator boundary
+
+[Service operations](design-docs/service-operations.md) checks current account
+availability and admin/operator grants in the backend, including raw auth/session
+paths and every content
+surface. Suspension revokes sessions, proofs and service roles; email
+handover removes both service roles and cancels incoming/authored invitations. Recent code authentication is required
+for operator mutations. Startup/recovery only issues the initial admin invitation. The recipient must explicitly accept using the emailed token before a UUID
+grant exists, then verify a fresh invitation-bound email OTP. Consent creates no
+session or role; every recipient verifies, including matching signed-in accounts.
+Proof consumption, session creation, grant and audit commit atomically. Ordinary
+login codes cannot verify invitations; resend/cancellation invalidates old proofs. Only admins can
+invite/revoke operators; ordinary operators cannot administer peers or admins.
+No email allowlist, implicit first user or SSO claim directly grants authority.
+
+Account lookup exposes bounded operational identity data, not private content.
+Public-content holds restrict distribution without giving operators new read
+permissions. Operators cannot impersonate, change credentials, delete accounts
+or inspect other users' hub audit feeds. Operator events use their own access
+and 365-day retention policy; current restrictions outlive event cleanup.
+These additions preserve ordinary collection authorization and hidden/missing
+404 equivalence. Refer to the contract for recovery and atomic audit rules.
 
 ## Tokens And Secrets
 
@@ -85,7 +112,9 @@ Recorded so a future security review doesn't read the absence as an oversight:
 
 - External input is validated at HTTP and upload boundaries (global
   `ValidationPipe` with whitelist + forbidNonWhitelisted; file size/type
-  checks on imports).
+  checks on imports). Multipart import parsing enforces a 10 MiB file limit,
+  one file, four fields and five parts before acquiring the shared authority
+  lock. The authenticated session is rechecked under that lock after parsing.
 - Import parsers must fail per-row with clear errors rather than corrupting
   state.
 - Product HTTP errors use a shared catalog and an explicit trusted exception
@@ -143,8 +172,15 @@ Web server rendering preserves the visitor's source budget through signed
 attribution. `apps/web/server.ts` derives the source from its socket, walking
 forwarded addresses only through explicit `WEB_TRUSTED_PROXY_CIDRS` hops, and
 overwrites any caller-supplied `x-web-read-source`. Server reads forward this
-30-second HMAC proof to the API. Only the read budget accepts verified proofs;
-invalid/absent proofs use the normal API socket/proxy source. They carry no
+30-second HMAC proof to the API. Only the read budget accepts `x-web-read-source` proofs;
+invalid/absent proofs use the normal API socket/proxy source. Native web POST
+forms use a separate `x-web-form-source` proof/HMAC domain for source budgets,
+including the POST, PATCH and DELETE API requests they forward.
+Documents use `strict-origin` referrers so native browser POSTs retain Origin
+without disclosing paths or query tokens; external resource links still use
+`no-referrer`. The web validates the browser Origin before forwarding JSON, and the API
+independently checks Origin, sessions and current authority. Read proofs cannot
+be used as form proofs. They carry no
 authentication or authorization. API and web share an independent
 `WEB_SOURCE_SECRET` (at least 32 random characters, `_FILE` in production).
 Do not log the proof or expose it in browser data. The web entry point requires
@@ -160,6 +196,39 @@ never external telemetry payloads.
 
 ## Personal Data
 
-- Store the minimum: email, display name, optional bio/image.
+- Store the minimum: email, full name and optional image. The public description
+  belongs to the hub. Historical user bios are retained without being published.
 - Logs and API telemetry use a strict allowlist; request IDs are
   server-generated and never echo caller input.
+
+
+## Public link addresses
+
+Saved links are for sharing, so a link's host must be reachable on the public
+web: `isPublicLinkHost` (`packages/types/src/links.ts`) refuses IP literals,
+single-label names, local/internal suffixes and RFC 2606 / 6761 reserved names.
+The API enforces it through `publicLinkUrl` on capture, add-link, imports
+(row error `not_public_url`) and link previews (`link_not_public`); the web
+form applies the same rule for early feedback. This is a product rule, not the
+SSRF boundary: title fetches still check every resolved address below.
+
+## Outbound fetches for link titles
+
+The API fetches a saved link's page only to read its title
+(`apps/api/src/modules/resources/page-title.ts`): after a save, when a
+collection with untitled links is opened (at most 5 per read, each URL at most
+once an hour per process), and for the signed-in save form through
+`GET /api/v1/link-preview` (its own 30/min request budget). YouTube addresses
+are asked through YouTube's oEmbed endpoint (a small JSON document, 64 KB cap)
+under the same guards. Because the URL is
+user-supplied, the fetch is treated as an SSRF surface: http(s) only, default
+ports only, no credentials in the URL, every DNS answer must be a public
+unicast address (private, loopback, link-local, CGNAT, multicast, documentation
+and IPv4-mapped forms are refused) and the connection is pinned to the vetted
+address so DNS rebinding cannot redirect it. Redirects are followed manually
+(max 3) with the same checks; one aborting 3 s wall-clock deadline covers DNS
+waiting, all redirects and body consumption, with a 256 KB body cap. Expiry
+closes the active socket; a late DNS answer cannot start a connection,
+and only `text/html` (or, for oEmbed, JSON) responses are parsed. The request carries no cookies,
+tokens or user identity. Nothing but the title is stored. `LINK_TITLES=off`
+disables it; tests disable it unless `LINK_TITLES=on`.

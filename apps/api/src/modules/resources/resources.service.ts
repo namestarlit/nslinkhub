@@ -5,15 +5,21 @@ import { ResourceKind } from "src/common/enums/resource-kind.enum";
 import { AuthUser } from "src/common/interfaces/auth-user.interface";
 import { decodeCursor, encodeCursor } from "src/common/utils/cursor.util";
 import { normalizeTags } from "src/common/utils/tags.util";
-import { canonicalizeUrl } from "src/common/utils/url.util";
+import { publicLinkUrl } from "src/common/utils/url.util";
+import { authorityContext } from "src/database/authority-context";
 import { PrismaService } from "src/database/prisma.service";
 import { Collection, Resource } from "src/generated/prisma/client";
 import { appError } from "../../common/errors/app-exception";
 import { wireToken } from "../../common/utils/wire-token";
 import { CollectionPolicyService } from "../hubs/collection-policy.service";
+import {
+  CreateCollectionResourceDto,
+  CreateHeadingResourceDto,
+} from "./dto/create-collection-resource.dto";
 import { CreateExternalResourceDto } from "./dto/create-external-resource.dto";
 import { ReorderResourcesDto } from "./dto/reorder-resources.dto";
 import { UpdateResourceDto } from "./dto/update-resource.dto";
+import { fetchPageTitle, linkTitlesEnabled } from "./page-title";
 
 @Injectable()
 export class ResourcesService {
@@ -26,7 +32,7 @@ export class ResourcesService {
     const collection = await this.requireWritableCollection(collectionId, user);
     await this.ensurePositionAvailable(collection.id, dto.position);
 
-    const url = canonicalizeUrl(dto.url);
+    const url = publicLinkUrl(dto.url);
     const duplicate = await this.prisma.resource.findFirst({
       where: { collectionId: collection.id, url },
       select: { id: true },
@@ -35,18 +41,103 @@ export class ResourcesService {
       throw appError("duplicate_resource");
     }
 
+    return this.toPublicResource(
+      await this.insertExternal(collection.id, url, dto.tags ?? [], dto.position),
+    );
+  }
+
+  // Inserts a canonical, non-duplicate link into a collection the caller has
+  // already authorized, then looks its title up after the save commits.
+  async insertExternal(collectionId: string, url: string, tags: string[], position: number) {
     const saved = await this.prisma.resource.create({
       data: {
-        collectionId: collection.id,
+        collectionId,
         kind: ResourceKind.EXTERNAL_LINK,
         url,
-        titleOverride: dto.titleOverride ?? null,
-        tags: normalizeTags(dto.tags),
-        position: dto.position,
+        tags: normalizeTags(tags),
+        position,
       },
     });
+    this.fillTitleLater(saved.id, url);
+    return saved;
+  }
 
-    return this.toPublicResource(saved);
+  // Saving never waits on a remote site (mutations hold the authority lock).
+  // After the save commits (or when a collection is opened), fetch the page
+  // title and use it only if the link still has no title. Best effort and in-process: a restart or failure just
+  // leaves the URL as the title. Disabled under test unless LINK_TITLES=on.
+  // A URL is looked up at most once per hour per process, whether from a save
+  // or from opening a collection, so a failing site is not fetched repeatedly.
+  private readonly titleAttempts = new Map<string, number>();
+  private fillTitleLater(id: string, url: string) {
+    if (!linkTitlesEnabled()) return;
+    const now = Date.now();
+    const last = this.titleAttempts.get(url);
+    if (last !== undefined && now - last < 3600_000) return;
+    if (this.titleAttempts.size >= 5000)
+      for (const [key, at] of this.titleAttempts)
+        if (now - at >= 3600_000 || this.titleAttempts.size >= 5000) this.titleAttempts.delete(key);
+    this.titleAttempts.set(url, now);
+    authorityContext.exit(() => {
+      void (async () => {
+        const title = await fetchPageTitle(url);
+        if (!title) return;
+        // The creating transaction may still be committing; retry briefly.
+        for (const wait of [0, 1000, 3000]) {
+          if (wait) await new Promise((done) => setTimeout(done, wait));
+          const updated = await this.prisma.resource.updateMany({
+            where: { id, url, titleOverride: null },
+            data: { titleOverride: title, version: { increment: 1 } },
+          });
+          if (updated.count) return;
+        }
+      })().catch(() => undefined);
+    });
+  }
+
+  async createCollectionLink(
+    collectionId: string,
+    user: AuthUser,
+    dto: CreateCollectionResourceDto,
+  ) {
+    const collection = await this.requireWritableCollection(collectionId, user);
+    const target = await this.prisma.collection.findUnique({
+      where: { id: dto.linkedCollectionId },
+    });
+    if (!target) throw new NotFoundException("Collection not found");
+    await this.policy.requireRead(target, user);
+    await this.ensurePositionAvailable(collection.id, dto.position);
+    if (
+      await this.prisma.resource.findFirst({
+        where: { collectionId, linkedCollectionId: target.id },
+      })
+    )
+      throw appError("duplicate_resource");
+    const resource = await this.prisma.resource.create({
+      data: {
+        collectionId,
+        kind: ResourceKind.COLLECTION_LINK,
+        linkedCollectionId: target.id,
+        position: dto.position,
+        tags: normalizeTags(dto.tags),
+      },
+    });
+    return this.resourceView(resource, user);
+  }
+
+  async createHeading(collectionId: string, user: AuthUser, dto: CreateHeadingResourceDto) {
+    await this.requireWritableCollection(collectionId, user);
+    await this.ensurePositionAvailable(collectionId, dto.position);
+    return this.toPublicResource(
+      await this.prisma.resource.create({
+        data: {
+          collectionId,
+          kind: ResourceKind.HEADING,
+          titleOverride: dto.titleOverride.trim(),
+          position: dto.position,
+        },
+      }),
+    );
   }
 
   async getByCollection(
@@ -83,8 +174,15 @@ export class ResourcesService {
     const nextCursor =
       rows.length > limit ? encodeCursor({ p: items[items.length - 1].position }) : null;
 
+    // Opening a collection resolves links that still have no title (saved
+    // before titles were looked up, or whose lookup failed earlier).
+    for (const item of items
+      .filter((row) => row.kind === ResourceKind.EXTERNAL_LINK && row.url && !row.titleOverride)
+      .slice(0, 5))
+      this.fillTitleLater(item.id, item.url as string);
+
     return {
-      items: items.map((item) => this.toPublicResource(item)),
+      items: await Promise.all(items.map((item) => this.resourceView(item, viewer))),
       meta: { limit, nextCursor },
     };
   }
@@ -113,13 +211,12 @@ export class ResourcesService {
       where: { id: resource.id },
       data: {
         position,
-        titleOverride: dto.titleOverride ?? resource.titleOverride,
         ...(dto.tags !== undefined ? { tags: normalizeTags(dto.tags) } : {}),
         version: { increment: 1 },
       },
     });
 
-    return this.toPublicResource(saved);
+    return this.resourceView(saved, user);
   }
 
   async remove(collectionId: string, resourceId: string, user: AuthUser) {
@@ -132,17 +229,7 @@ export class ResourcesService {
       throw new NotFoundException("Resource not found");
     }
 
-    await this.prisma.resource.delete({ where: { id: resource.id } });
-
-    // A section entry and the child's structural parent link are two faces of
-    // one relationship: removing the entry un-nests the collection (it becomes
-    // a top-level collection again, staying in the same hub).
-    if (resource.kind === ResourceKind.COLLECTION_LINK && resource.linkedCollectionId) {
-      await this.prisma.collection.update({
-        where: { id: resource.linkedCollectionId },
-        data: { parentCollectionId: null },
-      });
-    }
+    await this.prisma.resource.delete({ where: { id: resource.id, collectionId } });
 
     return { id: resource.id, deleted: true };
   }
@@ -220,7 +307,7 @@ export class ResourcesService {
     if (!collection) {
       throw new NotFoundException("Collection not found");
     }
-    // Content write: hub members and direct-share editors.
+    // Content write: hub owners and direct-share editors.
     await this.policy.requireWriteContent(collection, user);
     return collection;
   }
@@ -238,10 +325,7 @@ export class ResourcesService {
     }
     const access = await this.policy.requireRead(collection, viewer, shareToken);
     if (access.viaLinkToken && viewer) {
-      await this.policy.recordLinkAccess(
-        access.linkSourceCollectionId ?? collection.id,
-        viewer.userId,
-      );
+      await this.policy.recordLinkAccess(collection.id, viewer.userId);
     }
     return collection;
   }
@@ -260,11 +344,26 @@ export class ResourcesService {
     }
   }
 
+  private async resourceView(resource: Resource, viewer: AuthUser | null): Promise<WireResource> {
+    const base = this.toPublicResource(resource);
+    if (resource.kind !== ResourceKind.COLLECTION_LINK) return base;
+    const target = resource.linkedCollectionId
+      ? await this.prisma.collection.findUnique({ where: { id: resource.linkedCollectionId } })
+      : null;
+    const readable = target && (await this.policy.resolve(target, viewer)).canRead;
+    // Never forward the containing collection's share token or expose unreadable
+    // metadata: an unreadable target's id and any stored title (which may have
+    // been copied from it) stay out of the response.
+    if (!readable)
+      return { ...base, linkedCollectionId: null, titleOverride: null, linkedCollection: null };
+    return { ...base, linkedCollection: { id: target.id, title: target.title } };
+  }
+
   private toPublicResource(resource: Resource): WireResource {
     return {
       id: resource.id,
       collectionId: resource.collectionId,
-      kind: wireToken(resource.kind, ["external_link", "collection_link"]),
+      kind: wireToken(resource.kind, ["external_link", "collection_link", "heading"]),
       url: resource.url ?? undefined,
       linkedCollectionId: resource.linkedCollectionId,
       titleOverride: resource.titleOverride,

@@ -95,8 +95,9 @@ Mailbox verification and the library's unproven-account protection stay enabled.
 
 The optional `name` on code verification is a trimmed, nonempty display name
 (up to 255 characters), used only at first account creation. Existing users'
-profiles are unchanged by sign-in. `PATCH /profile` accepts display name,
-handle and bio only.
+profiles are unchanged by sign-in. `PATCH /profile` accepts the account's full
+name (`displayName`), plus its owned hub's name (`hubName`), handle and description
+(`hubDescription`). It does not edit credentials.
 Account deletion is disabled until verified deletion and ownership/retention
 rules are designed. Handover preserves the immutable user and hub identity.
 

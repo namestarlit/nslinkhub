@@ -52,7 +52,7 @@ describe("Collection routes (e2e)", () => {
     await request(server)
       .post(`/api/v1/collections/${collectionId}/resources/external`)
       .set("Authorization", `Bearer ${bearer}`)
-      .send({ url: `https://example.com/e2e-${sfx}`, position: 0 })
+      .send({ url: `https://fixture-links.dev/e2e-${sfx}`, position: 0 })
       .expect(201);
   });
 
@@ -77,13 +77,10 @@ describe("Collection routes (e2e)", () => {
     await request(app.getHttpServer()).get("/api/v1/collections/not-a-uuid/resources").expect(400);
   });
 
-  it("lists children of a published collection unauthenticated", async () => {
-    const res = await request(app.getHttpServer())
+  it("has no structural children route", async () => {
+    await request(app.getHttpServer())
       .get(`/api/v1/collections/${collectionId}/children`)
-      .expect(200);
-
-    const body = res.body as { data: unknown[] };
-    expect(Array.isArray(body.data)).toBe(true);
+      .expect(404);
   });
 
   it("looks up a collection by hub and slug", async () => {

@@ -17,7 +17,11 @@
     "test:cov": "bun test --coverage src",
     "test:e2e": "bun ../../tooling/verify-test-isolation.ts && bun ../../tooling/verify-api-tests.ts e2e",
     "email:worker": "bun src/email/worker.ts",
-    "email:worker:prod": "bun --tsconfig-override tsconfig.runtime.json dist/src/email/worker.js"
+    "email:worker:dev": "bun --watch src/email/worker.ts",
+    "email:worker:prod": "bun --tsconfig-override tsconfig.runtime.json dist/src/email/worker.js",
+    "admin:recover": "bun src/operations/recover.ts",
+    "admin:recover:prod": "bun --tsconfig-override tsconfig.runtime.json dist/src/operations/recover.js",
+    "db:seed": "bun prisma/seed.ts"
   },
   "dependencies": {
     "@logtape/logtape": "2.3.0",

@@ -41,19 +41,31 @@ export function requestBudget(
     // Infrastructure probes must remain reachable during dependency outages.
     if (request.method === "GET" && ["/api/v1/health", "/api/v1/status"].includes(path))
       return next();
-    const scope = path.startsWith("/api/v1/auth/")
-      ? "auth"
-      : /^\/api\/v1\/(imports|exports)(\/|$)/.test(path)
-        ? "file"
-        : ["GET", "HEAD", "OPTIONS"].includes(request.method)
-          ? "read"
-          : "write";
-    const limit = { auth: 30, file: 10, read: 300, write: 60 }[scope];
+    const scope =
+      path === "/api/v1/auth/invitations/preview" && request.method === "POST"
+        ? "read"
+        : path.startsWith("/api/v1/auth/")
+          ? "auth"
+          : /^\/api\/v1\/(imports|exports)(\/|$)/.test(path)
+            ? "file"
+            : path === "/api/v1/link-preview"
+              ? "lookup"
+              : ["GET", "HEAD", "OPTIONS"].includes(request.method)
+                ? "read"
+                : "write";
+    const limit = { auth: 30, file: 10, lookup: 30, read: 300, write: 60 }[scope];
     const key = requestBudgetKey(
       scope,
-      (scope === "read"
+      (scope === "read" || scope === "lookup"
         ? verifiedWebReadSource(request.get("x-web-read-source"), sourceSecret)
-        : undefined) ??
+        : ["POST", "PATCH", "DELETE"].includes(request.method)
+          ? verifiedWebReadSource(
+              request.get("x-web-form-source"),
+              sourceSecret,
+              Date.now(),
+              "form",
+            )
+          : undefined) ??
         request.ip ??
         request.socket.remoteAddress ??
         "unknown",

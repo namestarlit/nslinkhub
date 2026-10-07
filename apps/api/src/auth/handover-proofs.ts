@@ -32,6 +32,14 @@ export function bindHandoverProofs(
     [`email-verification-otp-${binding.currentEmail}`, identifiers.current],
     [`change-email-otp-${binding.currentEmail}-${binding.newEmail}`, identifiers.next],
   ]);
+  bindProofIdentifiers(context, names);
+  return identifiers;
+}
+
+export function bindProofIdentifiers(
+  context: Pick<AuthContext, "internalAdapter">,
+  names: Map<string, string>,
+) {
   const resolve = (identifier: string) => names.get(identifier) ?? identifier;
   const adapter = context.internalAdapter;
   // Bind only this request's fully initialized context, before invoking OTP
@@ -53,5 +61,4 @@ export function bindHandoverProofs(
     reserveVerificationValue: (data) =>
       adapter.reserveVerificationValue({ ...data, identifier: resolve(data.identifier) }),
   };
-  return identifiers;
 }

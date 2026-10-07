@@ -59,7 +59,13 @@ await withTestDatabase(async ({ url }) => {
     await Bun.sleep(250);
   }
   if (!ready) throw new Error("Dev web did not become ready");
-  const proxied = await fetch(`http://127.0.0.1:${webPort}/api/v1/explore`);
+  const signIn = await fetch(`http://127.0.0.1:${webPort}/sign-in`);
+  if (!signIn.ok || !(await signIn.text()).includes("Sign in to nslinkhub"))
+    throw new Error("Dev sign-in page did not render");
+  const output = await Bun.file("/tmp/w3-dev-loop.log").text();
+  if (!output.includes(`[web] Ready at http://localhost:${webPort}`))
+    throw new Error("Dev web did not announce its ready URL");
+  const proxied = await fetch(`http://127.0.0.1:${webPort}/api/v1/discover`);
   if (!proxied.ok || (await proxied.json()).data.length !== 0)
     throw new Error("Dev rewrite failed");
   await stop();
@@ -71,5 +77,5 @@ await withTestDatabase(async ({ url }) => {
       if (e instanceof Error && e.message.startsWith("Owned dev")) throw e;
     }
   }
-  console.log("Dev loop passed: isolated API/worker/web, rewrite, and bounded shutdown.");
+  console.log("Dev loop passed: API/worker/web scripts, ready URL, sign-in, rewrite and shutdown.");
 }, stop);

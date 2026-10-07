@@ -11,6 +11,7 @@ import {
   EXPORT_FILE_EXTENSIONS,
   ExportDocument,
   ExportFormat,
+  ExportInline,
   ExportItem,
   ExportLink,
 } from "./export-document";
@@ -52,14 +53,14 @@ export class ExportsService {
       await this.policy.requireRead(collection, user);
     }
 
-    const expand = dto.expand ?? true;
+    const expand = dto.expand ?? false;
     const extension = EXPORT_FILE_EXTENSIONS[dto.format];
     const files: Array<{ name: string; body: Buffer }> = [];
     const usedNames = new Set<string>();
 
     for (const id of ids) {
       const collection = byId.get(id) as Collection;
-      const document = await this.buildDocument(collection, expand);
+      const document = await this.buildDocument(collection, expand, user);
       const body = await this.render(dto.format, document);
       files.push({ name: this.uniqueName(usedNames, collection.slug, extension), body });
     }
@@ -83,45 +84,65 @@ export class ExportsService {
     };
   }
 
-  // Build the format-agnostic document: root collection = title + description,
-  // sub-collections expand into sections (or collapse to a line). Sections
-  // never nest further — the two-level cap guarantees their resources are all
-  // external links.
-  private async buildDocument(collection: Collection, expand: boolean): Promise<ExportDocument> {
+  private collectionUrl(id: string): string {
+    return new URL(`/c/${id}`, process.env.BETTER_AUTH_URL ?? "http://localhost:3000").href;
+  }
+
+  private async inlineItem(resource: Resource, user: AuthUser): Promise<ExportInline> {
+    if (resource.kind === ResourceKind.HEADING)
+      return { kind: "heading", title: resource.titleOverride ?? "Untitled heading" };
+    if (resource.kind !== ResourceKind.COLLECTION_LINK) return this.toLink(resource);
+    const target = resource.linkedCollectionId
+      ? await this.prisma.collection.findUnique({ where: { id: resource.linkedCollectionId } })
+      : null;
+    if (!target || !(await this.policy.resolve(target, user)).canRead)
+      return { kind: "notice", title: "Collection unavailable — not included in this export." };
+    return {
+      kind: "link",
+      title: resource.titleOverride ?? target.title,
+      url: this.collectionUrl(target.id),
+    };
+  }
+
+  // Expansion is explicit and bounded to one reference level. Cycles and deeper
+  // references remain links. Never use the root's authority for a destination.
+  private async buildDocument(
+    collection: Collection,
+    expand: boolean,
+    user: AuthUser,
+  ): Promise<ExportDocument> {
     const resources = await this.prisma.resource.findMany({
       where: { collectionId: collection.id },
-      include: { linkedCollection: true },
       orderBy: { position: "asc" },
     });
-
     const items: ExportItem[] = [];
     for (const resource of resources) {
-      if (resource.kind === ResourceKind.COLLECTION_LINK && resource.linkedCollection) {
-        const title = resource.titleOverride ?? resource.linkedCollection.title;
-        if (!expand) {
-          items.push({ kind: "collection_ref", title });
+      if (
+        expand &&
+        resource.kind === ResourceKind.COLLECTION_LINK &&
+        resource.linkedCollectionId &&
+        resource.linkedCollectionId !== collection.id
+      ) {
+        const target = await this.prisma.collection.findUnique({
+          where: { id: resource.linkedCollectionId },
+        });
+        if (target && (await this.policy.resolve(target, user)).canRead) {
+          const entries = await this.prisma.resource.findMany({
+            where: { collectionId: target.id },
+            orderBy: { position: "asc" },
+          });
+          items.push({
+            kind: "section",
+            title: resource.titleOverride ?? target.title,
+            description: target.description ?? undefined,
+            links: await Promise.all(entries.map((entry) => this.inlineItem(entry, user))),
+          });
           continue;
         }
-        const sectionResources = await this.prisma.resource.findMany({
-          where: { collectionId: resource.linkedCollection.id },
-          orderBy: { position: "asc" },
-        });
-        items.push({
-          kind: "section",
-          title,
-          description: resource.linkedCollection.description ?? undefined,
-          links: sectionResources.filter((child) => child.url).map((child) => this.toLink(child)),
-        });
-      } else {
-        items.push(this.toLink(resource));
       }
+      items.push(await this.inlineItem(resource, user));
     }
-
-    return {
-      title: collection.title,
-      description: collection.description ?? undefined,
-      items,
-    };
+    return { title: collection.title, description: collection.description ?? undefined, items };
   }
 
   private toLink(resource: Resource): ExportLink {

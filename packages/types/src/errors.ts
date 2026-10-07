@@ -3,7 +3,20 @@ import type { DependencyStatus } from "./status.js";
 // Safe fallback text is part of the API protocol. Clients branch on codes and
 // own presentation/localization; never parse server exception messages.
 export const apiErrors = {
+  capture_destination_required: { status: 409, message: "Choose a collection for this link" },
+  invitation_session_mismatch: {
+    status: 403,
+    message: "Sign out before accepting an invitation for another account",
+  },
+  recent_auth_required: { status: 403, message: "Sign in again to continue" },
+  collection_held: { status: 403, message: "Collection distribution is restricted" },
+  comments_disabled: { status: 403, message: "Comments are turned off for this collection" },
   bad_request: { status: 400, message: "Invalid request" },
+  link_not_public: {
+    status: 400,
+    message:
+      "Use a public web address; local, private and example addresses can't be opened by others",
+  },
   unauthorized: { status: 401, message: "Authentication required" },
   forbidden: { status: 403, message: "Forbidden" },
   not_found: { status: 404, message: "Not found" },
@@ -27,7 +40,6 @@ export const apiErrors = {
   duplicate_resource: { status: 409, message: "Link already exists in this collection" },
   position_conflict: { status: 409, message: "Position is already used in this collection" },
   invalid_reorder: { status: 400, message: "Invalid resource order" },
-  invalid_nesting: { status: 400, message: "Invalid collection nesting" },
   invalid_transfer: { status: 400, message: "Invalid ownership transfer" },
   transfer_requires_editor: { status: 400, message: "Recipient must already be an editor" },
   collection_not_published: { status: 400, message: "Only published collections can be saved" },
@@ -61,8 +73,8 @@ export type ValidationRule =
   | "choice"
   | "min_items"
   | "max_items"
-  | "unique_items"
   | "nested"
+  | "unique_items"
   | "unknown_field"
   | "invalid";
 export interface ValidationIssue {

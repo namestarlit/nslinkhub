@@ -1,12 +1,29 @@
-import { IsOptional, IsString, Matches, MaxLength, MinLength } from "class-validator";
+import {
+  IsBoolean,
+  IsOptional,
+  IsString,
+  Matches,
+  MaxLength,
+  MinLength,
+  ValidateIf,
+} from "class-validator";
 
 export class UpdateUserDto {
-  // Free-form display name (not a username; no handle-convention semantics).
+  @ValidateIf((_object, value) => value !== undefined)
+  @IsBoolean()
+  showNameOnHub?: boolean;
+
+  // Account holder full name; separate from the hub public display name.
   @IsOptional()
   @IsString()
-  @MinLength(1)
   @MaxLength(255)
   displayName?: string;
+
+  @IsOptional()
+  @IsString()
+  @Matches(/\S/)
+  @MaxLength(255)
+  hubName?: string;
 
   // The hub handle (mutable public identity). Format is re-validated in the
   // service and by a DB CHECK constraint.
@@ -20,5 +37,5 @@ export class UpdateUserDto {
   @IsOptional()
   @IsString()
   @MaxLength(5000)
-  bio?: string;
+  hubDescription?: string;
 }

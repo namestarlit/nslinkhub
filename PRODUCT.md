@@ -16,16 +16,13 @@ Core value:
 - Share one stable URL instead of sending many individual links.
 - Keep the collection current so what you shared always shows the latest
   content.
-- Scale a collection from a simple bookmark list to a structured, ordered
-  guide: a top-level collection acts as a table of contents whose sections are
-  sub-collections (nesting is deliberately capped at two levels — a collection
-  and its sections, "chapters with sections, no sub-chapters"), each with its
-  own rich description and ordered resources.
+- Structure guides with ordered headings and links. Reference another
+  collection when it is useful as an independent resource, including collections
+  from other hubs; references never change ownership or access.
 - Publish the best collections for anyone to discover, save, and follow.
-- Export a collection — expanding its nested sections in order into a single
-  document, with external links kept as references rather than inlined — as
-  Markdown, PDF, or Word, for offline use, broad sharing, or embedding in an
-  ebook.
+- Export collections as Markdown, PDF or Word. Keep references as links by
+  default, or explicitly include readable referenced collections one level deep.
+  Exports never fetch remote page content; external links remain hyperlinks.
 
 NSLinkHub is an ns-series product: a personal project under the namestarlit
 brand, built to solve the author's own problem and published for others.
@@ -38,34 +35,25 @@ Hub → Collections → Resources
 
 - **Hub** — your one personal space (one hub per user, like a Google Drive),
   the tenant that owns your collections. Created at sign-up and identified by a
-  unique, mutable **handle** (the "hub name", tailnet-style) that aliases the
-  immutable hub id. You never join anyone else's hub; there are no memberships,
-  invitations, or roles — collaboration is per-collection sharing (below).
-- **Collection** — the container of curated content; what a folder is to
-  Google Drive. A collection is created standalone; **nesting is a separate
-  action on collections that already exist** — you add an existing collection
-  into another as a section (there is exactly one way to nest). Collections
-  nest at most two levels: a collection and its sections (a section cannot
-  contain sub-sections, and a collection with sections cannot itself be
-  nested). Removing a section's entry un-nests it (it becomes standalone
-  again).
-- **Resource** — an item in a collection, and the smallest unit of content
-  (like text in a document). Its kind is set by *how it was added*, never by
-  inspecting the URL:
-  - an **external link** — what a pasted/copied URL always becomes (even one
-    pointing to a collection's page): a hyperlink with an editable title, tags,
-    and position. It does not expand or nest; opening it just navigates there,
-    subject to that destination's own access.
-  - a **collection-link** (`kind = collection_link`) — a **section**. It is
-    created only by nesting an existing collection (same hub) into this one, and
-    is the expandable table-of-contents entry for it. Because a collection-link
-    is always a structural section, it is always access-inherited and bounded by
-    the two-level cap. There is no way to link an arbitrary collection as a
-    floating pointer, and cross-hub references are a future read-only shortcut.
+  unique, mutable **handle** that aliases the immutable hub id. Its public
+  **display name** is stored on the hub, independently of the account owner’s
+  full name or email. Hubs resolve by ID or handle; ownership changes do not
+  rename the hub. You never join anyone else's hub; there are no memberships,
+  invitations, or hub roles — collaboration is per-collection sharing (below).
+- **Collection** — an independent container with its own title, description,
+  tags, sharing and publication. There are no parent/child relationships.
+- **Resource** — an ordered item in a collection. Kind is chosen when added:
+  - **External link**: a pasted URL, including a URL to another collection.
+    It remains a hyperlink with an editable title and tags.
+  - **Collection reference** (`collection_link`): an explicit reference by
+    immutable collection ID. The adding editor must be able to read the target.
+    References can cross hubs, be reused or form cycles. Reading, sharing,
+    publishing, transferring or deleting the source never grants access to or
+    modifies the target. Unavailable targets show a neutral unavailable entry.
+  - **Heading**: an ordered text label for grouping links inside a guide,
+    without creating a separate collection or permission boundary.
 
-  There is no URL auto-detection: the system never turns a pasted link into an
-  expandable collection-link. A resource has no summary — clarify a vague link
-  by renaming its title; tags carry the rest.
+  There is no URL auto-detection. Resources have no summary; use titles and tags.
 - **Tag** — an optional normalized lowercase label. Tags are a plain **string
   array** on a collection or a resource — no shared tag table, no global
   namespace. They are set when creating or updating the item (see "Tags"
@@ -104,7 +92,7 @@ always optional; keep tags flat (no hierarchies or governance).
 
 ### Capture and organize
 
-- Create collections (nested), add resources with commentary, reorder with
+- Create independent collections, add links, references and headings, reorder with
   optimistic-concurrency version checks, tag, and deduplicate URLs by
   canonical form.
 - Import from browser-bookmarks HTML (the primary migration path) and from a
@@ -117,8 +105,38 @@ always optional; keep tags flat (no hierarchies or governance).
 - Canonical URL identity: lowercase scheme/host, normalized paths, sorted
   query params, tracking params stripped (`utm_*`, `fbclid`, `gclid`) — so
   the same resource captured twice converges.
+- Save a link takes one or two links per save (two copy-and-paste trips at
+  most; bulk import is for more), each with optional tags, into one chosen
+  collection. Repeats, non-addresses and domains that don't exist are refused
+  in the form; a site that exists but gives no title is still saved. People type only what they must: a title is never an
+  input (personal context will be a separate note, planned with richer link
+  metadata). Choosing a new collection asks for its
+  name, prefilled with a suggestion that never repeats ("Saved links, Oct 7",
+  then "(2)"); typed names may repeat. The destination list shows when each
+  collection was last updated.
+- Saved links must open for everyone they are shared with: localhost,
+  loopback and IP addresses, local/internal names and names reserved for
+  examples and testing (`example.com`, `.test`, `.invalid`, …) are refused by
+  the API and flagged in the form.
+- Every link gets a title resolved from its page: the save form shows each
+  pasted address's title as confirmation before saving. Untitled links are also filled after
+  the save commits and whenever a collection is opened (`og:title`/`<title>`,
+  or YouTube's oEmbed; public addresses only, short deadline, small body cap).
+  Failure leaves the URL as the title; nothing else from the page is stored.
 - Capture from the browser via the extension (popup, context menu, keyboard
   shortcut) into a chosen hub + collection.
+
+### First-link activation
+
+The landing's primary action is **Save your first link**; Discover remains
+available. Paste one HTTP(S) URL, then verify email if signed out. Sending
+a code creates no account or content. Verification signs in an existing account
+or creates the ordinary account and its one hub. The API saves the first private
+“My links” collection and resource atomically with a user-scoped retry identity.
+No profile, title or handle setup is required. Existing owners choose a destination
+or create a private collection. Adding to a published collection requires an
+explicit destination choice. The saved reader offers another link and optional
+renaming. General **Sign in** returns through `/hub` to the owner’s stable `/h/<hubId>` address.
 
 ### Share (Drive philosophy)
 
@@ -130,14 +148,11 @@ always optional; keep tags flat (no hierarchies or governance).
   individually revocable, lands in the recipient's shared/. This is the only
   collaboration mechanism — an editor works from their own space; there is no
   hub to join.
-- **Ownership transfer**: a **top-level** collection can be transferred to a
-  user who is already an `editor` on it (Drive-style;
-  `POST /collections/:id/transfer`) — a section cannot be transferred alone; it
-  moves with its parent. On transfer the collection subtree moves into the new
-  owner's hub ("MyDrive"),
-  the previous owner keeps it as an editor in their shared/, and the immutable
-  **creator** is unchanged (owner is mutable, creator is not). Handing over an
-  entire account/hub is instead done by changing the account email (with
+- **Ownership transfer**: a collection can be transferred to an existing
+  `editor` (`POST /collections/:id/transfer`). Only that collection moves into
+  the recipient's hub. Referenced collections remain unchanged. The previous
+  owner becomes an editor and the immutable creator remains unchanged. Handover
+  of an entire account/hub is instead done by changing the account email (with
   verification; implemented locally in the auth-delivery backend), not a separate transfer model
   — a hub is 1:1 with its account.
 
@@ -147,36 +162,50 @@ always optional; keep tags flat (no hierarchies or governance).
   collections appear on the product-wide **explore** surface and the hub's
   public page; unpublished collections are visible to the hub owner and
   explicit shares only.
-- **Publishing a collection makes its sections publicly readable too** (access
-  inherits down): a published guide's sub-sections can be read as part of it,
-  though they are *not* listed separately in explore. This is intended — a
-  guide is useless if its sections 404 — but it is a public exposure, so the
-  web publish flow must confirm it ("this will make N sections readable").
+- Publication applies only to the collection being published. Referenced
+  collections need their own publication or grants; inaccessible targets remain
+  unavailable. Every independently published collection can appear in explore.
 - Account holders **save** published collections (social-style bookmark) into
   their **saved/** surface; saves go dormant when a collection is unpublished
   and revive on republish.
 
+### Discuss
+
+Every collection can carry a discussion: top-level comments (questions or
+notes) with one level of replies. Comments follow the collection's own access,
+so anyone who can read the collection can read its discussion. Signed-in readers
+with access (published collections, direct shares, or an active share link they
+opened) can comment and reply; anonymous readers see a sign-in prompt. Anyone who
+can comment may reply, so help never waits on the curator. Replies from the owner
+or an editor are labelled Curator or Editor, and the owner or an editor can mark
+one reply per question as the answer; it is shown first. Each question returns
+up to 100 readable replies, independently of other questions. “More replies”
+continues that thread; a readable accepted answer stays first on each page.
+
+Authors edit or delete their own comments (a question with replies keeps a
+placeholder). The owner and editors can hide comments; hidden comments stay
+visible to them. Owners turn comments off per collection (on by default);
+existing comments stay readable. A collection on hold accepts no new comments.
+Comments never grant access to the collection or anything it references.
+Comment notifications and operator moderation follow as the next milestone.
+
 ### Export
 
-- Export one **or more** collections as Markdown, PDF, or Word in a single
-  synchronous request: the response body is the file itself (a zip when
-  several collections are selected, one document per collection). Each
-  document reads like one written in Google Docs — root collection = H1 with
-  its description under it, each sub-collection **expands in order** as an H2
-  section with its description, hyperlinked resource lines under each; never
-  an H3, by the two-level nesting cap. `expand: false` collapses
-  sub-collections to a single line instead. External-link resources stay as
-  references and are not inlined. Rendering is programmatic, so no format
-  needs a job queue and nothing is stored server-side. Export requires a
-  signed-in account — anonymous readers of published or link-shared
-  collections browse but do not export. (Word replaces the earlier CSV idea —
-  CSV remains an import format only.)
+- Export one or more collections as Markdown, PDF or Word in a synchronous
+  request (one file, or a zip with one document per selected collection).
+  The collection title is H1, its description follows, and ordered headings
+  become H2. References remain durable links by default. With `expand: true`,
+  readable referenced collections become H2 sections; their headings become H3.
+  Expansion stops there: deeper and self references remain links. Every target
+  is separately authorized; unavailable references get a generic notice without
+  disclosing a title or content. External links remain hyperlinks. Nothing is
+  queued or stored server-side. Export requires sign-in; anonymous readers browse.
 
 ### Account
 
 - Email codes via self-hosted better-auth (cookie sessions for browsers,
   bearer tokens for API clients and the extension). No username: identity is a
-  free-form **display name** plus a unique, mutable **hub handle**. Profile
+  full name on the account and a public hub name plus unique, mutable **hub handle**. Profile
   self-service lives at `/api/v1/profile`. Later: "Continue with namestarlit"
   SSO (`docs/design-docs/identity-sso.md`).
 - **Email code is the sign-up and sign-in path** (ships with the email-delivery slice):
@@ -193,6 +222,30 @@ always optional; keep tags flat (no hierarchies or governance).
 Optional authenticator-app TOTP and recovery codes are a separate follow-up
 from core email-code delivery.
 
+### Service operations
+
+A product-authorized operator can look up accounts, suspend/reactivate them,
+revoke sessions, hold/release distribution of public collections, and inspect
+an operator audit trail. This is service administration, separate from hub
+ownership and reader/editor sharing. Operator access never grants private
+collection reads, impersonation, credential editing or account deletion.
+
+Suspension denies authentication and sharing of the account's owned content;
+reactivation permits fresh sign-in and restores existing sharing except for
+independent content holds. Holds preserve owner content/settings while denying
+non-owner access to the held collection. Active owners can correct content; only
+operators can release holds. Reasons and audit records accompany actions.
+
+Startup emails the configured initial admin an invitation. New recipients enter
+their name and accept before the account is created. Every recipient, including
+someone already signed in, verifies a fresh email OTP before the role activates.
+Only admins can invite/remove operators; recipients must accept and verify before receiving
+a UUID-bound grant. No first-user, email-domain or SSO-claim shortcut confers
+access. Verified email handover removes both service roles.
+See [service operations](docs/design-docs/service-operations.md) for the complete
+permission, recovery, retention and acceptance contract. The implementation
+includes the reusable web sign-in/session flow and `/ops` pages.
+
 ## 5. Product Surfaces
 
 ```txt
@@ -208,6 +261,15 @@ implementation contract. These designs precede the web scaffold.
 
 ## 6. Acceptance Criteria (durable behaviors)
 
+- Service operations deny suspended sessions and restrict held
+  content across every read/list/export path. Operators gain no private-content
+  access; actions and audit commit atomically. Recovery does not revive old
+  sessions or service-role grants. Startup invites the initial admin; only admins
+  invite operators. Acceptance begins from the emailed link, creates new accounts
+  only on explicit consent, and grants no role until a fresh invitation-bound email
+  OTP is verified. Matching signed-in accounts also verify. Sensitive actions
+  require recent email-code verification; TOTP remains a later phase.
+  See the service-operations contract above.
 - An unpublished collection is invisible to strangers: not on explore, not on
   the hub's public page, 404 to unauthorized direct requests.
 - A share-link reader can read but never write; rotating or disabling the
@@ -218,7 +280,9 @@ implementation contract. These designs precede the web scaffold.
 - Saving requires publication; a save survives unpublish (dormant) and
   revives on republish.
 - Each user owns exactly one hub (their space), created at sign-up with a
-  unique derived handle; the handle is mutable, but durable links use the
+  unique handle derived from a supplied name, or a readable random handle when
+  no usable name is supplied. Email addresses are not used as fallback seeds.
+  The handle is mutable, but durable links use the
   immutable hub id, so a rename never breaks a saved reference.
 - Reorder and update operations reject stale versions (409) rather than
   silently overwriting concurrent edits.
@@ -228,19 +292,18 @@ implementation contract. These designs precede the web scaffold.
   on collections and resources; there is no shared tag table. An external
   resource stores its own canonical URL (one copy of a given URL per
   collection).
-- Access inherits down the hierarchy: a direct share, active link, or
-  publication on a collection grants the same access to its descendant
-  collections (and their resources) — sharing a "folder" shares its contents.
-  Ownership already spans the whole subtree (one hub).
-- Nesting is a single action — add an existing same-hub collection into another
-  as a section; it creates the structural link and the section entry together,
-  and removing the entry un-nests it. Nesting a section into a collection, or
-  nesting a collection that already has sections, is rejected (two-level cap).
-- A collection-link exists only as a section (created by nesting); there is no
-  way to link an arbitrary collection, so every collection-link is same-hub and
-  access-inherited by construction.
-- Only a top-level collection can be transferred; transferring a section is
-  rejected.
+- References never inherit direct grants, share-link access or publication.
+  Their destinations resolve through the same independent collection policy.
+- An editor can add a reference to a readable collection from any hub, then
+  tag, reorder or remove the reference without write access to the target.
+- What belongs to an item stays as saved: a link's address and its resolved
+  title, a reference's target, a heading's text. People change only what they
+  add (tags, order; reference notes planned). A wrong link is removed and
+  added again.
+- Deleting a referenced target keeps a neutral unavailable resource in the source.
+  Deleting or transferring a source never deletes or transfers its targets.
+- Guides use ordered heading resources. Explicit export expansion is bounded
+  and separately authorized, so cycles cannot recurse or expose private content.
 - All identifiers exposed in routes are immutable UUIDv7 values; changing a
   username, hub name, or collection title never breaks a stored reference.
 
@@ -251,8 +314,8 @@ implementation contract. These designs precede the web scaffold.
   sharing to unregistered emails, and full-text search across collections and
   resources — tracked in the hub design doc's deferred (Phase E) list.
 - Billing or any commercial machinery.
-- **Authored rich content / a document or course builder.** Section content is
-  a rich *description* plus linked resources — never a block/rich-text editor,
+- **Authored rich content / a document or course builder.** Collection content is
+  a *description* plus headings and linked resources — never a block/rich-text editor,
   authored article prose, or hosted/uploaded media. Media is attached as a
   *resource* (a link to an unlisted YouTube or Vimeo video, a recording, etc.),
   not uploaded or authored in-product. A media-and-blocks course/document

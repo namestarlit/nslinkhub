@@ -3,4 +3,5 @@
 // hub handle are looked up per request when needed, not carried here.
 export interface AuthUser {
   userId: string;
+  sessionId?: string;
 }

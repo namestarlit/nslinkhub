@@ -1,4 +1,10 @@
-import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from "@nestjs/common";
+import type { HandleAvailability } from "@nslinkhub/types";
 import { AuthUser } from "src/common/interfaces/auth-user.interface";
 import { PrismaService } from "src/database/prisma.service";
 import { recordAudit } from "../../common/audit";
@@ -40,6 +46,44 @@ export class HubsService {
     return this.prisma.hub.findUnique({ where: { handle: handle.trim().toLowerCase() } });
   }
 
+  async handleAvailability(userId: string, rawHandle: string): Promise<HandleAvailability> {
+    const handle = rawHandle.trim().toLowerCase();
+    if (!hasValidHandleFormat(handle)) return { handle, status: "invalid" };
+    if (isReservedHandle(handle)) return { handle, status: "reserved" };
+    const hub = await this.prisma.hub.findUnique({
+      where: { handle },
+      select: { ownerUserId: true },
+    });
+    return {
+      handle,
+      status: !hub ? "available" : hub.ownerUserId === userId ? "current" : "taken",
+    };
+  }
+
+  async updateName(userId: string, rawName: string) {
+    const name = rawName.trim();
+    if (!name || name.length > 255) throw new BadRequestException("Invalid hub name");
+    const hub = await this.prisma.hub.findUnique({ where: { ownerUserId: userId } });
+    if (!hub) throw new NotFoundException("Hub not found");
+    if (hub.name === name) return;
+    await this.prisma.$transaction(async (tx) => {
+      await tx.hub.update({ where: { id: hub.id, ownerUserId: userId }, data: { name } });
+      await recordAudit(tx, { hubId: hub.id, actorUserId: userId, action: "hub.name_changed" });
+    });
+  }
+
+  async updateDescription(userId: string, rawDescription: string) {
+    if (rawDescription.length > 5000) throw new BadRequestException("Invalid hub description");
+    const description = rawDescription.trim() || null;
+    const hub = await this.prisma.hub.findUnique({ where: { ownerUserId: userId } });
+    if (!hub) throw new NotFoundException("Hub not found");
+    if (hub.description === description) return;
+    await this.prisma.hub.update({
+      where: { id: hub.id, ownerUserId: userId },
+      data: { description },
+    });
+  }
+
   // Rename the caller's hub handle. The handle is the mutable public identity;
   // durable links use the immutable hub id, so a rename never breaks a saved
   // link or a published-content reference.
@@ -68,10 +112,25 @@ export class HubsService {
       if (taken) {
         throw appError("handle_unavailable");
       }
-      await this.prisma.$transaction(async (tx) => {
-        await tx.hub.update({ where: { id: hub.id, ownerUserId: userId }, data: { handle } });
-        await recordAudit(tx, { hubId: hub.id, actorUserId: userId, action: "hub.handle_changed" });
-      });
+      try {
+        await this.prisma.$transaction(async (tx) => {
+          await tx.hub.update({ where: { id: hub.id, ownerUserId: userId }, data: { handle } });
+          await recordAudit(tx, {
+            hubId: hub.id,
+            actorUserId: userId,
+            action: "hub.handle_changed",
+          });
+        });
+      } catch (error) {
+        if (
+          typeof error === "object" &&
+          error !== null &&
+          "code" in error &&
+          error.code === "P2002"
+        )
+          throw appError("handle_unavailable");
+        throw error;
+      }
     }
 
     return { hubId: hub.id, handle };

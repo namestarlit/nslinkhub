@@ -1,27 +1,27 @@
-// Format-agnostic export document. Mirrors how the collection reads as a
-// document: root collection = H1 + description, expanded sub-collections =
-// H2 sections. The two-level nesting cap means sections never nest further.
 export interface ExportLink {
   kind: "link";
   title: string;
   url: string;
 }
 
-// A sub-collection rendered as a titled section (expand: true, the default).
+// An explicitly expanded, independently authorized collection reference.
 export interface ExportSection {
   kind: "section";
   title: string;
   description?: string;
-  links: ExportLink[];
+  links: ExportInline[];
 }
 
-// A sub-collection collapsed to a single line (expand: false).
-export interface ExportCollectionRef {
-  kind: "collection_ref";
+export interface ExportHeading {
+  kind: "heading";
   title: string;
 }
-
-export type ExportItem = ExportLink | ExportSection | ExportCollectionRef;
+export interface ExportNotice {
+  kind: "notice";
+  title: string;
+}
+export type ExportInline = ExportLink | ExportHeading | ExportNotice;
+export type ExportItem = ExportInline | ExportSection;
 
 export interface ExportDocument {
   title: string;
@@ -44,3 +44,22 @@ export const EXPORT_CONTENT_TYPES: Record<ExportFormat, string> = {
   pdf: "application/pdf",
   docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 };
+
+export function exportLines(
+  document: ExportDocument,
+): Array<
+  ExportLink | ExportNotice | (ExportHeading & { level: 2 | 3 }) | { kind: "text"; title: string }
+> {
+  const lines: Array<
+    ExportLink | ExportNotice | (ExportHeading & { level: 2 | 3 }) | { kind: "text"; title: string }
+  > = [];
+  for (const item of document.items) {
+    if (item.kind === "section") {
+      lines.push({ kind: "heading", title: item.title, level: 2 });
+      if (item.description) lines.push({ kind: "text", title: item.description });
+      for (const child of item.links)
+        lines.push(child.kind === "heading" ? { ...child, level: 3 } : child);
+    } else lines.push(item.kind === "heading" ? { ...item, level: 2 } : item);
+  }
+  return lines;
+}

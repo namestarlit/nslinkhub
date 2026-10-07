@@ -2,7 +2,7 @@ import { afterAll, describe, expect, it } from "bun:test";
 import { randomUUID } from "node:crypto";
 import { resolve } from "node:path";
 import { PrismaPg } from "@prisma/adapter-pg";
-import { createDeliveryAuth } from "../src/auth/delivery-auth";
+import { CODE_RESEND_SECONDS, createDeliveryAuth } from "../src/auth/delivery-auth";
 import { handoverIdentifiers } from "../src/auth/handover-proofs";
 import { emailKey, unseal } from "../src/email/outbox";
 import { PrismaClient } from "../src/generated/prisma/client";
@@ -17,7 +17,7 @@ const config = {
   secret,
   suppressionSecret,
   baseURL: "http://localhost:4000",
-  supportUrl: "https://example.com/support",
+  supportUrl: "https://fixture-links.dev/support",
 };
 const auth = createDeliveryAuth(config);
 const address = () => `delivery-${randomUUID()}@example.com`;
@@ -44,6 +44,10 @@ async function code(to: string) {
   // The target address can contain an eight-digit UUID segment before the
   // actual code. The template puts the proof on its own line.
   return payload.text.match(/^\d{8}$/m)?.[0] ?? "";
+}
+// Simulates the resend gap passing without waiting in real time.
+async function elapseResendGap(email: string) {
+  await prisma.$executeRaw`UPDATE request_budgets SET expires_at = clock_timestamp() WHERE key = ${emailKey(secret, "issue-gap", email)}`;
 }
 async function signup(email = address()) {
   await call("/code/send", { email });
@@ -77,7 +81,7 @@ describe("transactional codes-only auth", () => {
         EMAIL_PROVIDER: "capture",
         EMAIL_SUPPRESSION_SECRET: suppressionSecret,
         EMAIL_SUPPRESSION_SECRET_FILE: "",
-        EMAIL_SUPPORT_URL: "https://example.com/support",
+        EMAIL_SUPPORT_URL: "https://fixture-links.dev/support",
         QUEUE_NAMESPACE: `test-budget-${randomUUID()}`,
         SENTRY_DSN: "",
         SENTRY_DSN_FILE: "",
@@ -163,6 +167,13 @@ describe("transactional codes-only auth", () => {
     const email = address();
     await call("/code/send", { email });
     const old = await code(email);
+    // An immediate resend waits out the gap and says how long remains.
+    const early = await call("/code/send", { email });
+    expect(early.status).toBe(429);
+    const wait = Number(early.headers.get("retry-after"));
+    expect(wait).toBeGreaterThan(0);
+    expect(wait).toBeLessThanOrEqual(CODE_RESEND_SECONDS);
+    await elapseResendGap(email);
     await call("/code/send", { email });
     const fresh = await code(email);
     expect((await call("/code/verify", { email, code: old })).status).toBe(400);
@@ -177,8 +188,10 @@ describe("transactional codes-only auth", () => {
       }),
     ).toBe(1);
     const limited = address();
-    for (let i = 0; i < 5; i++)
+    for (let i = 0; i < 5; i++) {
       expect((await call("/code/send", { email: limited })).status).toBe(200);
+      await elapseResendGap(limited);
+    }
     expect((await call("/code/send", { email: limited })).status).toBe(429);
     const latest = await code(limited);
     const wrong = latest === "00000000" ? "11111111" : "00000000";

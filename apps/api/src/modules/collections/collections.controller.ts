@@ -25,7 +25,6 @@ import { shareTokenFrom } from "src/common/utils/token.util";
 import { CollectionsService } from "./collections.service";
 import { CreateCollectionDto } from "./dto/create-collection.dto";
 import { CreateShareDto } from "./dto/create-share.dto";
-import { NestCollectionDto } from "./dto/nest-collection.dto";
 import { SetLinkSharingDto } from "./dto/set-link-sharing.dto";
 import { TransferCollectionDto } from "./dto/transfer-collection.dto";
 import { UpdateCollectionDto } from "./dto/update-collection.dto";
@@ -140,17 +139,6 @@ export class CollectionsController {
     return apiOk(await this.collectionsService.unsave(id, user));
   }
 
-  @ApiBearerAuth()
-  @UseGuards(AuthGuard)
-  @Post(":id/collections")
-  async nestCollection(
-    @Param("id", new ParseUUIDPipe()) id: string,
-    @CurrentUser() user: AuthUser,
-    @Body() dto: NestCollectionDto,
-  ) {
-    return apiOk(await this.collectionsService.nestCollection(id, user, dto));
-  }
-
   // Durable permalink read: the immutable id survives slug renames (hub+slug
   // is the pretty URL, this is the reference clients keep).
   @UseGuards(OptionalAuthGuard)
@@ -167,23 +155,5 @@ export class CollectionsController {
       return;
     }
     return apiOk(data.collection, { etag: data.etag });
-  }
-
-  // Sections of a collection: unpaginated — access inherits down from the
-  // parent, and section order lives in the parent's resources.
-  @UseGuards(OptionalAuthGuard)
-  @Get(":id/children")
-  async getChildren(
-    @Param("id", new ParseUUIDPipe()) id: string,
-    @CurrentUser() user: AuthUser | null,
-    @Headers("x-share-token") headerToken?: string,
-    @Req() req?: Request,
-  ) {
-    const children = await this.collectionsService.getChildren(
-      id,
-      user,
-      shareTokenFrom(headerToken, req),
-    );
-    return apiOk(children);
   }
 }

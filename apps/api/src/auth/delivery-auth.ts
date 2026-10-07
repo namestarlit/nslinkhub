@@ -1,8 +1,17 @@
 import { emailOTP } from "better-auth/plugins";
+import { AppException, appError } from "../common/errors/app-exception";
+import { AUTHORITY_LOCK } from "../database/authority-context";
 import { emailKey, enqueueEmail } from "../email/outbox";
 import type { Prisma, PrismaClient } from "../generated/prisma/client";
+import { invalidateAccountInvitations, invitationCodeIdentifier } from "../operations/invitations";
+import {
+  acceptInvitation,
+  finishInvitation,
+  previewInvitation,
+  verificationContext,
+} from "../operations/recipient";
 import { createAuth } from "./create-auth";
-import { bindHandoverProofs, handoverIdentifiers } from "./handover-proofs";
+import { bindHandoverProofs, bindProofIdentifiers, handoverIdentifiers } from "./handover-proofs";
 
 const basePath = "/api/v1/auth";
 const codePaths = new Set([
@@ -11,6 +20,12 @@ const codePaths = new Set([
   "/email-change/start",
   "/email-change/confirm-current",
   "/email-change/confirm-new",
+]);
+const invitationPaths = new Set([
+  "/invitations/preview",
+  "/invitations/accept",
+  "/invitations/verify",
+  "/invitations/resend",
 ]);
 const nativePaths = new Set([
   "/sign-out",
@@ -37,6 +52,25 @@ function email(value: unknown): string | undefined {
     ? value.toLowerCase()
     : undefined;
 }
+// Minimum gap between two codes for one identity. A rejected request does not
+// extend the wait; the response says exactly how long remains.
+export const CODE_RESEND_SECONDS = 30;
+async function cooldown(tx: Prisma.TransactionClient, key: string, seconds: number) {
+  const claimed = await tx.$queryRaw<Array<{ count: number }>>`
+    INSERT INTO request_budgets (key,count,expires_at) VALUES (${key},1,clock_timestamp()+make_interval(secs => ${seconds}))
+    ON CONFLICT (key) DO UPDATE SET count=1, expires_at=clock_timestamp()+make_interval(secs => ${seconds})
+    WHERE request_budgets.expires_at <= clock_timestamp() RETURNING count`;
+  if (claimed.length) return 0;
+  const [row] = await tx.$queryRaw<Array<{ remaining: number }>>`
+    SELECT GREATEST(1, CEIL(EXTRACT(EPOCH FROM expires_at - clock_timestamp())))::int AS remaining
+    FROM request_budgets WHERE key = ${key}`;
+  return row?.remaining ?? seconds;
+}
+const coolingDown = (seconds: number) =>
+  Response.json(
+    { error: { code: "too_many_requests", message: "Unable to complete this request" } },
+    { status: 429, headers: { "Cache-Control": "no-store", "Retry-After": String(seconds) } },
+  );
 async function budget(tx: Prisma.TransactionClient, key: string, limit: number) {
   const rows = await tx.$queryRaw<Array<{ count: number }>>`
     INSERT INTO request_budgets (key,count,expires_at) VALUES (${key},1,clock_timestamp()+interval '10 minutes')
@@ -53,22 +87,40 @@ export interface DeliveryAuthOptions {
   suppressionSecret: string;
   baseURL: string;
   supportUrl: string;
+  // Seconds between two sign-in codes for one address (default CODE_RESEND_SECONDS).
+  codeResendSeconds?: number;
   // Fault injection stays at the persistence boundary; never emits real mail.
   persistEmail?: typeof enqueueEmail;
   beforeCommit?: () => Promise<void>;
 }
 export function createDeliveryAuth(options: DeliveryAuthOptions) {
   const { prisma, secret, baseURL, supportUrl } = options;
+  const resendGap = options.codeResendSeconds ?? CODE_RESEND_SECONDS;
   const ordinary = createAuth({ prisma, secret, baseURL });
+  async function getSession(input: { headers: Headers }) {
+    const session = await ordinary.api.getSession(input);
+    if (!session) return null;
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { accountState: true },
+    });
+    return user?.accountState === "active" ? session : null;
+  }
   return {
     ...ordinary,
+    api: { ...ordinary.api, getSession },
     handler: async (request: Request): Promise<Response> => {
       const url = new URL(request.url);
       const path = url.pathname.slice(basePath.length);
       // Explicit HTTP allowlist: native OTP/verification/reset routes cannot bypass
       // purpose binding or durable delivery. No GET endpoint consumes a challenge.
-      if (request.method === "GET")
-        return path === "/get-session" ? ordinary.handler(request) : failure(404);
+      if (request.method === "GET") {
+        if (path !== "/get-session") return failure(404);
+        const session = await getSession({ headers: request.headers });
+        return session
+          ? ordinary.handler(request)
+          : Response.json(null, { headers: { "Cache-Control": "no-store" } });
+      }
       let body: Record<string, unknown>;
       try {
         // Bound streaming input before JSON parsing (Content-Length is untrusted).
@@ -91,7 +143,10 @@ export function createDeliveryAuth(options: DeliveryAuthOptions) {
       } catch {
         return failure(400);
       }
-      if (request.method !== "POST" || (!codePaths.has(path) && !nativePaths.has(path)))
+      if (
+        request.method !== "POST" ||
+        (!codePaths.has(path) && !nativePaths.has(path) && !invitationPaths.has(path))
+      )
         return failure(404);
       const origin = request.headers.get("origin");
       if (
@@ -100,16 +155,35 @@ export function createDeliveryAuth(options: DeliveryAuthOptions) {
         request.headers.get("sec-fetch-site") === "cross-site"
       )
         return failure(403);
+      if (
+        invitationPaths.has(path) &&
+        (origin !== new URL(baseURL).origin || request.headers.has("authorization"))
+      )
+        return failure(403, "forbidden");
       try {
         return await prisma.$transaction(
           async (tx) => {
             // All auth mutations, including code session creation, share this
             // DB lock. Cross-process ordering is deliberate at this product's scale.
-            await tx.$executeRaw`SELECT pg_advisory_xact_lock(74201931)`;
+            await tx.$executeRaw`SELECT pg_advisory_xact_lock(${AUTHORITY_LOCK}::bigint)`;
+            const signedIn = await localSession();
+            async function localSession() {
+              return createAuth({ prisma: tx, secret, baseURL }).api.getSession({
+                headers: request.headers,
+              });
+            }
+            if (
+              signedIn &&
+              !(await tx.user.findFirst({
+                where: { id: signedIn.user.id, accountState: "active" },
+              }))
+            )
+              return failure(401);
             let deliveryFailed = false;
             let deliveryCount = 0;
             let target: string | undefined;
             let proofIdentifiers: ReturnType<typeof handoverIdentifiers> | undefined;
+            let invitationIdentifier: string | undefined;
             const localAuth = createAuth({
               prisma: tx,
               secret,
@@ -128,7 +202,7 @@ export function createDeliveryAuth(options: DeliveryAuthOptions) {
                         throw new Error("Missing workflow");
                       const identifier =
                         type === "sign-in"
-                          ? `sign-in-otp-${to}`
+                          ? (invitationIdentifier ?? `sign-in-otp-${to}`)
                           : type === "change-email"
                             ? proofIdentifiers?.next
                             : proofIdentifiers?.current;
@@ -157,6 +231,61 @@ export function createDeliveryAuth(options: DeliveryAuthOptions) {
                 }),
               ],
             });
+            let acceptance: Awaited<ReturnType<typeof acceptInvitation>> | undefined;
+            let verification: Awaited<ReturnType<typeof verificationContext>> | undefined;
+            const verifyInvitation = path === "/invitations/verify";
+            if (invitationPaths.has(path)) {
+              if (path.endsWith("preview")) {
+                if (Object.keys(body).some((k) => k !== "token")) throw appError("bad_request");
+                return Response.json(await previewInvitation(tx, body.token, signedIn), {
+                  headers: { "Cache-Control": "no-store" },
+                });
+              }
+              if (
+                typeof body.token !== "string" ||
+                !(await budget(tx, emailKey(secret, "invitation-accept", body.token), 15))
+              )
+                throw appError("too_many_requests");
+              const context = await localAuth.$context;
+              if (path === "/invitations/accept") {
+                acceptance = await acceptInvitation(tx, body, signedIn, (email, name) =>
+                  context.internalAdapter.createUser({ email, name, emailVerified: false }),
+                );
+                if (!acceptance.issueCode) {
+                  await options.beforeCommit?.();
+                  return Response.json(
+                    { email: acceptance.email, signedIn: false, state: acceptance.state },
+                    { headers: { "Cache-Control": "no-store" } },
+                  );
+                }
+              } else if (
+                Object.keys(body).some(
+                  (k) => !["token", ...(verifyInvitation ? ["code"] : [])].includes(k),
+                )
+              )
+                throw appError("bad_request");
+              verification = await verificationContext(tx, body.token, signedIn);
+              invitationIdentifier = invitationCodeIdentifier(verification.invitation);
+              bindProofIdentifiers(
+                context,
+                new Map([[`sign-in-otp-${verification.invitation.email}`, invitationIdentifier]]),
+              );
+              if (verifyInvitation) {
+                if (typeof body.code !== "string" || !/^\d{8}$/.test(body.code))
+                  throw appError("bad_request");
+              } else {
+                if (
+                  !(await budget(tx, emailKey(secret, "issue", verification.invitation.email), 5))
+                )
+                  throw appError("too_many_requests");
+                acceptance ??= {
+                  email: verification.invitation.email,
+                  signedIn: false,
+                  state: "verifying",
+                  issueCode: true,
+                };
+              }
+            }
             let nativePath = path;
             let nativeBody = body;
             let currentEmail: string | undefined;
@@ -186,6 +315,31 @@ export function createDeliveryAuth(options: DeliveryAuthOptions) {
               if (path.startsWith("/code/")) {
                 const address = email(body.email);
                 if (!address) return failure(400);
+                if (issuing) {
+                  const wait = await cooldown(
+                    tx,
+                    emailKey(secret, "issue-gap", address),
+                    resendGap,
+                  );
+                  if (wait) return coolingDown(wait);
+                }
+                const account = await tx.user.findUnique({
+                  where: { email: address },
+                  select: { accountState: true },
+                });
+                if (account?.accountState === "suspended") {
+                  if (
+                    !(await budget(
+                      tx,
+                      emailKey(secret, issuing ? "issue" : "verify", address),
+                      issuing ? 5 : 15,
+                    ))
+                  )
+                    return failure(429, "too_many_requests");
+                  return issuing
+                    ? Response.json({ success: true }, { headers: { "Cache-Control": "no-store" } })
+                    : failure(400);
+                }
                 budgetIdentity = address;
                 nativePath = issuing ? "/email-otp/send-verification-otp" : "/sign-in/email-otp";
                 nativeBody = issuing
@@ -282,6 +436,15 @@ export function createDeliveryAuth(options: DeliveryAuthOptions) {
               )
                 return failure(429, "too_many_requests");
             }
+            if (verifyInvitation && verification) {
+              nativePath = "/sign-in/email-otp";
+              nativeBody = { email: verification.invitation.email, otp: body.code };
+            }
+            if (acceptance?.issueCode) {
+              nativePath = "/email-otp/send-verification-otp";
+              nativeBody = { email: acceptance.email, type: "sign-in" };
+              expectedDelivery = true;
+            }
             const headers = new Headers(request.headers);
             headers.set("content-type", "application/json");
             headers.delete("content-length");
@@ -298,6 +461,24 @@ export function createDeliveryAuth(options: DeliveryAuthOptions) {
               response.status >= 500
             )
               throw new Error("Auth transaction failed");
+            if (response.ok && (path === "/code/verify" || verifyInvitation)) {
+              const verified = (await response.clone().json()) as {
+                token?: string;
+                user?: { id?: string };
+              };
+              if (!verified.token || !verified.user?.id)
+                throw new Error("Missing verified session");
+              await tx.session.updateMany({
+                where: { token: verified.token, userId: verified.user.id },
+                data: { verifiedAt: new Date() },
+              });
+              userId = verified.user.id;
+              if (verifyInvitation) await finishInvitation(tx, body.token, verified.user.id);
+              // A completed sign-in ends the resend wait for that address.
+              const verifiedAddress = path === "/code/verify" ? email(body.email) : undefined;
+              if (verifiedAddress)
+                await tx.$executeRaw`DELETE FROM request_budgets WHERE key = ${emailKey(secret, "issue-gap", verifiedAddress)}`;
+            }
             if (codePaths.has(path)) {
               if (response.ok && path.endsWith("confirm-current"))
                 await tx.emailChangeIntent.update({ where: { userId }, data: { phase: "new" } });
@@ -315,6 +496,25 @@ export function createDeliveryAuth(options: DeliveryAuthOptions) {
                 await context.internalAdapter.deleteVerificationByIdentifier(
                   `email-verification-otp-${currentEmail}`,
                 );
+                const grants = await tx.operatorGrant.deleteMany({ where: { userId } });
+                const admins = await tx.adminGrant.deleteMany({ where: { userId } });
+                if (!userId || !currentEmail) throw new Error("Missing handover identity");
+                await invalidateAccountInvitations(tx, userId, currentEmail);
+                await tx.user.update({
+                  where: { id: userId },
+                  data: { operationsVersion: { increment: 1 } },
+                });
+                if (grants.count || admins.count)
+                  await tx.operatorAudit.create({
+                    data: {
+                      actorKind: "user",
+                      actorUserId: userId,
+                      targetUserId: userId,
+                      action: "account.handover",
+                      reason: "access_administration",
+                      outcome: "success",
+                    },
+                  });
                 await tx.emailChangeIntent.delete({ where: { userId } });
                 response.headers.delete("set-cookie");
                 response.headers.delete("set-auth-token");
@@ -327,14 +527,22 @@ export function createDeliveryAuth(options: DeliveryAuthOptions) {
                 },
               });
             }
+            if (acceptance && !response.ok) throw appError("service_unavailable");
             await options.beforeCommit?.();
-            if (!response.ok && codePaths.has(path)) return failure(response.status);
+            if (acceptance)
+              return Response.json(
+                { email: acceptance.email, signedIn: false, state: acceptance.state },
+                { headers: { "Cache-Control": "no-store" } },
+              );
+            if (!response.ok && (codePaths.has(path) || verifyInvitation))
+              return failure(response.status);
             response.headers.set("Cache-Control", "no-store");
             return response;
           },
           { maxWait: 5000, timeout: 15000 },
         );
-      } catch {
+      } catch (error) {
+        if (error instanceof AppException) return failure(error.getStatus(), error.code);
         return failure(503, "service_unavailable");
       }
     },

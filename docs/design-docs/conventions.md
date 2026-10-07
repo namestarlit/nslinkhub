@@ -6,7 +6,7 @@ one, because three layers meet here.
 ## Casing
 
 - **JSON field keys → camelCase.** Every request and response key is
-  camelCase: `hubId`, `parentCollectionId`, `linkSharingEnabled`,
+  camelCase: `hubId`, `linkedCollectionId`, `linkSharingEnabled`,
   `requestId`, `nextCursor`. No snake_case keys in payloads, ever. The whole
   stack is TypeScript (Prisma models, DTOs, response mappers, and both future
   clients), so camelCase keeps payloads transform-free from the database row
@@ -66,7 +66,7 @@ Useful actionable codes include:
 | `slug_conflict`, `handle_unavailable`, `email_conflict` | Choose another value |
 | `handle_invalid`, `handle_reserved` | Correct the requested handle |
 | `duplicate_resource`, `position_conflict` | Resolve the existing resource/order |
-| `invalid_reorder`, `invalid_nesting`, `invalid_transfer` | Correct the operation |
+| `invalid_reorder`, `invalid_transfer` | Correct the operation |
 | `transfer_requires_editor` | Grant the recipient editor access first |
 | `collection_not_published` | Saving requires publication |
 | `too_many_requests` | Respect Retry-After before another attempt |

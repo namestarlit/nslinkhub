@@ -6,17 +6,26 @@ import type { IsoTimestamp } from "./envelope.js";
 export interface Profile {
   id: string;
   displayName: string;
+  showNameOnHub: boolean;
   handle: string | null;
   hubId: string | null;
+  hubName: string | null;
   email: string;
-  bio: string | null;
+  hubDescription: string | null;
   image: string | null;
   createdAt: IsoTimestamp;
   updatedAt: IsoTimestamp;
 }
 
 export interface UpdateProfileRequest {
+  hubName?: string;
   displayName?: string;
+  showNameOnHub?: boolean;
   handle?: string;
-  bio?: string;
+  hubDescription?: string;
+}
+
+export interface HandleAvailability {
+  handle: string;
+  status: "available" | "current" | "invalid" | "reserved" | "taken";
 }

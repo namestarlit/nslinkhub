@@ -1,7 +1,9 @@
 import { type ChildProcess, spawn } from "node:child_process";
 import { createServer } from "node:net";
+import { resolve } from "node:path";
 import { resolveApiPort } from "./dev-config";
 
+const root = resolve(import.meta.dir, "..");
 // Pigfarm's pattern: infrastructure first, three host processes, fail together.
 // Refuse occupied ports rather than terminate independently started processes.
 async function requireFree(port: number) {
@@ -15,11 +17,15 @@ async function requireFree(port: number) {
     server.listen(port, "127.0.0.1", () => server.close(() => resolve()));
   });
 }
-const apiPort = await resolveApiPort();
+const apiPort = await resolveApiPort(resolve(root, "apps/api"));
 const webPort = Number(process.env.WEB_PORT ?? 3000);
 if (apiPort === webPort) throw new Error("API and web need different ports");
 await Promise.all([requireFree(apiPort), requireFree(webPort)]);
-const infra = Bun.spawn(["bun", "run", "infra:up"], { stdout: "inherit", stderr: "inherit" });
+const infra = Bun.spawn(["bun", "run", "infra:up"], {
+  cwd: root,
+  stdout: "inherit",
+  stderr: "inherit",
+});
 if (await infra.exited) process.exit(1);
 const env = {
   ...process.env,
@@ -62,16 +68,29 @@ function stop(code: number) {
     process.exit(code);
   });
 }
-for (const [cwd, args] of [
-  ["apps/api", ["--watch", "src/entrypoint.ts"]],
-  ["apps/api", ["--watch", "src/email/worker.ts"]],
-  ["apps/web", ["server.ts", "--dev"]],
+console.log(`Starting API at http://localhost:${apiPort} and web at http://localhost:${webPort}.`);
+for (const [name, workspace, script] of [
+  ["api", "@nslinkhub/api", "start:dev"],
+  ["worker", "@nslinkhub/api", "email:worker:dev"],
+  ["web", "@nslinkhub/web", "dev"],
 ] as const) {
-  const child = spawn("bun", [...args], { cwd, env, stdio: "inherit", detached: true });
+  console.log(`Starting ${name}: bun run ${script}`);
+  const child = spawn("bun", ["run", "--filter", workspace, script], {
+    cwd: root,
+    env,
+    stdio: "inherit",
+    detached: true,
+  });
   children.push(child);
-  child.once("error", () => stop(1));
-  child.once("exit", (code) => {
-    if (!stopping) stop(code || 1);
+  child.once("error", () => {
+    console.error(`${name} could not start; stopping the development stack.`);
+    stop(1);
+  });
+  child.once("exit", (code, signal) => {
+    if (!stopping) {
+      console.error(`${name} exited (${signal ?? code}); stopping the development stack.`);
+      stop(code || 1);
+    }
   });
 }
 process.once("SIGINT", () => stop(130));

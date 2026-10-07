@@ -1,5 +1,6 @@
-import type { Collection, Resource } from "@nslinkhub/types";
-import { permalink, prettyPath } from "../lib/http";
+import type { Collection, PersonRef, Resource } from "@nslinkhub/types";
+import { hubPath, permalink, prettyPath } from "../lib/http";
+import { Updated } from "./local-time";
 
 export function Tags({ tags }: { tags: string[] }) {
   return tags.length ? (
@@ -17,47 +18,98 @@ export function CollectionRow({ item, handle }: { item: Collection; handle?: str
         <a href={handle ? prettyPath(handle, item.slug) : permalink(item.id)}>{item.title}</a>
       </h2>
       {item.description && <p className="preview">{item.description}</p>}
-      <div className="row-meta">
-        <Tags tags={item.tags} />
-        <span>
-          Updated{" "}
-          <time dateTime={item.updatedAt}>
-            {new Date(item.updatedAt).toLocaleDateString("en-GB", {
-              day: "numeric",
-              month: "short",
-              year: "numeric",
-              timeZone: "UTC",
-            })}
-          </time>
-        </span>
-      </div>
+      <CollectionMeta item={item} handle={handle} compact />
     </li>
   );
 }
-export function ResourceRow({
+// A person, the same way everywhere: their name (only when they show it) and
+// their hub handle, together linking to their hub.
+export function Person({ person }: { person: PersonRef }) {
+  return (
+    <a className="person" href={`/h/${encodeURIComponent(person.hubId)}`}>
+      {person.name && <span className="person-name">{person.name}</span>}
+      <span className="person-handle">@{person.handle}</span>
+    </a>
+  );
+}
+export function CollectionMeta({
   item,
-  titles,
-  token,
+  handle,
+  compact = false,
 }: {
-  item: Resource;
-  titles: Record<string, string>;
-  token?: string;
+  item: Collection;
+  handle?: string;
+  compact?: boolean;
 }) {
+  const owner: PersonRef | null = item.hub
+    ? { hubId: item.hub.id, handle: item.hub.handle, name: item.hub.ownerName }
+    : null;
+  const creator =
+    // Only when the owner is known and the creator is someone else.
+    !compact && item.hub && item.creator && item.creator.hubId !== item.hub.id
+      ? item.creator
+      : null;
+  return (
+    <div className="row-meta">
+      {owner ? (
+        <Person person={owner} />
+      ) : (
+        handle && (
+          <a className="person" href={hubPath(handle)}>
+            <span className="person-handle">@{handle}</span>
+          </a>
+        )
+      )}
+      {creator && (
+        <span>
+          Created by <Person person={creator} />
+        </span>
+      )}
+      <span>
+        Updated <Updated at={item.updatedAt} />
+      </span>
+      {compact && !item.published && <span className="row-badge">Private</span>}
+      {compact && item.tags.length > 0 && (
+        <span className="row-tags">
+          {item.tags
+            .slice(0, 3)
+            .map((tag) => `#${tag}`)
+            .join(" ")}
+        </span>
+      )}
+    </div>
+  );
+}
+export function ResourceRow({ item }: { item: Resource }) {
+  if (item.kind === "heading")
+    return (
+      <li className="resource-heading">
+        <h2>{item.titleOverride}</h2>
+      </li>
+    );
   if (item.kind === "collection_link")
     return (
-      <li className="resource-row">
-        <span className="meta">Section</span>
+      <li className={`resource-row${item.linkedCollection ? "" : " resource-unavailable"}`}>
         <h2>
-          {item.linkedCollectionId ? (
-            <a href={permalink(item.linkedCollectionId, token)}>
-              {item.titleOverride || titles[item.linkedCollectionId] || "Open section"}{" "}
-              <span aria-hidden="true">→</span>
+          {item.linkedCollection ? (
+            <a href={permalink(item.linkedCollection.id)}>
+              {item.titleOverride || item.linkedCollection.title}
             </a>
           ) : (
-            "Section unavailable"
+            "Collection unavailable"
           )}
         </h2>
-        <Tags tags={item.tags} />
+        <div className="meta resource-meta">
+          {item.linkedCollection ? (
+            <>
+              <CollectionIcon />
+              <span className="resource-kind">Collection</span>
+            </>
+          ) : (
+            <span>This collection may be private or no longer available.</span>
+          )}
+          <Tags tags={item.tags} />
+        </div>
       </li>
     );
   let url: URL | undefined;
@@ -70,25 +122,58 @@ export function ResourceRow({
       <h2>
         {url ? (
           <a href={url.href} rel="noreferrer" referrerPolicy="no-referrer">
-            {item.titleOverride || url.href} <span aria-hidden="true">↗</span>
+            {item.titleOverride || url.href}
           </a>
         ) : (
           item.titleOverride || "Link unavailable"
         )}
       </h2>
-      {url && <p className="meta hostname">{url.hostname}</p>}
-      <Tags tags={item.tags} />
+      {url ? (
+        <div className="meta hostname resource-meta">
+          <span>{url.hostname.replace(/^www\./, "")}</span>
+          <ExternalIcon />
+          <Tags tags={item.tags} />
+        </div>
+      ) : (
+        <Tags tags={item.tags} />
+      )}
     </li>
   );
 }
-export function Skeleton() {
+// One stroke-icon family (1.5px, round joins) shared with the header controls.
+function ExternalIcon() {
   return (
-    <section aria-busy="true" aria-label="Loading collection content" className="skeleton">
-      <p className="sr-only">Loading…</p>
-      <div aria-hidden="true" className="skeleton-title" />
-      {[1, 2, 3].map((i) => (
-        <div key={i} aria-hidden="true" className="skeleton-row" />
-      ))}
-    </section>
+    <svg
+      width="13"
+      height="13"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M7 17 17 7M9 7h8v8" />
+    </svg>
+  );
+}
+function CollectionIcon() {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      className="resource-kind"
+    >
+      <rect x="3" y="7" width="14" height="14" rx="2.5" />
+      <path d="M7 3h11.5A2.5 2.5 0 0 1 21 5.5V17" />
+    </svg>
   );
 }

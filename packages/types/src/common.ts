@@ -2,5 +2,5 @@
 
 export type ShareRole = "reader" | "editor";
 export type ShareSource = "direct" | "link";
-export type ResourceKind = "external_link" | "collection_link";
+export type ResourceKind = "external_link" | "collection_link" | "heading";
 export type ExportFormat = "markdown" | "pdf" | "docx";

@@ -26,7 +26,8 @@ export default function config(phase: string): NextConfig {
         {
           source: "/:path*",
           headers: [
-            { key: "Referrer-Policy", value: "no-referrer" },
+            // Native POST needs a non-null Origin; disclose only the origin, never token-bearing paths.
+            { key: "Referrer-Policy", value: "strict-origin" },
             { key: "X-Content-Type-Options", value: "nosniff" },
             { key: "X-Frame-Options", value: "DENY" },
             { key: "Cache-Control", value: "private, no-store, max-age=0" },

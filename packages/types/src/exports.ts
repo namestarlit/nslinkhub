@@ -7,6 +7,6 @@ export interface CreateExportRequest {
   format: ExportFormat;
   /** Collections to export, one document each (max 20). */
   collectionIds: string[];
-  /** Expand sub-collections as sections (default true); false collapses them to a line. */
+  /** Expand readable linked collections once (default false); otherwise retain links. */
   expand?: boolean;
 }

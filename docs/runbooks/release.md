@@ -137,8 +137,8 @@ logs and remove the one-shot service. Then let Dokploy deploy the reviewed
 automatically in every API replica.
 
 The release-foundations migration adds `audit_records` and `request_budgets`
-plus indexes/CHECK constraints only. It preserves UUID generation, hierarchy
-and timestamp triggers, and partial unique indexes. The old image can run
+plus indexes/CHECK constraints only. It preserved UUID generation, the then-existing
+hierarchy trigger, timestamp triggers, and partial unique indexes. The old image can run
 with these additional tables. Roll back the image on application failure;
 do not drop audit data or automatically reverse SQL. Prisma migration failure
 requires inspection and the existing [migration runbook](migrations.md).

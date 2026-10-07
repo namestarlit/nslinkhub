@@ -24,7 +24,10 @@ describe("code emails", () => {
         expect(body).not.toContain("token=");
         expect(body).not.toContain("use this link");
         expect(body).toContain(valid.supportUrl);
-        expect(body).toContain("Do not share this code");
+        expect(body).toContain("Do not share this code with anyone.");
+        expect(body).not.toContain("Do not forward this email");
+        expect(body).toContain("an ns series product");
+        expect(body).not.toContain("mailto:");
       }
       // Subjects never carry the code.
       expect(email.subject).not.toContain(valid.code);

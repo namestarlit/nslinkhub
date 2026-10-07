@@ -33,6 +33,23 @@ const strings = (v: unknown) => Array.isArray(v) && v.every(string);
 const role = (v: unknown) => v === "reader" || v === "editor";
 const source = (v: unknown) => v === "direct" || v === "link";
 const collectionShape = {
+  hub: (v: unknown) =>
+    v === undefined ||
+    (typeof v === "object" &&
+      v !== null &&
+      "id" in v &&
+      uuid(v.id) &&
+      "handle" in v &&
+      string(v.handle)),
+  capabilities: (v: unknown) =>
+    v === undefined ||
+    (typeof v === "object" && v !== null && "canManage" in v && bool(v.canManage)),
+  restriction: (v: unknown) =>
+    v === undefined || (typeof v === "object" && v !== null && "reason" in v && "supportUrl" in v),
+  creator: (v: unknown) =>
+    v === undefined ||
+    v === null ||
+    (typeof v === "object" && "hubId" in v && "handle" in v && "name" in v),
   id: uuid,
   hubId: uuid,
   slug: string,
@@ -41,7 +58,7 @@ const collectionShape = {
   tags: strings,
   published: bool,
   linkSharingEnabled: bool,
-  parentCollectionId: (v) => v === null || uuid(v),
+  commentsEnabled: bool,
   version: number,
   createdAt: iso,
   updatedAt: iso,
@@ -49,10 +66,12 @@ const collectionShape = {
 const profileShape = {
   id: uuid,
   displayName: string,
+  showNameOnHub: bool,
   handle: nullableString,
   hubId: (v) => v === null || uuid(v),
+  hubName: nullableString,
   email: string,
-  bio: nullableString,
+  hubDescription: nullableString,
   image: nullableString,
   createdAt: iso,
   updatedAt: iso,
@@ -60,9 +79,13 @@ const profileShape = {
 const resourceShape = {
   id: uuid,
   collectionId: uuid,
-  kind: (v) => v === "external_link" || v === "collection_link",
+  kind: (v) => v === "external_link" || v === "collection_link" || v === "heading",
   url: string,
   linkedCollectionId: (v) => v === null || uuid(v),
+  linkedCollection: (v) =>
+    v === undefined ||
+    v === null ||
+    (typeof v === "object" && "id" in v && uuid(v.id) && "title" in v && string(v.title)),
   titleOverride: nullableString,
   tags: strings,
   position: number,
@@ -101,7 +124,7 @@ const auditShape = {
 function shape(
   actual: Record<string, unknown>,
   fields: Record<string, (v: unknown) => boolean>,
-  optional: string[] = [],
+  optional: string[] = ["restriction", "hub", "capabilities", "linkedCollection", "creator"],
 ) {
   expect(Object.keys(actual).sort()).toEqual(
     Object.keys(fields)
@@ -171,7 +194,7 @@ describe("W3 serialized contracts and safe HTTP errors", () => {
 
   it("serializes profile, collection, permalink, handle, explore and resource reads", async () => {
     const server = app.getHttpServer();
-    expect(ownerProfile.bio).toBeNull();
+    expect(ownerProfile.hubDescription).toBeNull();
     expect(ownerProfile.image).toBeNull();
     const byId = await request(server).get(`/api/v1/collections/${cid}`).expect(200);
     shape(byId.body.data, collectionShape);
@@ -183,21 +206,28 @@ describe("W3 serialized contracts and safe HTTP errors", () => {
       expect(hub.body.data.hub).toEqual({
         id: ownerProfile.hubId,
         handle: ownerProfile.handle,
+        name: ownerProfile.hubName,
+        ownerName: ownerProfile.displayName || null,
         description: null,
+        publishedCollectionCount: 1,
+        createdAt: expect.any(String),
+        updatedAt: expect.any(String),
       });
+      expect(iso(hub.body.data.hub.createdAt)).toBe(true);
+      expect(iso(hub.body.data.hub.updatedAt)).toBe(true);
       shape(hub.body.data.collections[0], collectionShape);
       shape(hub.body.meta, cursorShape);
     }
-    const explore = await request(server).get("/api/v1/explore?limit=100").expect(200);
-    shape(explore.body.meta, cursorShape);
+    const discover = await request(server).get("/api/v1/discover?limit=100").expect(200);
+    shape(discover.body.meta, cursorShape);
     shape(
-      explore.body.data.find((c: Collection) => c.id === cid),
+      discover.body.data.find((c: Collection) => c.id === cid),
       collectionShape,
     );
     const resource = await request(server)
       .post(`/api/v1/collections/${cid}/resources/external`)
       .set("Authorization", `Bearer ${owner}`)
-      .send({ url: "https://example.com/contract", position: 0 })
+      .send({ url: "https://fixture-links.dev/contract", position: 0 })
       .expect(201);
     shape(resource.body.data, resourceShape);
     expect(resource.body.data.linkedCollectionId).toBeNull();
@@ -211,16 +241,16 @@ describe("W3 serialized contracts and safe HTTP errors", () => {
       .send({ slug: `child-${suffix}`, title: "Child" })
       .expect(201);
     await request(server)
-      .post(`/api/v1/collections/${cid}/collections`)
+      .post(`/api/v1/collections/${cid}/resources/collection`)
       .set("Authorization", `Bearer ${owner}`)
-      .send({ collectionId: child.body.data.id })
+      .send({ linkedCollectionId: child.body.data.id, position: 1 })
       .expect(201);
-    const withSection = await request(server)
+    const withReference = await request(server)
       .get(`/api/v1/collections/${cid}/resources`)
       .expect(200);
-    const section = withSection.body.data.find((r: Resource) => r.kind === "collection_link");
-    shape(section, resourceShape, ["url"]);
-    expect(section.url).toBeUndefined();
+    const reference = withReference.body.data.find((r: Resource) => r.kind === "collection_link");
+    shape(reference, resourceShape, ["url"]);
+    expect(reference.url).toBeUndefined();
   });
 
   it("preserves sharing privacy, shared/saved lists and audit shapes", async () => {
@@ -338,7 +368,7 @@ describe("W3 serialized contracts and safe HTTP errors", () => {
     const badUuid = await request(server).get(`/api/v1/collections/${secret}`).expect(400);
     const badCursor = await request(server)
       .get(
-        `/api/v1/explore?cursor=${Buffer.from(JSON.stringify({ u: new Date().toISOString(), id: secret })).toString("base64url")}`,
+        `/api/v1/discover?cursor=${Buffer.from(JSON.stringify({ u: new Date().toISOString(), id: secret })).toString("base64url")}`,
       )
       .expect(400);
     expect(badCursor.body.error.code).toBe("invalid_cursor");

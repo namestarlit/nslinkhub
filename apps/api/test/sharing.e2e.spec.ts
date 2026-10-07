@@ -55,7 +55,7 @@ describe("Sharing, publication, and saves (e2e)", () => {
     await request(server)
       .post(`/api/v1/collections/${id}/resources/external`)
       .set("Authorization", `Bearer ${owner}`)
-      .send({ url: `https://example.com/s-${sfx}`, position: 0 })
+      .send({ url: `https://fixture-links.dev/s-${sfx}`, position: 0 })
       .expect(201);
 
     // Share as reader.
@@ -74,7 +74,7 @@ describe("Sharing, publication, and saves (e2e)", () => {
     await request(server)
       .post(`/api/v1/collections/${id}/resources/external`)
       .set("Authorization", `Bearer ${collaborator}`)
-      .send({ url: `https://example.com/s2-${sfx}`, position: 1 })
+      .send({ url: `https://fixture-links.dev/s2-${sfx}`, position: 1 })
       .expect(403);
 
     // Promote to editor.
@@ -88,7 +88,7 @@ describe("Sharing, publication, and saves (e2e)", () => {
     await request(server)
       .post(`/api/v1/collections/${id}/resources/external`)
       .set("Authorization", `Bearer ${collaborator}`)
-      .send({ url: `https://example.com/s3-${sfx}`, position: 1 })
+      .send({ url: `https://fixture-links.dev/s3-${sfx}`, position: 1 })
       .expect(201);
     // Editor cannot publish or manage shares.
     await request(server)
@@ -167,11 +167,15 @@ describe("Sharing, publication, and saves (e2e)", () => {
     );
     expect(savedItem?.available).toBe(false);
 
-    // Saving an unpublished collection is rejected.
+    // Hidden unpublished content remains indistinguishable from a missing ID.
     const other = await createCollection(owner, `save2-${sfx}`);
     await request(server)
       .post(`/api/v1/collections/${other}/save`)
       .set("Authorization", `Bearer ${collaborator}`)
+      .expect(404);
+    await request(server)
+      .post(`/api/v1/collections/${other}/save`)
+      .set("Authorization", `Bearer ${owner}`)
       .expect(400);
   });
 });

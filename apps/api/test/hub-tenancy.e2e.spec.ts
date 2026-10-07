@@ -60,7 +60,7 @@ describe("Hub tenancy (e2e)", () => {
     await request(server)
       .post(`/api/v1/collections/${collectionId}/resources/external`)
       .set("Authorization", `Bearer ${ownerBearer}`)
-      .send({ url: `https://example.com/secret-${sfx}`, position: 0 })
+      .send({ url: `https://fixture-links.dev/secret-${sfx}`, position: 0 })
       .expect(201);
 
     // Stranger cannot read an unpublished collection (404: cannot know it exists).
@@ -94,7 +94,7 @@ describe("Hub tenancy (e2e)", () => {
       .send({ slug, title: "Published", published: true })
       .expect(201);
 
-    const res = await request(server).get("/api/v1/explore?limit=50").expect(200);
+    const res = await request(server).get("/api/v1/discover?limit=50").expect(200);
     const body = res.body as { data: Array<{ slug: string }> };
     expect(body.data.some((c) => c.slug === slug)).toBe(true);
   });

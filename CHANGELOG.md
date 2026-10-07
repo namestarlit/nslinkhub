@@ -9,6 +9,266 @@ summary of what changed after completed work has been promoted out of `ref/`.
 
 ## Unreleased
 
+- Links must be public web addresses: localhost, loopback, IP, local/internal
+  and example/test names (`example.com`, `.test`, …) are refused by the API
+  (`link_not_public`, imports report `not_public_url`) and flagged in red in
+  Save a link.
+- Pre-deployment reset: all migrations squashed into one `0_init` (schema
+  unchanged, verified with `migrate diff`); the unused `users.bio`,
+  `capture_receipts.hub_id` and `resource_id` columns are gone. New
+  `bun run db:seed` loads six real collections curated from the engineering
+  toolkit, with sections and titles read from the pages.
+- Cleanup: removed the dead inline-rename path, the `/profile` and
+  `/invitations` redirect pages, unused props, notices and styles; shared
+  limits (2 links per save, 30 tags of 80 characters) and input checks now live
+  in one place for the API and the web.
+- Save a link takes one or two links per save, each with optional tags
+  (added as chips behind "Add tags"; the collection edit page uses the same
+  shared tag field), into one chosen collection. The link
+  field turns blue when the page's title is found and red, blocking the save,
+  for a repeat, a non-address or a domain that doesn't exist; a "Bulk import
+  links" button tells people who press it that import is coming.
+  Titles are never typed: they are resolved from the page (shown as you
+  paste; YouTube via oEmbed), and links still missing a title are resolved
+  when their collection is opened.
+  New collections are named on creation (suggested "Saved links, Oct 7", never
+  repeating), and the destination list shows when each was last updated.
+  `POST /api/v1/capture` now takes `links[]` and returns `resourceIds`; new
+  `GET /api/v1/link-preview`. Titles are no longer accepted when adding links
+  or references, and item edits change only tags and position: what belongs to
+  a link (address, title) or a heading stays as saved.
+- Focus rings show only for keyboard navigation: after a mouse or touch press
+  no outline appears (including when returning from another window); Tab or
+  arrow keys bring it back.
+- Review fixes: a reference to a collection the reader cannot open no longer
+  reveals its id or stored title; exports render outside the global write lock;
+  default hub names keep every word of a name (only generated handles drop
+  their random suffix, and retry suffixes never reach the name).
+- Hub and collection sharing use the same unboxed section and text actions.
+  Hubs show it inline below the description; collections keep it above Discussion.
+  Copy confirmations reserve space so nearby content stays still.
+
+- Discussion disclosures retain pointer focus without gaining a blue outline
+  after window switching; keyboard navigation still shows the focus indicator.
+
+- The desktop collection share panel and Discussion header stay visible while
+  comments scroll independently. Add a comment opens the composer, whose hint
+  invites questions or notes. Closing preserves drafts; sign-in returns readers
+  to the open composer. Native disclosures work without JavaScript.
+
+- Sharing is one row of text links (LinkedIn, X, WhatsApp, Share link) with a
+  “Link copied to clipboard.” confirmation beneath; Reply/Edit in comments put
+  the cursor in the text box.
+- Collection reading smoothly folds the description before links begin scrolling,
+  retaining the title, tags and author/update metadata. Continued scroll input
+  carries through the transition; returning to the top restores the description.
+  Reduced-motion preferences skip animation.
+
+- Review repairs: partial imports isolate database row failures with savepoints;
+  bounded multipart parsing finishes before the authority lock and session
+  recheck. Sign-in resend cooldowns no longer invalidate flow cookies. Replies
+  paginate per thread with accepted answers first and native continuation links.
+  Page-title lookups use one aborting deadline across DNS, redirects and streaming
+  bodies. Signed web DELETE forms retain each visitor's source budget.
+
+- Emails end with the web footer (support prompt, “© year nslinkhub”, “an ns
+  series product”); code emails keep a single “Do not share this code with
+  anyone.” warning. The footer always links the new web `/support` page, which
+  shows the support address from `SUPPORT_EMAIL`; the site footer links Discover
+  and Support.
+- People appear the same way everywhere: name (only if they show it) plus
+  `@handle`, linking to their hub. Collection pages show “Created by” when the
+  creator differs from the owner. The discovery API is now `GET /api/v1/discover`.
+- Collections have a discussion: signed-in readers with access comment and
+  reply (one level), curator replies are labelled, owners/editors mark the answer
+  and hide comments, authors edit or delete their own, and owners can switch
+  comments off on the edit page (new `collection_comments` table and
+  `collections.comments_enabled`). Notifications and operator moderation for
+  comments are the next milestone.
+- The web app has one cohesive visual system: self-hosted Schibsted Grotesk on
+  every OS, one left content edge, ink titles with accent reserved for actions,
+  one control size (38 px, 44 px on touch), and a refreshed light/dark palette
+  with recalculated contrast. The wordmark stays the plain `nslinkhub` text.
+- Discover (`/discover`, formerly Explore) leads with “Someone already found your
+  next good read.” over calm, fully clickable collection cards. Collections read
+  as one sheet matching the landing example; resource rows open on a click
+  anywhere. Owners get one Edit button and a dedicated `/c/:id/edit` page in place
+  of per-field inline editing, plus an “Add a link” row; signed-in users get Save
+  a link in the top bar.
+- Share menus (Copy link, device share sheet, Email, X, LinkedIn, WhatsApp)
+  replace Copy link on collections and hubs. Transient confirmations appear as
+  top toasts; inline notices are info, warning or error toned. Landing questions
+  loop with no control. Settings fits one view and drops the duplicate Sign out.
+- The collection header stays fixed on desktop while sections and links scroll,
+  with GitHub-style “Updated 3 hours ago” metadata; from 1024 px sharing sits in
+  a permanent panel beside the collection.
+- Pages feel faster: the layout reads session, profile and theme in parallel,
+  navigations only show the loading state after ~300 ms, and returning to a tab
+  re-checks the session instead of reloading the page.
+- Sign-in codes can be resent once every 30 seconds per address (server enforced,
+  with a live countdown on the code page).
+- Saved links without a title get the page's title automatically after saving,
+  through an SSRF-guarded fetch (public addresses only, pinned connection).
+- Notifications are expandable items with unread markers; opening Notifications
+  resets the badge and “Clear all” empties the list (new `notifications_seen_at`
+  and `notifications_cleared_at` user columns; `/api/v1/notifications`).
+
+- Unavailable collections explain that they may be private or no longer exist.
+  Signed-out readers can sign in and return to the same collection; API reads
+  keep private and missing targets indistinguishable.
+
+- **Breaking:** collections are independent. Removed parent fields, nesting/children
+  endpoints, inherited grants/holds and recursive ownership operations. Collection
+  references are ordinary ordered resources, including references across hubs;
+  each destination keeps its own permissions. Deleting a target leaves an
+  unavailable reference, while source deletion/transfer never affects targets.
+- Guides support ordered heading resources. Markdown, PDF and Word exports keep
+  references as links by default; explicit expansion includes one readable level,
+  preserves headings and marks unavailable references without leaking content.
+  Web reference navigation uses immutable URLs without forwarding share tokens.
+
+- Profile settings adds an autosaving “Show my name on my hub” switch. Turning it
+  off hides owner attribution on hubs and public collection metadata without
+  changing the saved full name or hub identity. Existing accounts default to on.
+
+- Your hub now shows its name, handle, optional owner name and description
+  above Your collections, with Copy hub link beneath the description.
+  Save a link remains the main creation action. Public preview stays in Settings.
+- Collection owners edit the title, description and tags in place, saving on
+  blur/Enter with cancellation, retained failed drafts and version-conflict recovery.
+  Native forms remain available without JavaScript.
+- Stable `/h/:hubId` and readable `/@handle` routes show owners their own hub
+  and visitors published content. `/hub` redirects to the stable address; Settings
+  explicitly opens the public preview with `?view=public`.
+
+- Settings renders Profile and Hub directly, without Account/Appearance tabs.
+  Appearance stays in the header. Profile includes
+  email and member-since; Sign out sits at the bottom. Copy hub link shares the
+  permanent address with an outlined button before View your public hub.
+  Full name belongs to the user; the hub has an independent Hub name, public
+  Description, immutable ID and editable handle. The user bio editor is removed. Changes autosave with draft recovery and a retained public-hub link.
+- Public hubs resolve by stable `/h/:hubId` or readable `/@handle`, and show
+  “@handle by <owner name>” when named, otherwise only the handle. Their grouped
+  header places the Copy hub link text action below the description. The collection
+  count sits with its heading, and empty feedback stays beneath it. Hub creation and update
+  dates are omitted; collection update dates remain. Counts exclude private and held content across all pages. Collection
+  previews show description, tags, hub handle, owner attribution and updated date.
+- Account avatars prefer a chosen image, then Gravatar for the verified email,
+  then the generated fallback. Gravatar is proxied; email hashes stay server-side.
+- Header Explore and Sign in links match the weight of text actions.
+- The header uses one icon button cycling System → Light → Dark → System, with
+  System as the default and the current mode shown by its icon.
+- Hid unnecessary single-page collection pagination and exposed collection name,
+  description and tags in one edit form, including native form error recovery.
+
+- New accounts without a usable name receive readable generated hub handles
+  instead of `hub`/`hub-2`. Defaults do not expose email addresses; supplied names
+  still seed handles, and existing handles remain unchanged.
+
+- Added first-link capture through verified email, atomic private collection/link
+  creation, concurrent-first-save handling and scoped replay receipts. Added
+  owned-collection hub navigation, add-another and optional rename with retry drafts.
+- Refined collection browsing with description previews, hub/date metadata,
+  whitespace grouping and desktop pages sized to the available frame; mobile
+  retains scrolling. Kept Sign in navigation and purposeful structural dividers.
+
+### Public landing and neutral theme
+
+- Kept button-styled links free of text underlines on hover, consistent with
+  native buttons.
+
+- Paired saving and discovery in one desktop composition beside a compact
+  collection example. Kept the discovery CTA directly beneath its heading,
+  moved browsing guidance to Explore, and preserved mobile stacking.
+
+- Introduced a non-looping typed question sequence on the landing page, with
+  four-second reading pauses, Pause/Resume/Replay controls, stable layout and
+  static reduced-motion/no-JavaScript alternatives.
+
+- Kept header/footer visible around a scrollable content area, with an accessible
+  document-scroll fallback for very short viewports. Explore and public hubs use
+  compact responsive collection lists. Removed decorative arrows from links.
+
+- Added a product landing page at `/` and moved public collection browsing to
+  `/explore`, preserving pagination and reader recovery links.
+- Grouped Explore with the account controls on the right of the header, leaving
+  the wordmark on the left. Signed-in wordmarks still open the user's own hub.
+- Refined light/dark surfaces with neutral grays and charcoal, preserving the
+  blue accent, accessible feedback colors and system appearance default.
+
+
+### Generated avatars
+
+- Added deterministic SVG avatars from immutable user UUIDs to the account menu
+  and profile. The API preserves the approved shape/color algorithm, validates
+  seeds and dimensions, and supports immutable caching and conditional ETags.
+- Added a UUID avatar redirect without account lookup; no external image
+  provider, persistence or uploaded-photo support is introduced.
+
+### Profile feedback and navigation loading
+
+- Kept one explicit Save profile action, enhanced to save in place with green
+  inline “Saved” feedback beside the button, retained drafts on failure and protection for newer edits.
+- Added authenticated live hub-handle validation; final writes still enforce
+  uniqueness, including competing claims. The hint previews the public address
+  and shows validation guidance only when the handle changes.
+- Replaced full-page navigation skeletons with compact progress and delayed
+  reload recovery, preserving private-content revalidation.
+
+- Added page-specific browser titles with the nslinkhub suffix.
+
+### Account navigation and appearance
+
+- Added an avatar-only account menu with Profile, Notifications, Settings, authorized Service
+  operations and Sign out. The wordmark keeps its normal color without an
+  underline and sends signed-in users to their own hub. Explore is always in
+  the header, replacing the duplicate hub/collection breadcrumbs.
+- Added Light, Dark and System themes with a browser preference that persists
+  without JavaScript. Appearance lives in Settings; signed-out visitors always
+  follow their device theme. The footer stacks the current-year product copyright
+  above a smaller “an ns series product” line.
+- Removed the client Service status page and links; API health and readiness
+  endpoints remain available for monitoring.
+- Connected profile editing to the existing own-account name, biography and hub
+  handle API; credentials remain outside the profile form.
+- Added Notifications for service invitations, with a badge for invitations needing
+  attention. These are informational messages directing recipients to email,
+  without an extra invitation-page chain. Sharing updates follow
+  in the next notification milestone.
+
+### Local development
+
+- Routed the root dev launcher through API, worker and web workspace scripts,
+  with named startup/failure output and an explicit web ready URL. Extended
+  dev-loop acceptance to check the sign-in page and readiness announcement.
+
+### Service operations
+
+- Added startup admin invitations and admin-only operator invitation management.
+  Acceptance starts from a private emailed link. Inviting/previewing creates no
+  account; new recipients enter their name and accept, then verify an emailed OTP.
+  Every recipient verifies a fresh invitation-bound email OTP before the role
+  activates, including signed-in users; existing names remain unchanged. Email
+  invitations now have a prominent **Review invitation** button.
+  Tokens rotate on resend; account invitation lists are status-only. Added expiry, resend/cancel, access revocation,
+  invitation audit and zero-admin invitation recovery; removed direct operator CLI
+  grants. Replays and restarts never restore revoked access.
+- Root workspace commands and development launcher use exact Bun `--filter`
+  selectors; Prisma retains its configuration directory.
+
+- Added native email-code sign-in, resend/recovery, sign-out and `/ops` account,
+  collection-moderation and audit pages, including operation without JavaScript.
+- Added accepted admin/operator grants, account suspension/recovery,
+  session revocation and public collection distribution holds. Restrictions cover
+  authentication, lists, section/resource reads, exports and redistribution,
+  while preserving active-owner correction and private-content boundaries.
+- Added atomic operator audit, expected versions and idempotent commands, recent
+  verification, serialized authority checks, bounded retention and an invitation/recovery
+  runbook. No real operator is automatically seeded.
+- Preserved visitor request budgets for native forms using separate signed source
+  attribution; browser Origin validation remains mandatory. Document referrers
+  disclose only the origin so native POST retains Origin without leaking paths.
+
 ### Web reading
 
 - Added `/status` and public navigation with aggregate ready/limited/unavailable
@@ -99,6 +359,12 @@ summary of what changed after completed work has been promoted out of `ref/`.
   verified retention workflow. Email handover revokes all sessions, with no password route back in.
 
 ### Documentation
+
+- Defined the service-operator milestone: account lookup, suspension/reactivation,
+  session revocation, public-content holds and audit. Documented deployment-only
+  grants, privacy boundaries, recovery, concurrency and retention; reconciled
+  the earlier no-admin wording to preserve the ban on private-content bypass.
+  Implemented the reusable web sign-in journey and operator workflows below.
 
 - Recorded the reviewed W3 reading milestone and the next planned vertical
   journey: public hub → pretty collection URL → section/resource. Added API

@@ -1,5 +1,5 @@
 import { Document, ExternalHyperlink, HeadingLevel, Packer, Paragraph, TextRun } from "docx";
-import { ExportDocument, ExportLink } from "../export-document";
+import { ExportDocument, ExportLink, exportLines } from "../export-document";
 
 function linkParagraph(link: ExportLink): Paragraph {
   return new Paragraph({
@@ -20,22 +20,17 @@ export function renderDocx(document: ExportDocument): Promise<Buffer> {
     children.push(new Paragraph({ text: document.description }));
   }
 
-  for (const item of document.items) {
-    if (item.kind === "link") {
-      children.push(linkParagraph(item));
-    } else if (item.kind === "collection_ref") {
+  for (const item of exportLines(document)) {
+    if (item.kind === "link") children.push(linkParagraph(item));
+    else
       children.push(
-        new Paragraph({ children: [new TextRun({ text: item.title, italics: true })] }),
+        new Paragraph({
+          text: item.title,
+          ...(item.kind === "heading"
+            ? { heading: item.level === 2 ? HeadingLevel.HEADING_2 : HeadingLevel.HEADING_3 }
+            : {}),
+        }),
       );
-    } else {
-      children.push(new Paragraph({ text: item.title, heading: HeadingLevel.HEADING_2 }));
-      if (item.description) {
-        children.push(new Paragraph({ text: item.description }));
-      }
-      for (const link of item.links) {
-        children.push(linkParagraph(link));
-      }
-    }
   }
 
   const doc = new Document({ sections: [{ children }] });

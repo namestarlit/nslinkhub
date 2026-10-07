@@ -12,9 +12,13 @@ The backend model is complete: Hub → Collections → Resources with a single
 `CollectionPolicyService` for collection access. Tenancy is the Google-Drive
 individual model — **one hub (personal space) per user**, identified by a
 mutable handle + a free-form display name (no username, no memberships,
-invitations, hub roles, or admin). Collaboration is per-collection sharing:
+invitations, hub roles, or content-admin bypass). Collaboration is per-collection sharing:
 owner → direct reader/editor → active link → published. Remaining tracks are
 the clients (W2 shared types done; W3 web, W4 extension) and Phase E hardening.
+Service operations are [implemented](docs/design-docs/service-operations.md): account restrictions, public-content holds and operator audit
+use separate admin/operator authority without granting access to private collections.
+Startup invites the first admin; admins invite operators. Both roles require
+verified recipient acceptance.
 
 ## System Shape
 
@@ -22,7 +26,7 @@ A Bun-managed TypeScript codebase. The backend is a NestJS modular monolith
 backed by PostgreSQL 18 (Prisma 7 with the pg driver adapter); BullMQ on
 Redis delivers email through a PostgreSQL outbox and separate worker. Auth is self-hosted better-auth (DB sessions, bearer
 plugin, email codes only) mounted as raw
-middleware ahead of body parsing. The Next.js web app implements explore, public hubs, collection reading and service status; an MV3 browser
+middleware ahead of body parsing. The Next.js web app implements explore, public hubs, collection reading and account navigation; an MV3 browser
 extension remains planned. The repository is a Bun workspace:
 the backend lives at `apps/api`, the HTTP-only web client at `apps/web`;
 `apps/extension` joins in W4.
@@ -60,13 +64,14 @@ ref/               disposable, git-ignored implementation context
 | --- | --- |
 | `auth` (`apps/api/src/auth`) | better-auth instance + personal-hub onboarding hook; handler mounted in `app.setup.ts` |
 | `common/guards` | `AuthGuard`/`OptionalAuthGuard` via `resolveSessionUser` |
-| `hubs` | one-hub-per-user ownership + handle management (`HubsService`), collection access policy — owner → direct share → link → published, inheriting down the collection tree (`CollectionPolicyService`) |
+| `hubs` | one-hub-per-user ownership + handle management (`HubsService`), collection access policy — owner → direct share → link → published independently for each collection (`CollectionPolicyService`) |
 | `email` (`apps/api/src/email`) | encrypted PostgreSQL outbox, BullMQ relay/worker, capture/Resend providers, signed delivery webhooks and cleanup |
 | `users` | self-service profile at `/profile` (display name, bio, hub handle) |
-| `collections` | collection CRUD (two-level nesting), publish/unpublish, link + direct sharing, ownership transfer, saves, `/explore`, public hub pages + handle resolution (`/hubs/by-handle/:handle`), `/me/{shared,saved,audit}`, hub+slug lookup and the durable id permalink (`GET /collections/:id`) |
-| `resources` | resource CRUD (own canonical URL, tags array, nesting via section entries), reorder with version checks |
+| `collections` | collection CRUD, publish/unpublish, link + direct sharing, ownership transfer, saves, `/discover`, public hub pages + handle resolution (`/hubs/by-handle/:handle`), `/me/{shared,saved,audit}`, hub+slug lookup and the durable id permalink (`GET /collections/:id`) |
+| `resources` | resource CRUD (own canonical URL, tags array, collection references and headings), reorder with version checks |
 | `imports` | bookmarks-HTML + universal-CSV ingestion with per-row error reports |
 | `exports` | synchronous export (`POST /exports`): markdown/PDF/Word, one document per collection, zipped when several — programmatic renderers, no queue |
+| `avatars` | deterministic SVG generation from safe seeds; account clients use immutable user UUIDs; no user lookup |
 | `health` | liveness (`/health`) + per-dependency readiness (`/status`: postgres, queue Redis → ready/degraded/unavailable; 503 when postgres is down) |
 
 ## Dependency Rules

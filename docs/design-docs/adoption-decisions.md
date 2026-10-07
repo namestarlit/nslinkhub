@@ -104,6 +104,22 @@ with 19 production browser cases passing across public reading and status.
 Account and mutation journeys remain later work, delivered one complete journey
 at a time.
 
+## Service-operations scope update (2026-10-06)
+
+The user requested service administration before further account implementation.
+[Service operations](service-operations.md) now defines account lookup,
+suspension/reactivation, session revocation, public-content holds and operator
+audit. This explicitly extends the earlier decision not to adopt platform
+authority by implication. No Pigfarm role graph, hub memberships, private-content
+bypass or identity-provider migration is adopted. Operator grants are separate,
+product-owned authority. Startup invites the initial admin; admins invite
+operators and both roles require verified, explicit recipient acceptance.
+
+The capabilities are implemented locally with shared email-code sign-in,
+operator workflows, runtime/browser acceptance and an invitation/recovery runbook.
+See the active implementation plan for review status. Live email/provider and
+public-release gates remain. Account deletion and MFA retain their own scope.
+
 ## Gate #2 design status (2026-10-05)
 
 The three W3 design documents now define the
@@ -176,7 +192,7 @@ the current state. Timing refers to the acceptance gates in the next section.
 | Localization/theme | R8 has `/en` and `/sw` routes and persisted theme; NSLinkHub has fixed durable URL shapes and no locale requirement | Defer locale-prefixed routes and theme implementation choices to an explicit product need/W3 design. Preserve `/c/<id>`, `/@handle`, and `/@handle/<slug>`. Keep user-facing copy separate from error codes. |
 | Deployment | R9 has CI and infrastructure direction, with no app images/stack artifacts in the inspected checkout | Retain namestarlit VPS, Dokploy Stack, GHCR SHA-pinned images and +4 local ports. Build and prove NSLinkHub artifacts at gate 4; do not import Hashikome topology or credentials. |
 | Audit and retention | R5/R9 distinguish internal audit and workflow retention; local audit is absent | Add auth-delivery security outcomes with gate 3; complete hub-scoped publication/share/transfer audit before public release. Correct the already-exposed profile DELETE route through a decided account-deletion/retention contract before public release; no generic purge engine now. |
-| Product-specific machinery | R5/R8/R9 include organizations, platform authority, invitations, Google linking, MFA, mobile credentials and farm workflows | Do not adopt these as W3 prerequisites. No admin bypass, memberships, invitations, organization switcher, mobile/offline layer, commercial machinery, or alternative identity provider by implication. nsauth stays the decided future SSO direction. |
+| Product-specific machinery | R5/R8/R9 include organizations, platform authority, invitations, Google linking, MFA, mobile credentials and farm workflows | Do not adopt these as W3 prerequisites. No admin bypass, memberships, invitations, organization switcher, mobile/offline layer, commercial machinery, or alternative identity provider by implication. nsauth stays the decided future SSO direction. The explicit 2026-10-06 service-operations scope above adds bounded operator authority separately. |
 
 ## Delivery order and acceptance gates
 

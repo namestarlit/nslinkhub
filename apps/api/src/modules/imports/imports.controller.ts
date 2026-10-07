@@ -1,6 +1,18 @@
-import { Body, Controller, Post, UploadedFile, UseGuards, UseInterceptors } from "@nestjs/common";
+import {
+  Body,
+  Controller,
+  Post,
+  SetMetadata,
+  UploadedFile,
+  UseGuards,
+  UseInterceptors,
+} from "@nestjs/common";
 import { FileInterceptor } from "@nestjs/platform-express";
 import { ApiBearerAuth, ApiConsumes, ApiTags } from "@nestjs/swagger";
+import {
+  AUTHORITY_AFTER_UPLOAD,
+  ParsedUploadAuthorityInterceptor,
+} from "src/common/authority.interceptor";
 import { CurrentUser } from "src/common/decorators/current-user.decorator";
 import { AuthGuard } from "src/common/guards/auth.guard";
 import type { AuthUser } from "src/common/interfaces/auth-user.interface";
@@ -17,7 +29,13 @@ export class ImportsController {
 
   @Post("csv")
   @ApiConsumes("multipart/form-data")
-  @UseInterceptors(FileInterceptor("file"))
+  @SetMetadata(AUTHORITY_AFTER_UPLOAD, true)
+  @UseInterceptors(
+    FileInterceptor("file", {
+      limits: { fileSize: 10 * 1024 * 1024, files: 1, fields: 4, parts: 5, fieldSize: 1024 },
+    }),
+    ParsedUploadAuthorityInterceptor,
+  )
   async importCsv(
     @UploadedFile() file: unknown,
     @CurrentUser() user: AuthUser,
@@ -29,7 +47,13 @@ export class ImportsController {
 
   @Post("bookmarks-html")
   @ApiConsumes("multipart/form-data")
-  @UseInterceptors(FileInterceptor("file"))
+  @SetMetadata(AUTHORITY_AFTER_UPLOAD, true)
+  @UseInterceptors(
+    FileInterceptor("file", {
+      limits: { fileSize: 10 * 1024 * 1024, files: 1, fields: 4, parts: 5, fieldSize: 1024 },
+    }),
+    ParsedUploadAuthorityInterceptor,
+  )
   async importBookmarksHtml(
     @UploadedFile() file: unknown,
     @CurrentUser() user: AuthUser,

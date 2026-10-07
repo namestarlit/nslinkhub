@@ -7,19 +7,20 @@ import {
   IsUrl,
   MaxLength,
   Min,
-  MinLength,
 } from "class-validator";
 
+// A link's title is resolved from its page by the server, never an input.
 export class CreateExternalResourceDto {
-  @IsUrl({ require_protocol: true })
+  // Whether the host is public is decided by publicLinkUrl (link_not_public).
+  @IsUrl({
+    require_protocol: true,
+    protocols: ["http", "https"],
+    require_valid_protocol: true,
+    disallow_auth: true,
+    require_tld: false,
+  })
   @MaxLength(2048)
   url: string;
-
-  @IsOptional()
-  @IsString()
-  @MinLength(1)
-  @MaxLength(255)
-  titleOverride?: string;
 
   @IsOptional()
   @IsArray()

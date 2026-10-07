@@ -8,6 +8,9 @@ const env = maskVerificationOverrides({
   ...process.env,
   NODE_ENV: "test",
   EMAIL_PROVIDER: "capture",
+  // Keep the resend gap real but short so journeys can resend without sleeping.
+  AUTH_CODE_RESEND_SECONDS: "2",
+  SUPPORT_EMAIL: "support@example.com",
   WEB_SOURCE_SECRET: "browser-source-secret-synthetic-only-32-chars",
   BETTER_AUTH_SECRET: "browser-test-secret-not-for-production",
   EMAIL_SUPPRESSION_SECRET: "browser-test-suppression-independent",

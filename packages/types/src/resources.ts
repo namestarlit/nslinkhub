@@ -7,6 +7,8 @@ export interface Resource {
   kind: ResourceKind;
   url?: string;
   linkedCollectionId: string | null;
+  /** Viewer-authorized destination metadata; null means unavailable. */
+  linkedCollection?: { id: string; title: string } | null;
   titleOverride: string | null;
   tags: string[];
   position: number;
@@ -15,20 +17,30 @@ export interface Resource {
   updatedAt: IsoTimestamp;
 }
 
+// A link's title is resolved by the server, never sent.
 export interface CreateExternalResourceRequest {
   url: string;
-  titleOverride?: string;
   tags?: string[];
   position: number;
 }
 
+// Only what people add is editable; an item's own content is fixed.
 export interface UpdateResourceRequest {
   version: number;
-  titleOverride?: string;
   tags?: string[];
   position?: number;
 }
 
 export interface ReorderResourcesRequest {
   items: Array<{ resourceId: string; position: number; version: number }>;
+}
+
+export interface CreateCollectionResourceRequest {
+  linkedCollectionId: string;
+  tags?: string[];
+  position: number;
+}
+export interface CreateHeadingResourceRequest {
+  titleOverride: string;
+  position: number;
 }

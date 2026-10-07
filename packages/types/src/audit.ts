@@ -12,6 +12,7 @@ export const auditActions = [
   "link.rotated",
   "link.disabled",
   "hub.handle_changed",
+  "hub.name_changed",
   "audit.read",
 ] as const;
 export type AuditAction = (typeof auditActions)[number];

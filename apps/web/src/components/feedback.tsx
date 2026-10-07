@@ -28,12 +28,14 @@ export function Feedback({
   error,
   collection = false,
   hub = false,
-  resetPath = "/",
+  resetPath = "/discover",
+  signInHref,
 }: {
   error: Failure;
   collection?: boolean;
   hub?: boolean;
   resetPath?: string;
+  signInHref?: string;
 }) {
   const cursor = error.code === "invalid_cursor";
   const hidden = (collection || hub) && !cursor && [400, 401, 403, 404].includes(error.status);
@@ -50,7 +52,9 @@ export function Feedback({
       </h1>
       <p>
         {hidden
-          ? "Explore other collections to find something useful."
+          ? collection
+            ? "It may be private or no longer exist."
+            : "Discover other collections to find something useful."
           : cursor
             ? "Reload the list to see the latest results."
             : error.status === 429
@@ -58,13 +62,20 @@ export function Feedback({
               : "Check your connection and try again."}
       </p>
       {hidden || cursor ? (
-        <a className="button" href={cursor ? resetPath : "/"}>
-          {cursor
-            ? collection
-              ? "Reload collection"
-              : "Reload collections"
-            : "Explore collections"}
-        </a>
+        <div className="feedback-actions">
+          {hidden && signInHref && (
+            <a className="button primary" href={signInHref}>
+              Sign in
+            </a>
+          )}
+          <a className="button" href={cursor ? resetPath : "/discover"}>
+            {cursor
+              ? collection
+                ? "Reload collection"
+                : "Reload collections"
+              : "Discover collections"}
+          </a>
+        </div>
       ) : (
         <Retry seconds={error.retryAfter} />
       )}
