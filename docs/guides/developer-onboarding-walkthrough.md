@@ -12,7 +12,7 @@ answer in your own words before continuing. Reading the whole file in one go
 is the failure mode this structure exists to prevent. Every file is a
 clickable link.
 
-**Pin:** verified against commit `493e690`. This is enforced, not honor
+**Pin:** verified against commit `892253a`. This is enforced, not honor
 system: `check:guide-pin` (part of `bun run verify`) fails when any file this
 guide links changes after the pinned commit. To clear it, reread the affected
 sessions, fix any drift, and move the pin to the latest commit — in a
@@ -319,8 +319,10 @@ implemented and reviewed. [Service operations](../design-docs/service-operations
 (separate operator authority, account restrictions, public-content holds and
 audit; never private collection access) and the unified web experience
 (one visual system, comments, notifications, saving one or two links with
-resolved titles and tags) are reviewed and committed. Next: an operations
-redesign and the [final internals pass](../exec-plans/active/final-pass-internals.md).
+resolved titles and tags) are reviewed and committed, as is the operations
+redesign (tabbed tables, collection review by link, "Confirm it's you" for
+sensitive actions). Next: one reusable email-verification flow, then the
+[final internals pass](../exec-plans/active/final-pass-internals.md).
 Continue with one complete vertical MLP journey at a time.
 Local PostgreSQL/Redis run in containers; the API,
 worker and Next.js dev server run on the host. Keep application builds
