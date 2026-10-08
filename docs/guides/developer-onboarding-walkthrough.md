@@ -12,7 +12,7 @@ answer in your own words before continuing. Reading the whole file in one go
 is the failure mode this structure exists to prevent. Every file is a
 clickable link.
 
-**Pin:** verified against commit `1915274`. This is enforced, not honor
+**Pin:** verified against commit `81d622e`. This is enforced, not honor
 system: `check:guide-pin` (part of `bun run verify`) fails when any file this
 guide links changes after the pinned commit. To clear it, reread the affected
 sessions, fix any drift, and move the pin to the latest commit — in a
@@ -331,8 +331,9 @@ sensitive actions) and one reusable email-verification flow that resumes
 interrupted actions for their owner. Settled foundations are recorded in
 [engineering decisions](../engineering-decisions/README.md). The docs follow
 the PRODUCT / ARCHITECTURE / DESIGN layout. Next: the
-link-metadata foundation, [bulk import](../exec-plans/active/deliver-bulk-import.md),
-then preview cards with curator's notes (the full order is `PRODUCT.md` §9) and the
+link-metadata foundation, activity and attribution, the Manage workspace,
+[bulk import](../exec-plans/active/deliver-bulk-import.md), your home and
+following, then preview cards (the full order is `PRODUCT.md` §9) and the
 [final internals pass](../exec-plans/active/final-pass-internals.md).
 Continue with one complete vertical MLP journey at a time.
 Local PostgreSQL/Redis run in containers; the API,
