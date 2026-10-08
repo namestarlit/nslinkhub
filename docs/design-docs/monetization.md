@@ -30,6 +30,8 @@ Candidates for what the account adds:
   nslinkhub as their curation layer: tags as labels, collections to organize,
   notes for context. Keys act as the account, through the same authorization
   and per-account rate budgets as every other client, and are revocable.
+  Rate limits are part of the plan: heavier work can buy higher limits sized to
+  it.
 - **A curator profile**: a verified label and a richer hub page.
 
 ## Starting point

@@ -13,7 +13,8 @@ summary of what changed after completed work has been promoted out of `ref/`.
   (educators, researchers, community and learning-program leaders) opt into a
   paid **Curator account** with analytics, members-only collections, bigger
   bulk work, link health and API access — also for people collecting resources
-  from the open web at scale who use it as a curation layer (ADR-0016; details after the everyday build).
+  from the open web at scale who use it as a curation layer, with rate limits
+  sized to their plan (ADR-0016; details after the everyday build).
   Per collection, owners and editors are now **Maintainers**: the discussion
   badge, hidden-comment notes and "Paul John and 2 maintainers" attribution.
   The link annotation is simply the **note**.

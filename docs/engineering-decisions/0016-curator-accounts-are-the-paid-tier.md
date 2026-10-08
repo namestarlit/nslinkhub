@@ -43,7 +43,8 @@ is decided after the everyday product is built:
   access goes through the collection policy like every other grant.
 - Analytics count in aggregate and never track individual readers.
 - API access acts as the account through the same API authorization; keys are
-  scoped and revocable, never a privileged path.
+  scoped and revocable, never a privileged path. Higher rate limits are a plan
+  setting, never an exemption from them.
 
 ## Links
 
