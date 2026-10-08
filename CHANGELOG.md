@@ -15,7 +15,10 @@ summary of what changed after completed work has been promoted out of `ref/`.
   management in the web, discussion follow-ups, Discover search, the rest of
   the internals pass, account work, the extension, direct shares to people
   without an account, ns-series single sign-on, release). Item-level saves are
-  replaced by Add to my collection; monetization is chosen after the build.
+  replaced by Add to my collection (a quick save); following hubs is planned.
+  Preview cards are metadata only (no images or icons, so viewing never
+  contacts linked sites) with just View and Edit; targeted sharing is by
+  invitation, which needs an account. Monetization is chosen after the build.
 - Discussion replies from a collection's owner or editors are all badged
   Curator. Permission roles stay `reader`/`editor`; labels are chosen per
   surface (ADR-0013). Bulk import is designed as Save a link at scale — a

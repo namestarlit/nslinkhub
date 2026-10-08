@@ -186,21 +186,24 @@ header; editing changes the name, description, tags and whether comments are
 on, in place. A share row offers LinkedIn, X, WhatsApp and **Share link**
 (copies the permanent address and says "Link copied to clipboard").
 
-### Preview, annotate and reuse a link *(planned)*
+### Preview and annotate a link *(planned)*
 
 Hovering a link (or focusing it with the keyboard; on phones, a small details
-button) shows a preview card, like a link card in Google Docs or a social post:
-site icon, title, domain, the page's image and a short description, then the
-curator's note. People who can edit get the actions there: copy, edit note and
-tags, remove. Opening the card shows the full item in a dialog with its own
-address (metadata, note, tags, actions), which also works without JavaScript.
+button) shows a preview card, like a link card in Google Docs: title, domain,
+site name and the page's short description, then the curator's note. The card
+is metadata only — no images, icons or thumbnails — so viewing a collection
+never contacts the linked sites; the page itself is one click away.
+
+The card has at most two actions. **View** (everyone who can read the
+collection) opens the item's details in a dialog with its own address, which
+also works without JavaScript. **Edit** (owner and editors) opens the item's
+edit form: tags, the curator's note, and removing the item. No row of separate
+action buttons.
 
 The **curator's note** is a short piece of context the owner or an editor writes
-about a link (why it's here, what to look for); every reader sees it. Page
-images and icons are fetched once by the server and served from nslinkhub, so
-readers' browsers never contact the linked sites just by viewing a collection.
-Signed-in readers can **Add to my collection** from the card: Save a link opens
-with the address filled in, for one of their own collections.
+about a link (why it's here, what to look for); every reader sees it. Signed-in
+readers can **Add to my collection** from the details: Save a link opens with
+the address filled in — a quick save into one of their own collections.
 
 ### Share and collaborate *(API only today)*
 
@@ -433,6 +436,7 @@ and `web-interface-system.md`; the visual system is `DESIGN.md`.
 | Email change (account handover) | Not yet | Built |
 | Browser extension | Planned | Uses existing API |
 | Link metadata, preview cards, curator's notes | Planned | Planned |
+| Following hubs | Planned | Planned |
 | Discover search and tag filters, full-text search | Planned | Planned |
 | Comment notifications, comment moderation in operations | Planned | Planned |
 | Single sign-on (ns-series identity service), account deletion | Planned | Planned |
@@ -440,13 +444,13 @@ and `web-interface-system.md`; the visual system is `DESIGN.md`.
 Next, in order (everything is to be built; what to charge for is chosen after):
 
 1. **Link metadata foundation** — durable background lookups (the worker
-   queue), stored title, description, site name, icon and image thumbnail per
-   link, and a shared fetch cache. Bulk import and preview cards both depend on
+   queue), stored title, description and site name per link (text only; no
+   images or icons are fetched or stored), and a shared fetch cache. Bulk import and preview cards both depend on
    it; it absorbs the first step of the
    [internals pass](docs/exec-plans/active/final-pass-internals.md).
 2. **Bulk import** — [deliver-bulk-import](docs/exec-plans/active/deliver-bulk-import.md).
-3. **Preview cards, item details and curator's notes**, with Add to my
-   collection.
+3. **Preview cards, item details and curator's notes** — View and Edit only,
+   with Add to my collection in the details.
 4. **Managing a collection in the web** — remove and reorder items, sections
    (headings) and references, sharing (Can view / Can edit, link sharing),
    publishing, transfer, saved and shared lists, export.
@@ -454,17 +458,20 @@ Next, in order (everything is to be built; what to charge for is chosen after):
    table) and comment moderation in operations; creator and contributors in
    the collection header once contributor attribution is decided.
 6. **Discover** — search by text and tags, tag filters, then full-text search
-   across collections and items.
+   across collections and items; **following hubs** (alongside saving
+   collections).
 7. **Rest of the internals pass** — fewer queries, one write-lock opt-out per
    controller, the forms route as an action table, Save a link drafts in Redis,
    focus rings.
 8. **Account** — email change in the web, account deletion with export and
    retention rules, optional authenticator-app codes.
 9. **Browser extension** (W4) — capture into a chosen collection.
-10. **Direct shares to people without an account yet** — granting an email
-    address Can view or Can edit before they sign up, activated when they do.
-    (Reading without an account already works through link sharing and
-    publishing.)
+10. **Targeted sharing by invitation** — sharing a collection with a specific
+    email address as Can view or Can edit sends an invitation; the share
+    activates once that person verifies their email and has an account. As in
+    Google Drive, anyone can read through link sharing or publishing without an
+    account, but a targeted share needs an identity to authorize, so it needs
+    an account.
 11. **ns-series single sign-on** — a centralized identity service for all ns
     products (`docs/design-docs/identity-sso.md`); nslinkhub is its first
     consumer.
@@ -475,8 +482,10 @@ Next, in order (everything is to be built; what to charge for is chosen after):
 ## 10. Open decisions
 
 - **Sections in the web.** How people add headings and place links under them.
-- **Preview card details.** Which actions live on the card versus the dialog,
-  note length, and whether readers see the page description or only the note.
+- **Preview card details.** Note length, and whether the card shows the page
+  description when a note exists.
+- **Following hubs.** What following gives you (a list of followed hubs, a
+  notice when they publish) and whether it's visible to the hub.
 - **Contributor attribution** — whether the collection header names its creator
   and editors.
 - **Requesting access** to a collection someone can't open.
