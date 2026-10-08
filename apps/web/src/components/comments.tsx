@@ -82,8 +82,8 @@ function Comment({
   canReply: boolean;
 }) {
   // Readers only need to know the reply comes from someone who maintains the
-  // collection; owner and editors are all curators to them.
-  const role = comment.author?.role ? "Curator" : null;
+  // collection; owner and editors are all maintainers to them.
+  const role = comment.author?.role ? "Maintainer" : null;
   const live = comment.state === "visible";
   return (
     <article
@@ -107,11 +107,11 @@ function Comment({
         <p className="comment-body">{comment.body}</p>
       ) : (
         <p className="comment-body comment-gone">
-          {comment.state === "deleted" ? "This comment was deleted." : "Hidden by a curator."}
+          {comment.state === "deleted" ? "This comment was deleted." : "Hidden by a maintainer."}
         </p>
       )}
       {comment.state === "hidden" && comment.body !== null && (
-        <p className="comment-note">Hidden from readers. Only curators see it.</p>
+        <p className="comment-note">Hidden from readers. Only maintainers see it.</p>
       )}
       <div className="comment-actions">
         {canReply && !comment.parentId && comment.state !== "deleted" && (

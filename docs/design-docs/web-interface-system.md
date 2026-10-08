@@ -496,7 +496,7 @@ collection layouts add no row separators or container borders. Exact values live
   follows the links. Native forms post through `/forms/comment-*` and return to
   the same collection URL (keeping an explicit share token) at the comment's
   anchor with a toast; errors show inside the discussion. Reply, Edit and Delete
-  (with a confirm step) are disclosures; curator replies carry a Curator/Editor
+  (with a confirm step) are disclosures; maintainer replies carry a Maintainer
   label and the accepted answer a green Answer marker. The frame never scrolls
   as a document: anchor jumps are pinned back so header and footer stay put.
 - People appear in one format everywhere (collection metadata, cards, comment

@@ -1,8 +1,36 @@
 # Monetization and valuation notes
 
-Status: **for review** (2026-10-07; paid-access idea added the same day). An early take on what people would pay for and
-what the product could be worth. Nothing here is decided, built or priced, and the
-figures are rough reasoning, not market research. Revisit with real usage data.
+Status: direction settled (ADR-0016, 2026-10-08): everyone's library stays
+free, and professional curators pay for a **Curator account**. What it includes
+and costs is decided after the everyday product is built; the rest of this
+document is notes for that decision, not a plan. Figures are rough reasoning,
+not market research.
+
+## Curator accounts
+
+Who: people for whom links are the work — educators and researchers managing a
+digital library of links; people running a link-heavy learning program; a
+community leader whose members get a guide of the best resources (today, a
+Google Doc sent to every new member); the person who keeps a community group
+supplied with links; and people gathering large sets of resources from the open
+web (scraping, crawling, research datasets) who need a curation layer for them.
+
+Candidates for what the account adds:
+
+- **Analytics and engagement** per collection: views, link clicks, saves and
+  follows, counted in aggregate only.
+- **Members-only collections**: a community gets access through an invitation
+  list or a join link, and later paid access — through the collection policy,
+  never a bypass.
+- **Bigger bulk work**: higher import limits, possibly scheduled imports.
+- **Link health**: alerts when links break.
+- **API access**: personal API keys with scopes, for integrations, automation
+  and pulling one's own data (for example to train on it) when bulk import and
+  export aren't enough. Programmatic collectors add resources at scale and use
+  nslinkhub as their curation layer: tags as labels, collections to organize,
+  notes for context. Keys act as the account, through the same authorization
+  and per-account rate budgets as every other client, and are revocable.
+- **A curator profile**: a verified label and a richer hub page.
 
 ## Starting point
 

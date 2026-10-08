@@ -9,6 +9,14 @@ summary of what changed after completed work has been promoted out of `ref/`.
 
 ## Unreleased
 
+- Product direction: everyone's library stays free, and professional curators
+  (educators, researchers, community and learning-program leaders) opt into a
+  paid **Curator account** with analytics, members-only collections, bigger
+  bulk work, link health and API access — also for people collecting resources
+  from the open web at scale who use it as a curation layer (ADR-0016; details after the everyday build).
+  Per collection, owners and editors are now **Maintainers**: the discussion
+  badge, hidden-comment notes and "Paul John and 2 maintainers" attribution.
+  The link annotation is simply the **note**.
 - Closed open product decisions: sections are added and assigned in a
   collection's edit view; preview cards show the page description (the
   curator's note, up to 280 characters, in full in the details); notifications

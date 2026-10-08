@@ -19,7 +19,7 @@ product
 ### Users and working context
 
 A reader arrives through a link or discovers recently updated collections,
-understands what a collection covers, then opens a useful resource. A curator
+understands what a collection covers, then opens a useful resource. An owner
 returns to their own hub to save links one at a time, in the middle of other
 work, and to share one durable address. A collaborator reads or edits one
 specific collection; they never join a hub. Typical scene: someone opens a
@@ -93,10 +93,21 @@ loses their order and context, and every update means sending them again.
 
 ## 3. Users and working context
 
-- **The curator** (primary; the author is user zero): collects resources on
-  topics they care about, organizes them into collections, and shares or
-  publishes the good ones. Usually saving one link at a time, in the middle of
-  other work, often on a laptop.
+- **Everyday people** (the author is user zero): collect resources on topics
+  they care about, organize them into collections, and share or publish the
+  good ones. Usually saving one link at a time, in the middle of other work,
+  often on a laptop. Everything in this document is for them, and free.
+- **Professional curators** *(planned: Curator accounts)*: people for whom
+  links are the work — educators and researchers managing a digital library of
+  links, people running a link-heavy learning program or a community whose
+  members get a guide of the best resources (today, a Google Doc sent to every
+  new member), the person who keeps the community group supplied with links,
+  and people gathering resources from the open web at scale (scraping,
+  crawling, research datasets) who label them with tags, organize them in
+  collections and add notes, through the API.
+  They need analytics and engagement, members-only collections, bigger bulk
+  work, link health and API access for integrations and their own data; they
+  are who nslinkhub charges (ADR-0016).
 - **The recipient**: is sent a collection's address or shared it directly. Reads
   without an account; with one, finds it again under what's shared with them.
 - **The collaborator**: a specific person the owner grants `editor` on one
@@ -145,7 +156,7 @@ loses their order and context, and every update means sending them again.
 
 **What belongs to an item stays as saved**: a link's address and its resolved
 title, a reference's target, a heading's text. People change only what they add
-to it (tags, order, and a curator's note — planned). A wrong link is removed
+to it (tags, order, and a note — planned). A wrong link is removed
 and added again.
 
 ## 5. Journeys
@@ -191,8 +202,8 @@ on, in place. A share row offers LinkedIn, X, WhatsApp and **Share link**
 *(Planned)* Like commits and contributors on GitHub, every change is recorded
 as "who did what to which item", and attribution comes from those records: the
 collection's metadata names its **creator** (who created it — distinct from the
-owner, who owns the hub) and its **curators**, everyone who has shaped its
-content ("Paul John and 2 curators"); each item's details say who added it
+owner, who owns the hub) and its **maintainers**, everyone who has shaped its
+content ("Paul John and 2 maintainers"); each item's details say who added it
 and when; owners and editors can open the collection's history.
 
 ### Preview and annotate a link *(planned)*
@@ -206,10 +217,10 @@ never contacts the linked sites; the page itself is one click away.
 The card has at most two actions. **View** (everyone who can read the
 collection) opens the item's details in a dialog with its own address, which
 also works without JavaScript. **Edit** (owner and editors) opens the item's
-edit form: tags, the curator's note, and removing the item. No row of separate
+edit form: tags, the note, and removing the item. No row of separate
 action buttons.
 
-The **curator's note** is a short piece of context (up to 280 characters) the
+The **note** is a short piece of context (up to 280 characters) the
 owner or an editor writes about a link — why it's here, what to look for. Every
 reader sees it in full in the item's details; whether part of it also shows on
 the card is decided once the screen is built. Signed-in
@@ -259,9 +270,9 @@ republished.
 
 Every collection can carry a **discussion**: questions or notes with one level
 of replies, readable by anyone who can read the collection. Anyone signed in who
-can read it can comment and reply, so help never waits on the curator;
+can read it can comment and reply, so help never waits on the maintainers;
 signed-out readers are invited to sign in. Replies from the owner or an editor
-are labelled Curator, and either can mark one reply per question as
+are labelled Maintainer, and either can mark one reply per question as
 the answer, shown first. Each question shows up to 100 replies, with **More
 replies** to continue. Authors edit or delete their own comments (a question
 with replies keeps a placeholder); the owner and editors can hide comments,
@@ -459,7 +470,7 @@ contracts: `docs/design-docs/manage-workspace.md` and
   collection.
 - A separate saved-items list: reusing someone's link is "Add to my
   collection" instead.
-- Billing, until the features are built and monetization is chosen
+- Billing, until Curator accounts are built and priced
   (`docs/design-docs/monetization.md`).
 
 ## 9. Current state
@@ -485,9 +496,9 @@ and `web-interface-system.md`; the visual system is `DESIGN.md`.
 | Export, import | Not yet | Built |
 | Email change (account handover) | Not yet | Built |
 | Browser extension | Planned | Uses existing API |
-| Link metadata, preview cards, curator's notes | Planned | Planned |
+| Link metadata, preview cards, notes | Planned | Planned |
 | Following hubs, your home (My collections, Shared with me, Saved, Following) | Planned | Planned |
-| Activity records, creator and curators, hub audit | Planned | Partial (management audit) |
+| Activity records, creator and maintainers, hub audit | Planned | Partial (management audit) |
 | Manage for hub owners (collections, comments, people, blocking, import, activity) | Planned | Planned |
 | Discover search and tag filters, full-text search | Planned | Planned |
 | Notifications for every kind, notification settings | Planned | Planned |
@@ -501,7 +512,7 @@ Next, in order (everything is to be built; what to charge for is chosen after):
    import and preview cards both depend on it; it absorbs the first step of the
    [internals pass](docs/exec-plans/active/final-pass-internals.md).
 2. **Activity and attribution** — every change recorded as an activity entry;
-   creator, curators and "added by" shown; the hub audit
+   creator, maintainers and "added by" shown; the hub audit
    ([attribution-and-activity](docs/design-docs/attribution-and-activity.md)).
 3. **Manage** — the operations console becomes one workspace scoped by role,
    adding the hub-owner sections: collections, comments, people and blocking,
@@ -515,7 +526,7 @@ Next, in order (everything is to be built; what to charge for is chosen after):
 6. **Your home and following** — My collections, Shared with me, Saved,
    Following; the public hub page with Follow
    ([hub-home-and-following](docs/design-docs/hub-home-and-following.md)).
-7. **Preview cards, item details and curator's notes** — View and Edit only,
+7. **Preview cards, item details and notes** — View and Edit only,
    with Add to my collection in the details.
 8. **Managing a collection in the web** — remove and reorder items, sections
    (headings) and references, sharing (Can view / Can edit, link sharing),
@@ -540,24 +551,31 @@ Next, in order (everything is to be built; what to charge for is chosen after):
 15. **Before public release** — live email provider and webhook acceptance,
     browser and worker telemetry, deployment
     (`docs/design-docs/infra-deployment.md`).
+16. **Curator accounts** — the professional account people opt into, like a
+    business account on Instagram: analytics and engagement, members-only
+    collections, bigger bulk work, link health, API access (keys for
+    integrations and data), a curator profile; then
+    pricing (ADR-0016, `docs/design-docs/monetization.md`).
 
 ## 10. Open decisions
 
-- **Monetization** — deferred by choice: decided after everything is built
-  (notes in `docs/design-docs/monetization.md`), including whether bulk import
-  is paid.
+- **Curator account details** — what exactly it includes and costs, decided
+  after everything else is built; the direction (charge professional curators,
+  keep everyone's library free) is settled in ADR-0016. Analytics will need a
+  privacy decision: aggregate counts, never tracking individual readers.
 
 Settled since this list was written: role names stay `reader`/`editor` with
 labels chosen per surface (ADR-0013); imports resolve titles through reviewed
 drafts (ADR-0012, design in `docs/design-docs/bulk-import.md`); link metadata,
-preview cards and curator's notes are the chosen direction (§5); one Manage
+preview cards and notes are the chosen direction (§5); one Manage
 workspace scoped by role (ADR-0014); attribution and the hub audit come from
 activity records (ADR-0015); following works like YouTube subscriptions and
 saved collections like saved Drive documents; following notifies by default
 with a per-hub toggle; blocking only stops taking part, never public reading;
-everyone who shapes a collection is a curator; sections are added and assigned
+everyone who shapes a collection is a maintainer (Curator is the professional
+account, ADR-0016); sections are added and assigned
 in the collection's edit view; preview cards show the page description, with
-the curator's note (up to 280 characters) in full in the details; notifications
+the note (up to 280 characters) in full in the details; notifications
 stay in-app apart from codes, invitations, targeted shares and security; all
 three download formats; account deletion with a 14-day grace period; bulk
 import limits of 1,000 links, 10 MB, 3 open drafts and 30 days; popular tags from

@@ -22,7 +22,7 @@ implementation work in [../exec-plans/active/](../exec-plans/active/).
 - [email-verification.md](email-verification.md): the one verification flow and
   interrupted actions.
 - [attribution-and-activity.md](attribution-and-activity.md): activity
-  entries, creator, curators, "added by" and the hub audit (designed).
+  entries, creator, maintainers, "added by" and the hub audit (designed).
 - [manage-workspace.md](manage-workspace.md): Manage — one workspace scoped by
   role (hub owner, operator, admin), blocking (designed).
 - [notifications.md](notifications.md): one inbox for every kind, scoped by

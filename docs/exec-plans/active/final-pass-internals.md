@@ -38,7 +38,8 @@ None yet.
   squashed `0_init`; the dev database is reset and reseeded (`bun run db:seed`)
   if a change is easier that way. No compatibility code.
 - Settled 2026-10-08 (ADR-0013): roles stay `reader`/`editor`; the discussion
-  badges the owner and editors alike as "Curator".
+  badges the owner and editors alike as "Maintainer" (Curator is the
+  professional account type; ADR-0016).
 
 ## Outcomes & Retrospective
 

@@ -48,3 +48,4 @@ Number records sequentially (`NNNN-short-slug.md`) and list them below.
 - [0013-permission-roles-and-display-labels.md](0013-permission-roles-and-display-labels.md) — Permission roles are stable; display labels are chosen per surface.
 - [0014-one-management-workspace.md](0014-one-management-workspace.md) — One management workspace, scoped by role.
 - [0015-attribution-from-activity-records.md](0015-attribution-from-activity-records.md) — Attribution comes from activity records.
+- [0016-curator-accounts-are-the-paid-tier.md](0016-curator-accounts-are-the-paid-tier.md) — Everyone's library is free; Curator accounts are the paid tier.

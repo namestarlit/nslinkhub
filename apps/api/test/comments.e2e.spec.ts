@@ -60,7 +60,7 @@ describe("collection comments", () => {
     await app.close();
   });
 
-  it("lets signed-in readers discuss a published collection; anyone can reply; curators are labelled and mark answers", async () => {
+  it("lets signed-in readers discuss a published collection; anyone can reply; maintainers are labelled and mark answers", async () => {
     const id = await collection(true);
     await auth(request(server()).post(`/api/v1/collections/${id}/shares`), owner)
       .send({ email: editor.email, role: "editor" })

@@ -9,7 +9,7 @@ by [PRODUCT.md](../../PRODUCT.md).
 ## People, jobs and feeling
 
 A reader arrives through a link or discovers recently updated collections,
-understands what a collection covers, then opens a useful resource. A curator
+understands what a collection covers, then opens a useful resource. An owner
 returns to their own hub to maintain links and share one durable reference.
 A collaborator reads or edits a specific collection; they do not join a hub.
 

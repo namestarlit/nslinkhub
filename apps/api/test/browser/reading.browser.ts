@@ -2874,8 +2874,8 @@ it("shows collection descriptions and hub attribution without repeated separator
 }, 15000);
 
 describe("collection discussion", () => {
-  it("prompts signed-out readers, lets signed-in readers post and reply, shows the curator's answer and honours the switch, with and without JavaScript", async () => {
-    // Earlier journeys end the shared owner's session; this one has its own curator.
+  it("prompts signed-out readers, lets signed-in readers post and reply, shows the maintainer's answer and honours the switch, with and without JavaScript", async () => {
+    // Earlier journeys end the shared owner's session; this one has its own maintainer.
     const curator = (
       await signInWithCode(app.getHttpServer(), {
         email: `curator-${crypto.randomUUID()}@example.com`,
@@ -3017,7 +3017,7 @@ describe("collection discussion", () => {
         await browserExpect(composer).toHaveValue("Draft retained while browsing");
         await composer.fill("");
 
-        // The curator (owner) marks the reader's reply as the answer.
+        // The maintainer (owner) marks the reader's reply as the answer.
         const reply = await prisma.collectionComment.findFirstOrThrow({
           where: { collectionId: id, parentId: { not: null } },
         });
@@ -3140,7 +3140,7 @@ it("preserves a throttled resend journey beyond the normal resend interval", asy
 it("continues replies on an older question page with the share token and answer intact", async () => {
   const signed = await signInWithCode(app.getHttpServer(), {
     email: `reply-pages-${crypto.randomUUID()}@example.com`,
-    name: "Reply curator",
+    name: "Reply maintainer",
   });
   const bearer = signed.headers["set-auth-token"] as string;
   const result = await request(app.getHttpServer())

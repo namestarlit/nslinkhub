@@ -28,8 +28,9 @@ labels: [tenancy-and-access.md](../design-docs/tenancy-and-access.md#roles-and-l
 
 - Contracts and stored data stay stable; wording can improve freely.
 - Precise identifiers keep authorization readable; plain labels keep the
-  interface readable. "Curator" as a permission would be vague (can a curator
-  publish or share? no) and collides with the product's name for the owner.
+  interface readable. A job title as a permission would be vague (can a
+  "curator" publish or share? no); "Curator" names the professional account
+  type instead (ADR-0016).
 - Mirrors ADR-0002: stable identity underneath, human-facing values on top.
 
 ## Constraints to preserve
