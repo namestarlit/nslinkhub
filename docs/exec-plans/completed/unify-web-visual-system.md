@@ -72,7 +72,7 @@ User feedback on the first pass, with decisions:
 - [x] (2026-10-08) Closed. Slice F2 (comment notifications, `/ops` comment
   moderation) and slice G (creator and contributors in the header; the API now
   returns the creator for attribution, contributors still need edit attribution
-  and a privacy decision) moved to the product backlog in `PRODUCT.md` §9.
+  and a privacy decision) moved to the product backlog in `PRODUCT.md` §11.
 - Discovered: the user's dev API watcher exited on an intermediate edit (an
   import added then removed within a minute). It was restarted with the dev
   stack's environment; edits to watched API files must stay valid at each save.

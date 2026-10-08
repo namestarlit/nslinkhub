@@ -23,10 +23,10 @@ Design: [bulk-import.md](../../design-docs/bulk-import.md). Decision:
   link's "Bulk import links" fake door confirmed the demand.
 - [ ] M1 — Draft model and parsing (API).
 - [ ] M2 — Background title lookups and revalidation (worker), on the
-  link-metadata foundation's lookup queue (built first; `PRODUCT.md` §9).
+  link-metadata foundation's lookup queue (built first; `PRODUCT.md` §11).
 - [ ] M3 — Folder destinations and commit (API).
 - [ ] M4 — Web start and preview pages under Manage (`/manage/import-export`), after
-  the Manage workspace exists (`PRODUCT.md` §9).
+  the Manage workspace exists (`PRODUCT.md` §11).
 - [ ] M5 — Remove one-shot import, expiry cleanup, docs and acceptance.
 
 ## Surprises & Discoveries

@@ -9,6 +9,12 @@ summary of what changed after completed work has been promoted out of `ref/`.
 
 ## Unreleased
 
+- `PRODUCT.md` reorganized as a PRD in pigfarm's flow: design context,
+  overview, goals (guides north star; free library, paid Curator accounts),
+  target users with their needs, proposed success measures, the hub and access
+  model with roles, thirteen functional modules (purpose, status, behavior),
+  technical requirements, acceptance, scope, open decisions, delivery and
+  references. Journeys and requirements no longer repeat each other.
 - Curator account direction gains **AI curation**: send everything in one
   bucket and get back a reviewable draft with proposed collections, sections,
   tags and notes, and duplicates, dead links and unsafe sites flagged; nothing

@@ -30,7 +30,7 @@ of this product's definition. Until plans are moved there, records map as follow
 | Workspace convention | nslinkhub today |
 | --- | --- |
 | Product brief (`backlog/<idea>.md`) | `PRODUCT.md`, linked from the workspace row |
-| Plan `README.md` (scope, state, next actions) | `PRODUCT.md` §9 Current state |
+| Plan `README.md` (scope, state, next actions) | `PRODUCT.md` §11 Delivery |
 | `plans/<idea>/tasks/` (implementation records) | ExecPlans in `docs/exec-plans/active/` |
 | Completed task evidence | `docs/exec-plans/completed/` and `CHANGELOG.md` |
 | Repository follow-ups (`<repo>/docs/backlog/`) | `docs/exec-plans/tech-debt-tracker.md` |

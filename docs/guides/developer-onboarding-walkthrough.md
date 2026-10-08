@@ -333,7 +333,7 @@ interrupted actions for their owner. Settled foundations are recorded in
 the PRODUCT / ARCHITECTURE / DESIGN layout. Next: the
 link-metadata foundation, activity and attribution, the Manage workspace,
 [bulk import](../exec-plans/active/deliver-bulk-import.md), your home and
-following, then preview cards (the full order is `PRODUCT.md` §9) and the
+following, then preview cards (the full order is `PRODUCT.md` §11) and the
 [final internals pass](../exec-plans/active/final-pass-internals.md).
 Continue with one complete vertical MLP journey at a time.
 Local PostgreSQL/Redis run in containers; the API,

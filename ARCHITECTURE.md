@@ -126,7 +126,7 @@ Operator tables — OperatorGrant, AdminGrant, ServiceInvitation, CollectionHold
 ## Client Surfaces
 
 **Web** is the full surface (explore, hub page, collections, resources, tags,
-sharing, transfer, saves, account); `PRODUCT.md` §9 lists what it has today. **Extension** is a
+sharing, transfer, saves, account); `PRODUCT.md` §11 lists what it has today. **Extension** is a
 constrained capture companion (authenticate, pick collection, capture the tab
 or selection via popup/context-menu/shortcut) using the existing
 external-resource endpoint; no management surface, no reimplementation of

@@ -4,43 +4,39 @@ NSLinkHub's canonical product definition (the PRD), written to be understood
 without the conversations behind it. Where this document and older material
 conflict, this document wins on what the product is and must do;
 `ARCHITECTURE.md` and `docs/design-docs/` say how it is built, `DESIGN.md` how
-it looks. Settled foundations are recorded in `docs/engineering-decisions/`.
-
-NSLinkHub is an ns-series product: a personal project under the namestarlit
-brand, built to solve its author's own problem and published for others. It has
-no company affiliation, and nothing here is deployed yet (see §9).
+it looks, and `docs/engineering-decisions/` records the settled foundations.
 
 ## Register
 
 product
 
-## Product design context
+## Product Design Context
 
-### Users and working context
+### Users And Working Context
 
 A reader arrives through a link or discovers recently updated collections,
 understands what a collection covers, then opens a useful resource. An owner
 returns to their own hub to save links one at a time, in the middle of other
-work, and to share one durable address. A collaborator reads or edits one
+work, and to share one durable address. A maintainer reads or edits one
 specific collection; they never join a hub. Typical scene: someone opens a
 colleague's collection on a phone beside a bright window, scans several links,
 then continues on a laptop.
 
-### Brand personality
+### Brand Personality
 
 Calm, legible and trustworthy — a dependable personal library. Lowercase
 `nslinkhub`, a personal ns-series product under the namestarlit brand.
 
-### Anti-references
+### Anti-References
 
 - Bookmark dumps: unordered, untitled lists that go stale.
 - Invented engagement: counts, decorative covers, recommendations or social
   proof that the data doesn't support.
 - Document or course builders with rich editors and uploaded media.
 - Cramped, compact forms that save space by dropping labels or crowding fields.
-- Team workspaces, organization switchers and admin consoles in the product.
+- Team workspaces and organization switchers.
 
-### Product design principles
+### Product Design Principles
 
 1. Reading earns the most space; titles and destinations are always clear.
 2. People type only what they must; the product resolves the rest.
@@ -50,7 +46,7 @@ Calm, legible and trustworthy — a dependable personal library. Lowercase
 5. Every journey works without JavaScript; hidden controls never stand in
    for permissions.
 
-### Accessibility and inclusion
+### Accessibility And Inclusion
 
 - WCAG 2.2 AA: keyboard operation, focus visible for keyboard users, reduced
   motion, zoom and reflow, non-color status cues, verified contrast in light
@@ -59,365 +55,520 @@ Calm, legible and trustworthy — a dependable personal library. Lowercase
   System).
 - Labels stay visible; user content wraps rather than overflowing.
 
-## 1. Product overview
+## 1. Product Overview
 
 NSLinkHub turns the links people collect into **collections**: ordered,
 shareable guides with one stable address. A collection can be read by anyone it
-is shared with, published for anyone to discover, discussed, and exported.
+is shared with, published for anyone to discover, followed, discussed, and
+downloaded as a document.
 
 ```txt
-Hub (one per person) → Collections → Items (links, headings, references)
+Hub (one per person) → Collections → Items (links, sections, references)
 ```
 
-The north star is **collections as guides, references embedded once**. Instead
-of re-sending the same ten links in a chat, or losing them in browser
-bookmarks, a person keeps one living collection and shares its address; when
-the collection improves, everyone who has the address sees the improvement.
+The problem it solves: useful links end up scattered across bookmarks, notes
+and chat history. Bookmarks are private, unordered and go stale; sending links
+one by one loses their order and context, and every update means sending them
+again. Instead, a person keeps one living collection and shares its address;
+when the collection improves, everyone who has the address sees the
+improvement.
 
-## 2. Problem and goals
+NSLinkHub serves two audiences:
 
-**The problem.** Useful links end up scattered across bookmarks, notes and chat
-history. Bookmarks are private, unordered and go stale; sending links one by one
-loses their order and context, and every update means sending them again.
+- **Everyone** gets a complete personal library for free: save, organize,
+  share, publish, follow and discuss.
+- **Professional curators** — people for whom links are the work — opt into a
+  paid **Curator account** with the tools that work needs (§6.13).
 
-**Goals.**
+NSLinkHub is an ns-series product: a personal project under the namestarlit
+brand, built to solve its author's own problem and published for others. It has
+no company affiliation, and nothing is deployed yet (§11).
+
+## 2. Product Goals
 
 - Saving a link takes seconds and as few inputs as possible.
-- A set of links becomes an ordered guide, with headings to group it and
-  references to other collections, without becoming a document editor.
+- A set of links becomes an ordered guide, with sections and references to
+  other collections, without becoming a document editor.
 - Sharing is one stable address, with access controlled per collection, the way
   Google Drive shares a file.
 - What is shared stays current: readers always see the latest version.
-- The best collections can be published, discovered, discussed and kept.
-- Collections can leave the product as Markdown, PDF or Word documents.
+- The best collections can be published, discovered, followed, discussed and
+  kept.
+- Collections can leave the product as Word, Markdown or PDF documents.
 
-## 3. Users and working context
+### Guides North Star
 
-- **Everyday people** (the author is user zero): collect resources on topics
-  they care about, organize them into collections, and share or publish the
-  good ones. Usually saving one link at a time, in the middle of other work,
-  often on a laptop. Everything in this document is for them, and free.
-- **Professional curators** *(planned: Curator accounts)*: people for whom
-  links are the work — educators and researchers managing a digital library of
-  links, people running a link-heavy learning program or a community whose
-  members get a guide of the best resources (today, a Google Doc sent to every
-  new member), the person who keeps the community group supplied with links,
-  and people gathering resources from the open web at scale (scraping,
-  crawling, research datasets) who label them with tags, organize them in
-  collections and add notes, through the API.
-  They need analytics and engagement, members-only collections, bigger bulk
-  work, link health and API access for integrations and their own data; they
-  are who nslinkhub charges (ADR-0016).
-- **The recipient**: is sent a collection's address or shared it directly. Reads
-  without an account; with one, finds it again under what's shared with them.
-- **The collaborator**: a specific person the owner grants `editor` on one
-  collection. They edit that collection's content from their own hub; nothing
-  else of the owner's is visible to them.
-- **The discoverer**: browses published collections, reads, joins the
-  discussion and saves the ones worth keeping.
-- **The service operator**: a separately invited person who keeps the service
-  healthy (account restrictions, public-content holds) without any access to
-  private content.
+**Collections as guides, references embedded once.** A collection is more than
+a list: it has order, sections, context (notes, discussion) and references to
+other collections, so it reads like a guide someone maintains. Every feature
+should make a collection more useful to follow, or easier to keep current.
 
-## 4. Core concepts
+### Free Library, Paid Curator Accounts
 
-- **Hub** — each person's one personal space (one hub per user, like a Google
-  Drive), created when they first sign in. It has a public **name**, an optional
-  **description** and a unique, changeable **handle** (`@handle`), all
-  independent of the owner's own name and email. Its permanent identity is an
-  immutable id, so renaming the handle breaks no link; a hub resolves by id or
-  handle. Nobody joins anyone else's hub: there are no memberships or hub roles.
-- **Collection** — an independent container with a title, description, tags,
-  sharing, publication and discussion. Collections never nest; one collection
-  can only *reference* another.
-- **Item** (a *resource* in the API) — an ordered entry in a collection. Its kind
-  is decided by how it was added, never by inspecting a URL:
-  - **Link**: a public web address. Its title is resolved from the page and is
-    never typed.
-  - **Collection reference**: points to another collection by its permanent id,
-    possibly in another person's hub. Whoever adds it must be able to read the
-    target; references can be reused and may form cycles. It grants no access:
-    each reader sees the target only if they could open it anyway; otherwise
-    they see a neutral "unavailable" entry, without its title. Reading,
-    sharing, publishing, transferring or deleting the source never grants
-    access to or changes the target. Pasting a collection's address creates an
-    ordinary link, never a reference: there is no URL auto-detection.
-  - **Heading**: a text label that groups the items below it into a section,
-    without creating a separate collection or permission boundary.
+Everything an everyday person needs stays free, so collections spread through
+readers, followers and shares. NSLinkHub charges professional curators, who get
+professional value: analytics, members-only collections, bulk work at their
+scale, link health, API access and AI curation (ADR-0016). Nothing free today
+moves behind the Curator account.
 
-  Items have no summary field: titles and tags make them clear.
-- **Tags** — optional labels on a collection or an item (`video`, `free`,
-  `must-read`) that make an item clear at a glance. They are normalized when
-  saved (lowercase, de-duplicated, capped) and stored on the item itself as a
-  plain list, set as part of creating or editing it. Deliberately not a global
-  entity: no shared tag table, no "everything tagged X" view, no autocomplete
-  pool, no hierarchies. Finding things across a library is a future full-text
-  search feature covering titles, tags and text together.
+## 3. Target Users
 
-**What belongs to an item stays as saved**: a link's address and its resolved
-title, a reference's target, a heading's text. People change only what they add
-to it (tags, order, and a note — planned). A wrong link is removed
-and added again.
+### Everyday Owner
 
-## 5. Journeys
+Anyone with a hub (the author is user zero). Collects resources on topics they
+care about, usually one link at a time in the middle of other work, often on a
+laptop.
 
-These describe the product. Journeys marked *(API only today)* are built and
-tested in the API but not yet in the web; §9 has the full picture.
+Needs:
 
-### Save a first link (signed out)
+- Save a link quickly into the right collection.
+- Organize collections into guides and keep them current.
+- Share or publish the good ones; manage who has access.
+- Find again what they saved, shared with them, or followed.
 
-The home page's main action is **Save your first link**. The person pastes one
-or two links (tags optional), then verifies their email with an eight-digit
-code; titles are looked up once the links are saved. Sending a code creates
-nothing. Verifying signs them in, creating their account and hub if new, and
-saves the links into a new private collection named with the date ("Saved links,
-Oct 7"), atomically and safe to retry. No profile, title or handle setup is
-needed first. **Sign in** on its own lands on the person's hub (`/hub` → their
-permanent `/h/<hubId>`).
+### Maintainer
 
-### Save a link (signed in)
+Someone the owner granted Can edit on one collection (role `editor`). Works on
+that collection from their own hub, without joining anything.
 
-**Save a link** is always in the header. The form takes one or two links: each
-address turns blue when it is a valid public link and red when it isn't, and
-shows the page's title once found. Tags are optional, added behind **Add tags**
-and shown as pills. The person picks an existing collection (each shows when it
-was last updated) or a new one, whose name is prefilled with a suggestion that
-never repeats (typed names may repeat). Adding to a published collection is
-always an explicit choice. Personal context about a link will be a separate
-note (planned), never a rewritten title. Repeated links, non-addresses and
-domains that don't exist are refused before saving; a real site with no title
-is still saved. More than two links is bulk work: at two rows the form offers
-**Bulk import links** (bulk import, §6).
-The whole form fits a 14-inch laptop screen in at most eight actions.
+Needs:
 
-### Read and organize a collection
+- Add, organize, annotate and remove items in that collection.
+- Moderate its discussion.
+- See nothing else of the owner's hub.
 
-A collection page shows its title, description, tags, owner and when it was
-last updated, then its items in order. Missing titles are resolved whenever the
-collection is opened. People who can edit see **Add a link** and **Edit** in the
-header; editing changes the name, description, tags and whether comments are
-on, in place. A share row offers LinkedIn, X, WhatsApp and **Share link**
-(copies the permanent address and says "Link copied to clipboard").
+### Reader
 
-*(Planned)* Like commits and contributors on GitHub, every change is recorded
-as "who did what to which item", and attribution comes from those records: the
-collection's metadata names its **creator** (who created it — distinct from the
-owner, who owns the hub) and its **maintainers**, everyone who has shaped its
-content ("Paul John and 2 maintainers"); each item's details say who added it
-and when; owners and editors can open the collection's history.
+Opens a collection someone sent, shared or published — with or without an
+account — and discovers more through Discover and hubs they follow.
 
-### Preview and annotate a link *(planned)*
+Needs:
 
-Hovering a link (or focusing it with the keyboard; on phones, a small details
-button) shows a preview card, like a link card in Google Docs: title, domain,
-site name and the page's description — what the resource is about. The card
-is metadata only — no images, icons or thumbnails — so viewing a collection
-never contacts the linked sites; the page itself is one click away.
+- Understand what a collection covers and open the right resource.
+- Ask questions and get answers in the discussion.
+- Follow hubs, save collections, and find them again later.
 
-The card has at most two actions. **View** (everyone who can read the
-collection) opens the item's details in a dialog with its own address, which
-also works without JavaScript. **Edit** (owner and editors) opens the item's
-edit form: tags, the note, and removing the item. No row of separate
-action buttons.
+### Professional Curator
 
-The **note** is a short piece of context (up to 280 characters) the
-owner or an editor writes about a link — why it's here, what to look for. Every
-reader sees it in full in the item's details; whether part of it also shows on
-the card is decided once the screen is built. Signed-in
-readers can **Add to my collection** from the details: Save a link opens with
-the address filled in — a quick save into one of their own collections.
+People for whom links are the work: educators and researchers managing a
+digital library of links; people running a link-heavy learning program or a
+community whose members get a guide of the best resources (today, a Google Doc
+sent to every new member); the person who keeps a community group supplied
+with links; people gathering resources from the open web at scale (scraping,
+crawling, research datasets).
 
-### Share and collaborate *(API only today)*
+Needs (planned, through a Curator account):
 
-Three independent ways to give access to one collection; each applies to that
-collection only:
+- See how their collections are used: views, link clicks, saves, follows.
+- Give members-only access to their best collections.
+- Bring in and keep large libraries healthy: bulk work at scale, dead-link
+  alerts, AI curation.
+- Integrate through the API, with rate limits that fit their work.
 
-- **Link sharing**: anyone with the link can read; the owner can rotate or turn
-  the link off, cutting off link-based access immediately. Signed-in people who
-  open it find the collection under what's shared with them while the link
-  stays on.
-- **Direct sharing** to an account by email as `reader` (the default) or
-  `editor`, independent of the link and individually revocable; it also lands
-  in the recipient's shared list. Editors change content only (items, tags,
-  imports) from their own hub and can never publish, share, delete or see
-  anything else in the owner's hub. This is the only collaboration mechanism.
-- **Publishing**: the collection appears on Discover and the hub's public page.
-  Referenced collections need their own publication or shares.
+### Service Operator And Admin
 
-A collection can also be **transferred** to one of its editors: only that
-collection moves to their hub, its references are untouched, the previous
-owner becomes an editor, and the original creator is kept on record. Handing
-over a whole hub is done by changing the account's email, because a hub
-belongs to exactly one account: the current address confirms by code (it sees
-the new address, and ignoring it changes nothing), the new address verifies by
-code, then every session is signed out and the account continues under the new
-email.
+Separately invited people who keep the service healthy: account restrictions,
+holds on public content, the operator team and the service audit. They never
+see private content.
 
-### Discover, discuss and keep
+## 4. Success Measures
 
-**Discover** lists published collections, newest first, continuing page by page
-(no popularity score, recommendations or sort options yet). Opening one shows
-which hub published it. Signed-in readers can **follow** a hub *(planned)*, like
-subscribing to a YouTube channel (the follow belongs to the hub and stays if
-the hub changes hands): the hub joins their Following list, its new
-published collections appear there, and they're notified when it publishes (each
-followed hub has a notifications toggle, on by default). They can also **save**
-a published collection to keep it *(API only today)*, like saving a document in
-Google Drive; a save goes dormant if the collection is unpublished — it keeps
-its place, labelled "Currently unavailable", cannot be opened or exported but
-can be removed, and no snapshot is kept — and comes back when the collection is
-republished.
+Proposed signals, not targets; there is no usage data yet, and none is
+invented here.
 
-Every collection can carry a **discussion**: questions or notes with one level
-of replies, readable by anyone who can read the collection. Anyone signed in who
-can read it can comment and reply, so help never waits on the maintainers;
-signed-out readers are invited to sign in. Replies from the owner or an editor
-are labelled Maintainer, and either can mark one reply per question as
-the answer, shown first. Each question shows up to 100 replies, with **More
-replies** to continue. Authors edit or delete their own comments (a question
-with replies keeps a placeholder); the owner and editors can hide comments,
-which stay visible to them. The owner can turn comments off, leaving existing
-ones readable; a collection on hold takes no new comments. Comments never grant
-access to anything.
+- A first link is saved in the first visit.
+- People return to collections shared with them (returning readers).
+- Collections get shared, published and followed.
+- Owners keep collections current (items added or changed after the first
+  week).
+- Professional curators would pay for the Curator account (validated with a
+  few hand-picked curators before self-serve).
 
-### Your home *(planned)*
+## 5. Hubs, Ownership And Access
 
-Your own hub page is your home, Google-Drive style: **My collections** (every
-collection in your hub), **Shared with me**, **Saved** and **Following**. A
-"View your public hub" link shows what visitors see: the hub's name, handle,
-description, Follow, the share row and its published collections.
+### Hub Model
 
-### Verify email, wherever it's needed
+Every person owns exactly one **hub**, their personal space (like a Google
+Drive), created at first sign-in. It has a public **name**, an optional
+**description** and a unique, changeable **handle** (`@handle`), all
+independent of the owner's own name and email. Its permanent identity is an
+immutable id, so renaming the handle breaks no link; a hub resolves by id or
+handle. Nobody joins anyone else's hub: there are no memberships or hub roles.
 
-Every situation that sends a code uses the same two screens, worded for the
-purpose: signing in; saving a first link; signing in to do something ("Sign in
-to join the discussion."); a session that ended mid-action ("Your session ended
-before we could post your comment."); confirming a sensitive action ("Confirm
-it's you"); accepting an invitation. A known address is shown, never asked for
-again, and nothing is emailed until the person chooses **Send code**. Codes
-pasted with spaces or dashes work. An action interrupted by sign-in or
-confirmation continues by itself afterwards, and only for the person it
-belongs to.
+### Collections And Items
 
-### Download and export *(API only today)*
+A **collection** is an independent container with a title, description, tags,
+sharing, publication and discussion. Collections never nest; one collection
+can only *reference* another. Its **items** are ordered; an item's kind is
+decided by how it was added, never by inspecting a URL:
 
-Like File › Download in Google Docs, a signed-in reader can **Download** a
-collection as a document: Word, Markdown or PDF. To export several collections
-at once (one document each, in a zip), hub owners use **Import & export** in
-Manage. The collection title and description lead, headings become sections, and
-references stay links unless the reader asks to include readable referenced
-collections one level deep — an expanded guide. Nothing is fetched from linked
-pages and nothing is stored. Unavailable references get a generic notice that
-reveals no title or content. Signed-out readers can only browse.
+- **Link**: a public web address. Its title comes from the page and is never
+  typed.
+- **Section** (a heading): a text label that groups the items below it,
+  without creating a separate collection or permission boundary.
+- **Collection reference**: points to another collection by its permanent id,
+  possibly in another person's hub. Whoever adds it must be able to read the
+  target; references can be reused and may form cycles. It grants no access:
+  readers who couldn't open the target anyway see a neutral "unavailable"
+  entry, without its title. Pasting a collection's address creates an
+  ordinary link, never a reference.
 
-### Manage your hub and the service
+**Tags** are optional labels on a collection or item (`video`, `free`,
+`must-read`), normalized when saved (lowercase, de-duplicated, capped) and
+stored on the item as a plain list — no shared tag table, no autocomplete
+pool, no hierarchies.
 
-**Manage**, in the account menu, is one workspace whose sections follow your
-roles *(planned; today it is the service-operations console)*:
+**What belongs to an item stays as saved**: a link's address and its title, a
+reference's target, a section's text. People change only what they add to it
+(tags, order, section, note). A wrong link is removed and added again.
 
-- **Every hub owner** manages their own hub: all collections as a table,
-  comments across the hub (hide, show, mark answers), **Access** (requests
-  to view or edit, every share, link-shared collections — like Google Drive's
-  "Manage access"), **People** (followers and blocked accounts), **Import &
-  export** (bulk import, exporting several collections), and the hub's
-  activity — its audit trail. Signed-in people who can't open a collection can
-  **Request access**; the request always reads "sent", so it never reveals
-  whether a private collection exists. Owners block someone where that person
-  appears (a comment, a follower, a request, a share) and unblock in People.
-  Blocking stops taking part, never public reading: what is published is
-  public to everyone.
-- **Service operators** find an account by email or handle and restrict it
-  (suspend, reactivate, sign out everywhere); look up a public collection by
-  its link and hold or release it, or moderate its comments; and review the
-  service audit. **Admins** also manage the operator team (invite, resend,
-  revoke).
+### Roles
 
-Sensitive service actions ask the operator to confirm it's them with a fresh
-code. Operators never see private content, impersonate anyone, edit
-credentials or delete accounts; owners manage only their own hub. Full
-contracts: `docs/design-docs/manage-workspace.md` and
-`docs/design-docs/service-operations.md`.
+Roles come in two separate scopes (ADR-0013):
 
-## 6. Product requirements
+| Role | Scope | Can |
+| --- | --- | --- |
+| Owner | Every collection in their hub (moves with a transfer) | Everything, including managing the hub |
+| Editor — "Can edit" | One collection | Change its content; never publish, share or delete |
+| Reader — "Can view" | One collection | Read |
+| Operator, Admin | The service, site-wide | Run the service; never read private content |
 
-### Capture and organize
+Per collection, the owner and editors are its **maintainers** (the discussion
+badge, attribution). The collection's **creator** is a record of who created
+it, kept through transfers, never a role. "Curator" names the professional
+account type, not a role.
 
-- Save a link takes 1–2 public links per save, each with optional tags, into one
-  chosen collection.
-- Saved links must open for everyone they are shared with: localhost, loopback
+### Backend Authority
+
+The API decides every rule, permission and derived state; the web and the
+browser extension are replaceable surfaces, and hidden controls are never a
+permission. Access to a collection resolves per collection, strongest first:
+owner → direct share → active share link → published. Anything else is "not
+found", so private collections can't be probed.
+
+## 6. Core Functional Modules
+
+Status per module: **Built** (web and API), **API only** (built and tested in
+the API, no web screens yet), or **Planned**.
+
+### 6.1 Saving Links
+
+Purpose: get a link into the right collection in seconds. Status: Built.
+
+- **First link (signed out):** the home page's main action is **Save your
+  first link**. The person pastes one or two links (tags optional), then
+  verifies their email with an eight-digit code. Sending a code creates
+  nothing; verifying signs them in, creates their account and hub if new, and
+  saves the links into a new private collection named with the date ("Saved
+  links, Oct 7"), atomically and safe to retry. No profile, title or handle
+  setup comes first.
+- **Save a link (signed in):** always in the header. One or two links per save;
+  each address turns blue when it is a valid public link and red when it isn't,
+  and shows the page's title once found. Tags are optional, behind **Add
+  tags**, shown as pills. The destination is an existing collection (each shows
+  when it was last updated) or a new one, prefilled with a name that never
+  repeats; adding to a published collection is always an explicit choice.
+  Repeats, non-addresses and domains that don't exist are refused before
+  saving; a real site with no title is still saved. The form fits a 14-inch
+  laptop screen in at most eight actions; more than two links is bulk work
+  (**Bulk import links**, §6.2).
+- Saved links must open for everyone they're shared with: localhost, loopback
   and IP addresses, local/internal names and names reserved for examples and
   testing (`example.com`, `.test`, `.invalid`, …) are refused.
-- Every link's title comes from its page (`og:title`/`<title>`, or YouTube's
-  oEmbed), looked up by the server with a short deadline. If no title is found,
-  the address stands in for it. Nothing else from the page is stored.
 - Addresses are canonical (lowercase scheme and host, normalized path, sorted
   query, tracking parameters such as `utm_*`, `fbclid`, `gclid` removed), so the
-  same link saved twice is one item per collection.
-- Items are ordered; reordering and edits use version checks, so a stale edit
-  is rejected rather than silently overwriting someone else's.
-- Bulk import is Save a link at scale (being built; today the API imports in
-  one shot): a browser bookmarks file, one documented CSV layout (`url`,
-  optional `tags`, optional `folder`) or a pasted list becomes a draft to review
-  before anything lands. Titles resolve from the pages like any save (source
-  titles are ignored); each row shows Ready, Failed with a reason, Duplicate or
-  Already saved; failed rows are fixed in place, revalidated or dropped.
-  Folders become sections of one collection or split into separate
-  collections, chosen per folder. Ready rows import while the rest wait in the
-  draft. No source-specific parsers beyond bookmarks HTML.
-- The browser extension (planned) captures the current tab into a chosen
+  same link is one item per collection.
+- **Add to my collection** *(planned)*: from a link's details, Save a link opens
+  with the address filled in — a quick save into one of your collections.
+- The browser extension *(planned)* saves the current tab into a chosen
   collection.
 
-### Access and privacy
+### 6.2 Bulk Import
 
-- Access to a collection is decided per collection, strongest first: hub owner →
-  direct share (reader/editor) → active share link → published. Anything else
-  is "not found", so private collections can't be probed.
-- Managing a collection (publish, share, delete, rename, settings) is
-  owner-only.
-- References, discussion and exports each authorize their own targets; none of
-  them widens access.
-- Email addresses are never shown publicly. The owner's name appears on their
-  public hub only if they choose to show it.
+Purpose: bring an existing library in, reviewed before it lands — Save a link
+at scale. Status: Planned (today the API imports in one shot);
+design: `docs/design-docs/bulk-import.md`, ADR-0012.
 
-### Account
+- Sources: a browser bookmarks file, one documented CSV layout (`url`,
+  optional `tags`, optional `folder`), or a pasted list.
+- Everything becomes a **draft** first. Titles resolve from the pages like any
+  save (source titles are ignored); each row shows Ready, Failed with a reason,
+  Duplicate or Already saved, with a summary and filters.
+- Failed rows are fixed in place (re-checked), revalidated or dropped.
+- Folders become sections of one collection, or split into separate
+  collections chosen per folder (new, existing, section of the parent, or
+  skip).
+- **Import N ready links** commits the ready rows; the rest wait in the draft
+  until fixed or dropped.
+- Limits: 1,000 links and 10 MB per draft, 3 open drafts, 30-day expiry.
+- Lives in Manage › Import & export (§6.9).
 
-- Sign-in is passwordless: email, then an eight-digit emailed code. Sign-in
-  emails carry codes only, never sign-in links. There are no passwords and no
-  usernames. Browsers use cookie sessions; API clients and the extension use
-  bearer tokens. Single sign-on through the ns series' own centralized identity
-  service (one account across ns products) is planned; authenticator-app codes
-  and recovery codes are a later follow-up.
-- Settings: full name, email and member-since; hub name, handle, description
-  and permanent id; whether to show the name on the hub. Changes save as they
-  are made. Appearance (system, light, dark) is a header control.
-- Notifications currently cover invitations to service roles. Planned: one
-  inbox for every kind that concerns you, scoped by role, with settings to turn
-  kinds (and individual followed hubs) off; invitations and security notices
-  stay on. Notifications are in-app; email is kept for codes, invitations,
+### 6.3 Collections And Guides
+
+Purpose: read and keep a collection current as a guide. Status: reading and
+details Built; organizing items API only.
+
+- A collection page shows its title, description, tags, owner and last update,
+  then its items in order. Missing titles are resolved when it is opened.
+- Maintainers see **Add a link** and **Edit** in the header. Editing changes the
+  name, description, tags and whether comments are on, in place.
+- A share row offers LinkedIn, X, WhatsApp and **Share link** ("Link copied to
+  clipboard").
+- **Sections** *(planned in the web)*: **Add section** in the edit view; a
+  link's edit form moves it into a section; items reorder by drag, with Move up
+  and Move down for keyboard users. Save a link can target "Collection ›
+  Section".
+- Reorders and edits use version checks; a stale edit is rejected, never
+  silently overwritten.
+- **Attribution** *(planned; ADR-0015)*: like commits and contributors on
+  GitHub, every change is recorded as "who did what to which item". The
+  collection shows its **creator** and its **maintainers** ("Paul John and 2
+  maintainers"); each item says who added it and when; maintainers can open
+  the collection's history.
+
+### 6.4 Link Previews And Notes
+
+Purpose: tell similar links apart and give them context, without leaving the
+collection. Status: Planned.
+
+- **Link metadata:** each link stores its title, description and site name,
+  looked up in the background. Text only: no images or icons are fetched or
+  stored, so viewing a collection never contacts the linked sites.
+- **Preview card:** hovering a link (or focusing it; on phones, a details
+  button) shows the title, domain, site name and the page's description — what
+  the resource is about, like a link card in Google Docs.
+- The card has at most two actions: **View** (anyone who can read) opens the
+  item's details, which have their own address and work without JavaScript;
+  **Edit** (maintainers) opens the item's edit form — tags, note, section,
+  remove.
+- **Note:** up to 280 characters of context a maintainer writes about a link —
+  why it's here, what to look for. Readers see it in full in the details;
+  whether part of it shows on the card is decided once the screen is built.
+
+### 6.5 Sharing And Access
+
+Purpose: give exactly the right people access to one collection. Status: API
+only; access requests and targeted invitations Planned.
+
+- **Link sharing:** anyone with the link can read; the owner can rotate or turn
+  it off, cutting off link-based access immediately. Signed-in people who open
+  it find the collection under Shared with me while the link stays on.
+- **Direct sharing:** to an account by email as Can view (default) or Can edit,
+  independent of the link and individually revocable. This is the only
+  collaboration mechanism.
+- **Targeted sharing by invitation** *(planned)*: sharing with an email address
+  that has no account sends an invitation; the share activates once the person
+  verifies their email and has an account. Reading without an account works
+  through link sharing and publishing, as in Google Drive; a targeted share
+  needs an identity to authorize.
+- **Publishing:** the collection appears on Discover and its hub's public page.
+  Publication, like every grant, applies only to that collection; referenced
+  collections need their own.
+- **Request access** *(planned)*: signed-in people who can't open a collection
+  can ask for Can view or Can edit; the owner answers in Manage › Access. The
+  request always reads "sent", so it never reveals whether a private
+  collection exists.
+- **Transfer:** a collection moves to one of its editors' hubs; references are
+  untouched, the previous owner becomes an editor, the creator stays on
+  record. Handing over a whole hub is changing the account's email (§6.11),
+  since a hub belongs to exactly one account.
+
+### 6.6 Discover, Following And Your Home
+
+Purpose: find good collections and come back to them. Status: Discover Built;
+saves API only; following and your home Planned
+(`docs/design-docs/hub-home-and-following.md`).
+
+- **Discover** lists published collections, newest first, page by page. Search
+  by text and tags, tag filters (popular tags from published collections over
+  the last 90 days) and full-text search are planned; no date-range filter.
+- **Public hub page:** the hub's name, handle, description, **Follow**, the
+  share row and its published collections.
+- **Follow** a hub like subscribing to a YouTube channel: it joins your
+  Following list, its new published collections appear there, and you're
+  notified when it publishes (a per-hub notifications toggle, on by default).
+  A follow belongs to the hub and stays if the hub changes hands.
+- **Save** a published collection like saving a document in Google Drive. If
+  it is unpublished, the save goes dormant — it keeps its place labelled
+  "Currently unavailable", can't be opened or downloaded, can be removed, and
+  no snapshot is kept — and comes back when it is republished.
+- **Your home:** your own hub page, Google-Drive style — **My collections**,
+  **Shared with me**, **Saved**, **Following** — with "View your public hub".
+
+### 6.7 Discussion
+
+Purpose: questions and answers next to the resources. Status: Built.
+
+- Every collection can carry a discussion: questions or notes with one level of
+  replies, readable by anyone who can read the collection.
+- Anyone signed in who can read it can comment and reply, so help never waits
+  on the maintainers; signed-out readers are invited to sign in.
+- Maintainers' replies are badged **Maintainer**; they can mark one reply per
+  question as the answer (shown first) and hide comments (still visible to
+  them). Each question shows up to 100 replies, with **More replies**.
+- Authors edit or delete their own comments; a question with replies keeps a
+  placeholder.
+- The owner can turn comments off, leaving existing ones readable; a collection
+  on hold takes no new comments. Comments never grant access to anything.
+
+### 6.8 Notifications
+
+Purpose: one inbox for everything that concerns you. Status: invitation
+notifications Built; the rest Planned (`docs/design-docs/notifications.md`).
+
+- Kinds, scoped by role: following (a followed hub published), comments, saves
+  and follows of your hub, sharing, invitations, imports, and service notices
+  for operators.
+- **Settings** on the Notifications page: a switch per kind and per followed
+  hub; invitations and security notices are always on.
+- Notifications are in-app. Email is kept for sign-in codes, invitations,
   targeted shares and security notices.
-- Account deletion (planned) is self-service with an email code, offers a
-  download of everything first, and has a 14-day grace period; then the hub,
-  its collections and the handle go, comments read "[deleted]" and activity
-  keeps only an anonymous actor.
 
-### Service operations
+### 6.9 Manage
+
+Purpose: one workspace to manage what you're responsible for, scoped by role
+(ADR-0014). Status: the service sections are Built (today's operations
+console); the hub-owner sections are Planned
+(`docs/design-docs/manage-workspace.md`).
+
+- **Every hub owner:** **Collections** (all collections as a table),
+  **Comments** across the hub (hide, show, mark answers), **Access** (access
+  requests, every share, link-shared collections; each collection's Manage
+  access opens it filtered), **People** (followers and blocked accounts),
+  **Import & export**, and **Activity** — the hub's audit trail.
+- **Blocking** happens where a person appears — a comment, a follower, an
+  access request, a share — and is undone in People. A blocked account can't
+  comment, follow, be shared into or open link-shared collections; published
+  collections stay public to everyone.
+- **Operators:** Accounts (find by email or handle; suspend, reactivate, sign
+  out everywhere), Public collections (find by link; hold, release, moderate
+  comments) and the Service audit. **Admins** also manage the Team (invite,
+  resend, revoke). See §6.12.
+
+### 6.10 Download And Export
+
+Purpose: take a collection out of the product as a document. Status: API only.
+
+- Like File › Download in Google Docs, a signed-in reader can **Download** a
+  collection as Word, Markdown or PDF; several collections at once (one
+  document each, zipped) are exported from Manage › Import & export.
+- The title and description lead, sections become headings, and references stay
+  links unless the reader asks to include readable referenced collections one
+  level deep — an expanded guide.
+- Nothing is fetched from linked pages and nothing is stored. Unavailable
+  references get a generic notice that reveals no title or content.
+
+### 6.11 Account And Sign-In
+
+Purpose: one account, passwordless, that never loses what you were doing.
+Status: sign-in, verification and settings Built; email change API only;
+deletion Planned.
+
+- **Sign-in:** email, then an eight-digit emailed code. Emails carry codes
+  only, never sign-in links; no passwords, no usernames.
+- **Verification:** every situation that sends a code uses the same two
+  screens, worded for the purpose (sign in, first link, signing in to do
+  something, a session that ended mid-action, confirming a sensitive action,
+  accepting an invitation). A known address is shown, never asked for again;
+  nothing is emailed until the person chooses **Send code**; codes pasted with
+  spaces or dashes work. An interrupted action continues afterwards, only for
+  the person it belongs to.
+- **Settings:** full name, email and member-since; hub name, handle,
+  description and permanent id; whether to show the name on the hub. Changes
+  save as they are made. Appearance (System, Light, Dark) is a header control.
+- **Email change** (account handover): the current address confirms by code
+  (ignoring it changes nothing), the new address verifies by code, then every
+  session is signed out.
+- **Account deletion** *(planned)*: self-service with an email code, a download
+  of everything first, and a 14-day grace period; then the hub, collections and
+  handle go, comments read "[deleted]", and activity keeps only an anonymous
+  actor.
+- **Single sign-on** *(planned)*: one account across ns products through the ns
+  series' own centralized identity service. Authenticator-app codes are a later
+  option.
+
+### 6.12 Service Operations
+
+Purpose: keep the service healthy without access to private content. Status:
+Built.
 
 - Operator and admin roles are granted only by invitation. The first admin is
-  invited by email at startup; only admins invite or remove operators. A new
-  recipient enters their name and accepts before any account is created, and
-  every recipient — including someone already signed in — verifies a fresh
-  email code before the role activates. No first-user, email-domain or
-  single-sign-on shortcut grants a role, and changing the account's email
-  removes both service roles.
+  invited at startup; only admins invite or remove operators. A new recipient
+  enters their name and accepts before any account is created, and every
+  recipient — even one already signed in — verifies a fresh email code before
+  the role activates. No first-user, email-domain or single-sign-on shortcut
+  grants a role; changing the account's email removes both roles.
 - Suspension blocks the account's sign-in and others' access to its content;
-  reactivation allows a fresh sign-in and restores existing sharing, except
-  where a collection is held. A hold keeps a public collection available to its
-  active owner for correction but hidden from everyone else; only operators
-  release holds.
-- Every operator action carries a reason and is audited together with its
-  effect.
+  reactivation allows a fresh sign-in and restores sharing except where a
+  collection is held. A hold keeps a public collection available to its owner
+  for correction but hidden from everyone else; only operators release it.
+- Every action carries a reason and is audited with its effect; sensitive
+  actions ask the operator to confirm it's them with a fresh code. Operators
+  never see private content, impersonate anyone, edit credentials or delete
+  accounts. Contract: `docs/design-docs/service-operations.md`.
 
-## 7. Acceptance criteria
+### 6.13 Curator Accounts
+
+Purpose: the professional account people opt into when links are their work,
+like a business account on Instagram — and what NSLinkHub charges for
+(ADR-0016). Status: Planned, after everything above; notes in
+`docs/design-docs/monetization.md`.
+
+Candidates:
+
+- **Analytics and engagement** per collection — views, link clicks, saves,
+  follows — counted in aggregate, never tracking individual readers.
+- **Members-only collections** for a community, through an invitation list or a
+  join link, later paid access — always through the collection access rules.
+- **Bulk work at scale:** higher import limits, possibly scheduled imports.
+- **Link health:** alerts when links break.
+- **API access:** scoped, revocable keys for integrations, automation and
+  pulling one's own data; programmatic collectors use NSLinkHub as a curation
+  layer (tags as labels, collections, notes). Rate limits sized to the plan.
+- **AI curation:** send everything in one bucket and get back a reviewable
+  draft with proposed collections, sections, tags and notes, and duplicates,
+  dead links and unsafe sites flagged. AI proposes, people decide; titles
+  still come from the pages.
+- **A curator profile:** a verified label and a richer hub page.
+
+## 7. Technical Product Requirements
+
+### Web Application
+
+The complete product surface: every module above. Native form posts work
+without JavaScript, which only enhances. The interface follows `DESIGN.md`
+and `docs/design-docs/web-interface-system.md`.
+
+### Browser Extension
+
+A planned, narrow capture companion: sign in, pick a collection, save the
+current tab or selection (popup, context menu, keyboard shortcut) through the
+same API as Save a link. No management screens.
+
+### API Clients
+
+Browsers use cookie sessions; API clients and the extension use bearer tokens.
+Every client goes through the same authorization; Curator API keys (planned)
+are scoped, revocable and rate-limited per plan.
+
+### Privacy
+
+- Email addresses are never public; an owner's name shows on their hub only if
+  they choose to show it.
+- Saved links must be public addresses; link previews are text only and never
+  make readers' browsers contact linked sites.
+- Activity records hold ids, never names, emails or authored text.
+- Analytics (planned) count in aggregate, never per reader.
+
+### Auditability And Retention
+
+- Every change to a hub's content and settings is recorded as an activity
+  entry (planned beyond today's management audit); every operator action is
+  audited with its reason.
+- Import drafts expire after 30 days; account deletion has a 14-day grace
+  period; exports are never stored.
+
+## 8. Acceptance Criteria
 
 - An unpublished collection is invisible to strangers: not on Discover, not on
   the hub page, "not found" to direct requests.
@@ -435,13 +586,13 @@ contracts: `docs/design-docs/manage-workspace.md` and
 - Tags are normalized (lowercase, de-duplicated) lists stored on collections
   and items, with no shared tag table. A link keeps one canonical address, at
   most once per collection.
-- Guides use ordered heading items.
+- Guides use ordered section items.
 - Stale reorders and edits are rejected (409) instead of overwriting concurrent
   changes.
 - Malformed import rows produce per-row errors, never silent partial
   corruption.
 - A link's title is never an input when saving or editing; its address, title,
-  target or heading text never changes after saving.
+  target or section text never changes after saving.
 - References never inherit direct shares, link access or publication. An editor
   can reference any collection they can read, then tag, reorder or remove the
   reference without access to its target. Deleting the target leaves a neutral
@@ -458,129 +609,92 @@ contracts: `docs/design-docs/manage-workspace.md` and
   invitation-bound email code is verified. Sensitive actions need a recent
   email code.
 
-## 8. Outside initial scope
+## 9. Out Of Scope
 
 - Mobile apps.
 - Authored rich content, a document or course builder, and uploaded or hosted
-  media. A collection is a description plus headings and links; media is linked
-  (an unlisted video, a recording), never uploaded. A course builder would need
-  an editor, storage and teams, which the individual-scoped ns series
-  deliberately excludes.
+  media. A collection is a description plus sections and links; media is
+  linked (an unlisted video, a recording), never uploaded. A course builder
+  would need an editor, storage and teams, which the individual-scoped ns
+  series deliberately excludes.
 - Organizations, teams and shared workspaces. Collaboration stays per
   collection.
-- A separate saved-items list: reusing someone's link is "Add to my
-  collection" instead.
-- Billing, until Curator accounts are built and priced
-  (`docs/design-docs/monetization.md`).
+- A separate saved-items list: reusing someone's link is Add to my collection.
+- Billing, until Curator accounts are built and priced.
 
-## 9. Current state
+## 10. Open Product Decisions
 
-Nothing is deployed; everything below runs and is verified locally. The API
-(NestJS, `/api/v1`) is the product authority; the web is the full surface; the
-browser extension will be a narrow capture companion. The web's journeys,
-interface and tokens are specified in `docs/design-docs/web-product-experience.md`,
-and `web-interface-system.md`; the visual system is `DESIGN.md`.
+- **Curator account details:** what it includes and costs, decided after the
+  everyday product is built. The direction is settled (ADR-0016).
 
-| Capability | Web | API |
+Decisions already made live in their module above, in the design docs, and in
+`docs/engineering-decisions/`.
+
+## 11. Delivery
+
+Nothing is deployed; everything built runs and is verified locally. The API
+(NestJS, `/api/v1`) is the product authority.
+
+| Module | Web | API |
 | --- | --- | --- |
-| Discover, hub pages, collection reading (links, headings, references) | Built | Built |
-| First link and Save a link (1–2 links, tags, live validation, titles) | Built | Built |
-| Collection details (name, description, tags, comments on/off) | Built | Built |
-| Discussion (comment, reply, answer, hide) | Built | Built |
-| Email verification (all purposes, resume, confirm) | Built | Built |
-| Settings, appearance, invitation notifications | Built | Built |
-| Service operations (accounts, collections, team, audit) | Built | Built |
-| Removing and reordering items, adding headings and references | Not yet | Built |
-| Sharing (link, direct), publishing, transfer | Not yet | Built |
-| Saves (saved collections), shared-with-me lists | Not yet | Built |
-| Export, import | Not yet | Built |
-| Email change (account handover) | Not yet | Built |
-| Browser extension | Planned | Uses existing API |
-| Link metadata, preview cards, notes | Planned | Planned |
-| Following hubs, your home (My collections, Shared with me, Saved, Following) | Planned | Planned |
-| Activity records, creator and maintainers, hub audit | Planned | Partial (management audit) |
-| Manage for hub owners (collections, comments, people, blocking, import, activity) | Planned | Planned |
-| Discover search and tag filters, full-text search | Planned | Planned |
-| Notifications for every kind, notification settings | Planned | Planned |
-| Single sign-on (ns-series identity service), account deletion | Planned | Planned |
+| 6.1 Saving links | Built | Built |
+| 6.2 Bulk import (reviewed drafts) | Planned | One-shot import built; drafts planned |
+| 6.3 Collections: reading, details | Built | Built |
+| 6.3 Organizing items, sections, references | Not yet | Built |
+| 6.3 Attribution and history | Planned | Management audit only |
+| 6.4 Link metadata, previews, notes | Planned | Planned |
+| 6.5 Sharing, publishing, transfer | Not yet | Built |
+| 6.5 Access requests, targeted invitations | Planned | Planned |
+| 6.6 Discover | Built | Built |
+| 6.6 Saves, shared with me | Not yet | Built |
+| 6.6 Following, your home, search | Planned | Planned |
+| 6.7 Discussion | Built | Built |
+| 6.8 Notifications | Invitations only | Invitations only |
+| 6.9 Manage: service sections | Built | Built |
+| 6.9 Manage: hub-owner sections, blocking | Planned | Planned |
+| 6.10 Download and export | Not yet | Built |
+| 6.11 Sign-in, verification, settings | Built | Built |
+| 6.11 Email change | Not yet | Built |
+| 6.11 Account deletion, single sign-on | Planned | Planned |
+| 6.12 Service operations | Built | Built |
+| 6.13 Curator accounts | Planned | Planned |
+| Browser extension | Planned | Uses the existing API |
 
-Next, in order (everything is to be built; what to charge for is chosen after):
+Delivery order (everything is built; what to charge for is chosen after):
 
-1. **Link metadata foundation** — durable background lookups (the worker
-   queue), stored title, description and site name per link (text only; no
-   images or icons are fetched or stored), and a shared fetch cache. Bulk
-   import and preview cards both depend on it; it absorbs the first step of the
-   [internals pass](docs/exec-plans/active/final-pass-internals.md).
-2. **Activity and attribution** — every change recorded as an activity entry;
-   creator, maintainers and "added by" shown; the hub audit
-   ([attribution-and-activity](docs/design-docs/attribution-and-activity.md)).
-3. **Manage** — the operations console becomes one workspace scoped by role,
-   adding the hub-owner sections: collections, comments, people and blocking,
-   activity ([manage-workspace](docs/design-docs/manage-workspace.md)).
-4. **Bulk import**, inside Manage —
+1. **Link metadata foundation** — background lookups (the worker queue), stored
+   title, description and site name per link, a shared fetch cache; the first
+   step of the [internals pass](docs/exec-plans/active/final-pass-internals.md).
+   Bulk import and previews depend on it.
+2. **Activity and attribution** (§6.3) —
+   [attribution-and-activity](docs/design-docs/attribution-and-activity.md).
+3. **Manage** for hub owners (§6.9) —
+   [manage-workspace](docs/design-docs/manage-workspace.md).
+4. **Bulk import** (§6.2) —
    [deliver-bulk-import](docs/exec-plans/active/deliver-bulk-import.md).
-5. **Notifications** — one inbox for every kind (following, comments, saves
-   and follows, sharing, invitations, imports, service), scoped by role, with
-   per-kind and per-hub settings on the Notifications page
-   ([notifications](docs/design-docs/notifications.md)).
-6. **Your home and following** — My collections, Shared with me, Saved,
-   Following; the public hub page with Follow
-   ([hub-home-and-following](docs/design-docs/hub-home-and-following.md)).
-7. **Preview cards, item details and notes** — View and Edit only,
-   with Add to my collection in the details.
-8. **Managing a collection in the web** — remove and reorder items, sections
-   (headings) and references, sharing (Can view / Can edit, link sharing),
-   publishing, transfer, export.
-9. **Discover** — search by text and tags, tag filters, then full-text search
-   across collections and items.
+5. **Notifications** (§6.8) —
+   [notifications](docs/design-docs/notifications.md).
+6. **Your home and following** (§6.6) —
+   [hub-home-and-following](docs/design-docs/hub-home-and-following.md).
+7. **Link previews and notes** (§6.4), with Add to my collection.
+8. **Organizing and sharing in the web** (§6.3, §6.5, §6.10) — items,
+   sections, references, sharing, publishing, transfer, download.
+9. **Discover search** (§6.6).
 10. **Rest of the internals pass** — fewer queries, one write-lock opt-out per
     controller, the forms route as an action table, Save a link drafts in
     Redis, focus rings.
-11. **Account** — email change in the web, account deletion with export and
-   retention rules, optional authenticator-app codes.
-12. **Browser extension** (W4) — capture into a chosen collection.
-13. **Targeted sharing by invitation** — sharing a collection with a specific
-    email address as Can view or Can edit sends an invitation; the share
-    activates once that person verifies their email and has an account. As in
-    Google Drive, anyone can read through link sharing or publishing without an
-    account, but a targeted share needs an identity to authorize, so it needs
-    an account.
-14. **ns-series single sign-on** — a centralized identity service for all ns
-    products (`docs/design-docs/identity-sso.md`); nslinkhub is its first
-    consumer.
-15. **Before public release** — live email provider and webhook acceptance,
-    browser and worker telemetry, deployment
-    (`docs/design-docs/infra-deployment.md`).
-16. **Curator accounts** — the professional account people opt into, like a
-    business account on Instagram: analytics and engagement, members-only
-    collections, bigger bulk work, link health, API access (keys for
-    integrations and data), AI curation (send everything, get back a curated
-    draft to review), a curator profile; then
-    pricing (ADR-0016, `docs/design-docs/monetization.md`).
+11. **Account** (§6.11) — email change in the web, deletion, authenticator-app
+    codes.
+12. **Browser extension** (§7).
+13. **Targeted sharing by invitation** (§6.5).
+14. **ns-series single sign-on** (§6.11) — `docs/design-docs/identity-sso.md`.
+15. **Before public release** — live email provider and webhooks, browser and
+    worker telemetry, deployment (`docs/design-docs/infra-deployment.md`).
+16. **Curator accounts** (§6.13), then pricing.
 
-## 10. Open decisions
+## 12. References
 
-- **Curator account details** — what exactly it includes and costs, decided
-  after everything else is built; the direction (charge professional curators,
-  keep everyone's library free) is settled in ADR-0016. Analytics will need a
-  privacy decision: aggregate counts, never tracking individual readers.
-
-Settled since this list was written: role names stay `reader`/`editor` with
-labels chosen per surface (ADR-0013); imports resolve titles through reviewed
-drafts (ADR-0012, design in `docs/design-docs/bulk-import.md`); link metadata,
-preview cards and notes are the chosen direction (§5); one Manage
-workspace scoped by role (ADR-0014); attribution and the hub audit come from
-activity records (ADR-0015); following works like YouTube subscriptions and
-saved collections like saved Drive documents; following notifies by default
-with a per-hub toggle; blocking only stops taking part, never public reading;
-everyone who shapes a collection is a maintainer (Curator is the professional
-account, ADR-0016); sections are added and assigned
-in the collection's edit view; preview cards show the page description, with
-the note (up to 280 characters) in full in the details; notifications
-stay in-app apart from codes, invitations, targeted shares and security; all
-three download formats; account deletion with a 14-day grace period; bulk
-import limits of 1,000 links, 10 MB, 3 open drafts and 30 days; popular tags from
-published collections over 90 days, no date-range filter; access requests
-and shares live in Manage › Access, blocking happens in context with People
-holding followers and blocked accounts, and follows belong to the hub. Details live in the
-design docs.
+- Architecture: `ARCHITECTURE.md`; visual system: `DESIGN.md`.
+- Focused designs: `docs/design-docs/README.md`.
+- Settled foundations: `docs/engineering-decisions/README.md`.
+- Security and reliability rules: `docs/SECURITY.md`, `docs/RELIABILITY.md`.
