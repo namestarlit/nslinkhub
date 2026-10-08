@@ -81,12 +81,9 @@ function Comment({
   returnTo: string;
   canReply: boolean;
 }) {
-  const role =
-    comment.author?.role === "owner"
-      ? "Curator"
-      : comment.author?.role === "editor"
-        ? "Editor"
-        : null;
+  // Readers only need to know the reply comes from someone who maintains the
+  // collection; owner and editors are all curators to them.
+  const role = comment.author?.role ? "Curator" : null;
   const live = comment.state === "visible";
   return (
     <article

@@ -21,6 +21,9 @@ implementation work in [../exec-plans/active/](../exec-plans/active/).
   pagination.
 - [email-verification.md](email-verification.md): the one verification flow and
   interrupted actions.
+- [bulk-import.md](bulk-import.md): bulk import through reviewed drafts —
+  statuses, fixing rows, folders as sections or separate collections, limits
+  (designed; being built).
 - [exports.md](exports.md): synchronous Markdown/PDF/Word exports and reference
   expansion.
 - [service-operations.md](service-operations.md): operator authority, account

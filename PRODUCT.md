@@ -226,7 +226,7 @@ Every collection can carry a **discussion**: questions or notes with one level
 of replies, readable by anyone who can read the collection. Anyone signed in who
 can read it can comment and reply, so help never waits on the curator;
 signed-out readers are invited to sign in. Replies from the owner or an editor
-are labelled (Curator, Editor), and either can mark one reply per question as
+are labelled Curator, and either can mark one reply per question as
 the answer, shown first. Each question shows up to 100 replies, with **More
 replies** to continue. Authors edit or delete their own comments (a question
 with replies keeps a placeholder); the owner and editors can hide comments,
@@ -283,10 +283,15 @@ delete accounts. The full contract (permissions, recovery, retention) is in
   same link saved twice is one item per collection.
 - Items are ordered; reordering and edits use version checks, so a stale edit
   is rejected rather than silently overwriting someone else's.
-- Import from browser bookmarks (HTML, the main migration path) and one
-  documented CSV layout (`url`, plus optional `title`) that people fill from
-  any tool. Every import reports imported, skipped and failed rows instead of
-  failing the whole file. No source-specific parsers beyond bookmarks HTML.
+- Bulk import is Save a link at scale (being built; today the API imports in
+  one shot): a browser bookmarks file, one documented CSV layout (`url`,
+  optional `tags`, optional `folder`) or a pasted list becomes a draft to review
+  before anything lands. Titles resolve from the pages like any save (source
+  titles are ignored); each row shows Ready, Failed with a reason, Duplicate or
+  Already saved; failed rows are fixed in place, revalidated or dropped.
+  Folders become sections of one collection or split into separate
+  collections, chosen per folder. Ready rows import while the rest wait in the
+  draft. No source-specific parsers beyond bookmarks HTML.
 - The browser extension (planned) captures the current tab into a chosen
   collection.
 
@@ -428,17 +433,14 @@ Next:
 
 ## 10. Open decisions
 
-- **Collaborator role name.** Whether `editor` becomes "Curator" (with the
-  owner's discussion badge becoming "Owner"), and whether that is a label
-  change or a full rename.
-- **Titles on import.** Imports currently keep the title from the bookmark file
-  or CSV row, while everywhere else titles come from the page. Decide whether
-  imports resolve titles like any other save.
 - **Sections in the web.** How people add headings and place links under them.
 - **Richer link details and notes.** More page metadata to tell similar links
   apart, and personal notes on an item.
-- **Bulk import page.** The "Bulk import links" button currently only measures
-  interest; when and how to ship import in the web.
 - **Requesting access** to a collection someone can't open.
 - **Account deletion** with export, and its retention rules.
-- **Monetization**, per the notes under review.
+- **Monetization**, per the notes under review, including whether bulk import
+  is a paid feature.
+
+Settled since this list was written: role names stay `reader`/`editor` with
+labels chosen per surface (ADR-0013); imports resolve titles through reviewed
+drafts (ADR-0012, design in `docs/design-docs/bulk-import.md`).

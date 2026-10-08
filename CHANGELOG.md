@@ -9,6 +9,11 @@ summary of what changed after completed work has been promoted out of `ref/`.
 
 ## Unreleased
 
+- Discussion replies from a collection's owner or editors are all badged
+  Curator. Permission roles stay `reader`/`editor`; labels are chosen per
+  surface (ADR-0013). Bulk import is designed as Save a link at scale — a
+  reviewed draft with resolved titles, in-place fixes and folders mapped to
+  sections or separate collections (ADR-0012, `docs/design-docs/bulk-import.md`).
 - Documentation reorganized the pigfarm way: `PRODUCT.md` is the PRD (now with
   a product design context), `ARCHITECTURE.md` the system-architecture
   authority (domain model, client surfaces and invariants absorbed), and the

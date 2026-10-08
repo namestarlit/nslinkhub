@@ -30,9 +30,7 @@ tags, order, and (planned) notes. A wrong link is removed and added again.
 
 - Add/edit DTOs have no title field for links or references; edits accept tags and position only.
 - Resolved titles never block a save; lookups run after commit.
-- Known exception, open for review: imports keep the title from the source file
-  (bookmark text or a CSV `title` column). Resolving them like other saves would
-  supersede this note, not the decision.
+- Imports resolve titles like every other save (ADR-0012).
 
 ## Links
 

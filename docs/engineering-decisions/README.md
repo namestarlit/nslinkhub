@@ -42,3 +42,5 @@ Number records sequentially (`NNNN-short-slug.md`) and list them below.
 - [0009-operator-authority.md](0009-operator-authority.md) — Separate operator authority; step-up for sensitive actions.
 - [0010-one-verification-flow.md](0010-one-verification-flow.md) — One email-verification flow with purposes; actions resume for their owner.
 - [0011-toolchain.md](0011-toolchain.md) — Toolchain: Bun, Biome, reviewed Prisma migrations.
+- [0012-bulk-import-through-reviewed-drafts.md](0012-bulk-import-through-reviewed-drafts.md) — Bulk import through reviewed drafts.
+- [0013-permission-roles-and-display-labels.md](0013-permission-roles-and-display-labels.md) — Permission roles are stable; display labels are chosen per surface.

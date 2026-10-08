@@ -26,9 +26,9 @@ IP literals, single-label, local/internal and reserved example/test names are
 refused with `link_not_public`. Its title is looked up server-side after the
 write commits, and again whenever an untitled collection is read
 (`og:title`/`<title>`, YouTube oEmbed; SSRF-guarded, short deadline, small body
-cap); no lookup runs under the write lock. Imports currently keep the source
-file's title (bookmark text or a CSV `title` column); whether they should
-resolve like other saves is an open product decision.
+cap); no lookup runs under the write lock. Imports resolve titles the same way
+through reviewed drafts ([bulk-import.md](bulk-import.md)); until that ships,
+the one-shot import endpoints still keep the source file's title.
 
 Reference edits, reorders and removal require only source write access. The
 viewer-filtered `linkedCollection` payload is `{ id, title }` or null; it never
