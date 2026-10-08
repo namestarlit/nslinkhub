@@ -12,7 +12,7 @@ answer in your own words before continuing. Reading the whole file in one go
 is the failure mode this structure exists to prevent. Every file is a
 clickable link.
 
-**Pin:** verified against commit `c80480c`. This is enforced, not honor
+**Pin:** verified against commit `e1c54c5`. This is enforced, not honor
 system: `check:guide-pin` (part of `bun run verify`) fails when any file this
 guide links changes after the pinned commit. To clear it, reread the affected
 sessions, fix any drift, and move the pin to the latest commit — in a
@@ -332,7 +332,7 @@ sensitive actions) and one reusable email-verification flow that resumes
 interrupted actions for their owner. Settled foundations are recorded in
 [engineering decisions](../engineering-decisions/README.md). The docs follow
 the PRODUCT / ARCHITECTURE / DESIGN layout. The link-metadata foundation (page metadata stored once per address, looked
-up by the worker) is done. Next: activity and attribution, the Manage workspace,
+up by the worker) is done. Activity and attribution is done. Next: collaborators and routes, the Manage workspace,
 [bulk import](../exec-plans/active/deliver-bulk-import.md), your home and
 following, then preview cards (the full order is `PRODUCT.md` §11) and the
 [final internals pass](../exec-plans/active/final-pass-internals.md).
