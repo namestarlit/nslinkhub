@@ -26,6 +26,25 @@ not perform resolve to 403.
 - Collection-reference metadata and exports authorize the destination separately.
   A source share token is never forwarded to another collection.
 
+## Roles and labels
+
+Roles come in two separate scopes ([ADR-0013](../engineering-decisions/0013-permission-roles-and-display-labels.md)):
+
+| Role | Scope | Comes from | Can |
+| --- | --- | --- | --- |
+| `owner` | Every collection in the hub | Owning the hub (`hub.ownerUserId`); moves with a collection transfer | Read, write content, manage |
+| `editor` | One collection | A direct share (`CollectionShare`) | Read, write content |
+| `reader` | One collection | A direct share, or a recorded link share | Read |
+| `operator`, `admin` | The service, site-wide | An accepted, verified invitation (`OperatorGrant`, `AdminGrant`) | Run service operations; never read private collections ([service-operations.md](service-operations.md)) |
+
+The collection's **creator** (`creatorUserId`) is a record, not a role: set once,
+kept through transfers, shown only as attribution, never consulted for access.
+
+Role names are stable identifiers in the API and database; each surface picks
+its own label: the discussion badges replies from the owner or an editor as
+**Curator**, sharing reads **Can view** / **Can edit**, operations reads
+"service operator" / "service admin". Changing a label never renames a role.
+
 ## Service operations
 
 The [service-operator contract](service-operations.md) adds explicit

@@ -47,7 +47,7 @@ person from registering a different account.
 
 ## Admin bootstrap and accepted invitations
 
-Grants are keyed by immutable user IDs, separate from hub/collection roles.
+Grants are keyed by immutable user IDs and are site-wide, separate from the per-collection roles ([roles and labels](tenancy-and-access.md#roles-and-labels)).
 Only an active admin with a cookie session verified within five minutes may
 invite operators, resend/cancel invitations or revoke operator access. There
 is no direct operator grant command or HTTP action. Multiple operators may

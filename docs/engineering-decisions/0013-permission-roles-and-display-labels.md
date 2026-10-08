@@ -53,6 +53,8 @@ for wording. Each surface chooses the label that serves its reader:
 - Labels never imply a capability the role doesn't have; the API remains the
   authority on what each role may do.
 - A new role is a new identifier, an engineering decision, and a policy change.
+- The collection's **creator** is a record, not a role: set once, kept through
+  transfers, used only for attribution, and never consulted for access.
 
 ## Links
 
