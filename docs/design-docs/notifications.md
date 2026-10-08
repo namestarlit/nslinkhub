@@ -45,6 +45,8 @@ transaction as the event when there are few recipients, and fanned out by the
 worker when there are many (a hub's followers). Email stays for what already
 uses it (codes, invitations, targeted shares).
 
-## Open questions
+## Email
 
-- Which kinds, if any, also send email, and whether email is a per-kind choice.
+Notifications are in-app. Email stays for what already uses it — sign-in codes,
+invitations and targeted shares — plus security notices. A weekly email digest
+may follow later as a per-kind opt-in, if people ask for it.

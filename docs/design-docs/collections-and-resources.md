@@ -37,6 +37,23 @@ FK and leaves an unavailable resource. No nest/children endpoints, hierarchy
 trigger, parent field, compatibility aliases or inherited-grant backfills remain.
 Resources carry no summary. Titles and tags clarify links; headings organize guides.
 
+## Sections in the web (planned)
+
+A collection's edit view has **Add section**, which adds a heading. A link's
+edit form has **Section**, to move it under a heading; items reorder by drag,
+with Move up and Move down for keyboard users. Save a link's destination can be
+"Collection › Section". Bulk import maps bookmark folders to sections.
+
+## Preview cards and details (planned)
+
+Hovering a link (or focusing it; on phones, a details button) shows a card with
+the page's metadata: title, domain, site name and the page's description — what
+the resource is about. No images or icons. The curator's note (up to 280
+characters) is shown in full in the item's details; whether a short version
+also appears on the card is decided once the screen is built. The card offers
+**View** (details) and, for the owner and editors, **Edit** (tags, note, section,
+remove).
+
 ## Tags
 
 Optional labels stored **directly on** a collection or resource as a normalized

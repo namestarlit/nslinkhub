@@ -69,6 +69,12 @@ lifecycle, privacy and retention details. The web console (`/ops`) finds
 accounts by email or handle, resolves a public collection from its link, manages
 the operator team and filters the audit; search text never appears in URLs.
 
+## Discover filters (planned)
+
+Search by text and tags, and filters by tag. **Popular tags** are the most-used
+tags on published collections over the last 90 days; private collections never
+contribute. No date-range filter until there is a concrete use for one.
+
 ## Ownership transfer
 
 - **Collection transfer** (`POST /collections/:id/transfer`): an owner transfers

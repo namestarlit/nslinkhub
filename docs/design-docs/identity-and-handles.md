@@ -69,3 +69,12 @@ Rules that keep it drift-proof:
 - **"Copy link" / share buttons always emit the `/c/<id>` permalink**, never
   the slug URL. Slug URLs are for address bars and link previews only.
 - Pretty URLs have exactly a handle and slug. Bare `/handle` paths are unsupported.
+
+## Account deletion (planned)
+
+Self-service, confirmed with an email code. Before deleting, the account is
+offered a download of all its collections and prompted to transfer collections
+others edit. A 14-day grace period allows changing one's mind; then the hub and
+its collections are deleted and the handle released, the person's comments read
+"[deleted]", activity entries keep only an anonymous actor, and shares and
+follows end.

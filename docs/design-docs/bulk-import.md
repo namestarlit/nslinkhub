@@ -91,7 +91,7 @@ for every action (works without JavaScript; the page refreshes to show progress,
 and polls with JavaScript). Reuses Save a link's pieces: blue/red address
 state, tag pills, destination picker.
 
-## Open questions
+## Paid or free
 
-- Whether bulk import is a paid feature (see [monetization.md](monetization.md));
-  built free for now.
+Built free; whether it is paid is decided with the rest of monetization once
+everything is built ([monetization.md](monetization.md)).

@@ -37,8 +37,8 @@ None yet.
 - Pre-deployment: schema changes go into new reviewed migrations on top of the
   squashed `0_init`; the dev database is reset and reseeded (`bun run db:seed`)
   if a change is easier that way. No compatibility code.
-- Open question for the user, outside this plan: rename the "editor" share role
-  to "curator" in the UI (and then the owner badge, currently "Curator").
+- Settled 2026-10-08 (ADR-0013): roles stay `reader`/`editor`; the discussion
+  badges the owner and editors alike as "Curator".
 
 ## Outcomes & Retrospective
 

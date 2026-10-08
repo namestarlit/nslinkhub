@@ -157,11 +157,12 @@ tested in the API but not yet in the web; §9 has the full picture.
 
 The home page's main action is **Save your first link**. The person pastes one
 or two links (tags optional), then verifies their email with an eight-digit
-code; titles are looked up once the links are saved. Sending a code creates nothing. Verifying signs
-them in, creating their account and hub if new, and saves the links into a new
-private collection named with the date ("Saved links, Oct 7"), atomically and
-safe to retry. No profile, title or handle setup is needed first. **Sign in**
-on its own lands on the person's hub (`/hub` → their permanent `/h/<hubId>`).
+code; titles are looked up once the links are saved. Sending a code creates
+nothing. Verifying signs them in, creating their account and hub if new, and
+saves the links into a new private collection named with the date ("Saved links,
+Oct 7"), atomically and safe to retry. No profile, title or handle setup is
+needed first. **Sign in** on its own lands on the person's hub (`/hub` → their
+permanent `/h/<hubId>`).
 
 ### Save a link (signed in)
 
@@ -172,9 +173,10 @@ and shown as pills. The person picks an existing collection (each shows when it
 was last updated) or a new one, whose name is prefilled with a suggestion that
 never repeats (typed names may repeat). Adding to a published collection is
 always an explicit choice. Personal context about a link will be a separate
-note (planned), never a rewritten title. Repeated links, non-addresses and domains that don't exist are
-refused before saving; a real site with no title is still saved. More than two
-links is bulk work: at two rows the form offers **Bulk import links** (see §8).
+note (planned), never a rewritten title. Repeated links, non-addresses and
+domains that don't exist are refused before saving; a real site with no title
+is still saved. More than two links is bulk work: at two rows the form offers
+**Bulk import links** (bulk import, §6).
 The whole form fits a 14-inch laptop screen in at most eight actions.
 
 ### Read and organize a collection
@@ -190,14 +192,14 @@ on, in place. A share row offers LinkedIn, X, WhatsApp and **Share link**
 as "who did what to which item", and attribution comes from those records: the
 collection's metadata names its **creator** (who created it — distinct from the
 owner, who owns the hub) and its **curators**, everyone who has shaped its
-content ("Paul John and 2 curators"); each item's details say who added it and when; owners and
-editors can open the collection's history.
+content ("Paul John and 2 curators"); each item's details say who added it
+and when; owners and editors can open the collection's history.
 
 ### Preview and annotate a link *(planned)*
 
 Hovering a link (or focusing it with the keyboard; on phones, a small details
 button) shows a preview card, like a link card in Google Docs: title, domain,
-site name and the page's short description, then the curator's note. The card
+site name and the page's description — what the resource is about. The card
 is metadata only — no images, icons or thumbnails — so viewing a collection
 never contacts the linked sites; the page itself is one click away.
 
@@ -207,8 +209,10 @@ also works without JavaScript. **Edit** (owner and editors) opens the item's
 edit form: tags, the curator's note, and removing the item. No row of separate
 action buttons.
 
-The **curator's note** is a short piece of context the owner or an editor writes
-about a link (why it's here, what to look for); every reader sees it. Signed-in
+The **curator's note** is a short piece of context (up to 280 characters) the
+owner or an editor writes about a link — why it's here, what to look for. Every
+reader sees it in full in the item's details; whether part of it also shows on
+the card is decided once the screen is built. Signed-in
 readers can **Add to my collection** from the details: Save a link opens with
 the address filled in — a quick save into one of their own collections.
 
@@ -242,15 +246,15 @@ email.
 
 **Discover** lists published collections, newest first, continuing page by page
 (no popularity score, recommendations or sort options yet). Opening one shows
-which hub published it. Signed-in readers can **follow** a hub *(planned)*,
-like subscribing to a YouTube channel: the hub joins their Following list,
-its new published collections appear there, and they're notified when it
-publishes (each followed hub has a notifications toggle, on by default). They can also **save** a published
-collection to keep it *(API only today)*, like saving a document in Google
-Drive; a save goes
-dormant if the collection is unpublished — it keeps its place, labelled
-"Currently unavailable", cannot be opened or exported but can be removed, and
-no snapshot is kept — and comes back when the collection is republished.
+which hub published it. Signed-in readers can **follow** a hub *(planned)*, like
+subscribing to a YouTube channel: the hub joins their Following list, its new
+published collections appear there, and they're notified when it publishes (each
+followed hub has a notifications toggle, on by default). They can also **save**
+a published collection to keep it *(API only today)*, like saving a document in
+Google Drive; a save goes dormant if the collection is unpublished — it keeps
+its place, labelled "Currently unavailable", cannot be opened or exported but
+can be removed, and no snapshot is kept — and comes back when the collection is
+republished.
 
 Every collection can carry a **discussion**: questions or notes with one level
 of replies, readable by anyone who can read the collection. Anyone signed in who
@@ -286,13 +290,13 @@ belongs to.
 ### Download and export *(API only today)*
 
 Like File › Download in Google Docs, a signed-in reader can **Download** a
-collection as a document (Word, Markdown or PDF; formats to be settled). To
-export several collections at once (one document each, in a zip), hub owners
-use **Import & export** in Manage. The collection title and description lead,
-headings become sections, and references stay links unless the reader asks to
-include readable referenced collections one level deep — an expanded guide. Nothing is fetched from
-linked pages and nothing is stored. Unavailable references get a generic
-notice that reveals no title or content. Signed-out readers can only browse.
+collection as a document: Word, Markdown or PDF. To export several collections
+at once (one document each, in a zip), hub owners use **Import & export** in
+Manage. The collection title and description lead, headings become sections, and
+references stay links unless the reader asks to include readable referenced
+collections one level deep — an expanded guide. Nothing is fetched from linked
+pages and nothing is stored. Unavailable references get a generic notice that
+reveals no title or content. Signed-out readers can only browse.
 
 ### Manage your hub and the service
 
@@ -372,7 +376,12 @@ contracts: `docs/design-docs/manage-workspace.md` and
 - Notifications currently cover invitations to service roles. Planned: one
   inbox for every kind that concerns you, scoped by role, with settings to turn
   kinds (and individual followed hubs) off; invitations and security notices
-  stay on.
+  stay on. Notifications are in-app; email is kept for codes, invitations,
+  targeted shares and security notices.
+- Account deletion (planned) is self-service with an email code, offers a
+  download of everything first, and has a 14-day grace period; then the hub,
+  its collections and the handle go, comments read "[deleted]" and activity
+  keeps only an anonymous actor.
 
 ### Service operations
 
@@ -482,8 +491,8 @@ Next, in order (everything is to be built; what to charge for is chosen after):
 
 1. **Link metadata foundation** — durable background lookups (the worker
    queue), stored title, description and site name per link (text only; no
-   images or icons are fetched or stored), and a shared fetch cache. Bulk import and preview cards both depend on
-   it; it absorbs the first step of the
+   images or icons are fetched or stored), and a shared fetch cache. Bulk
+   import and preview cards both depend on it; it absorbs the first step of the
    [internals pass](docs/exec-plans/active/final-pass-internals.md).
 2. **Activity and attribution** — every change recorded as an activity entry;
    creator, curators and "added by" shown; the hub audit
@@ -528,15 +537,12 @@ Next, in order (everything is to be built; what to charge for is chosen after):
 
 ## 10. Open decisions
 
-- **Sections in the web.** How people add headings and place links under them.
-- **Preview card details.** Note length, and whether the card shows the page
-  description when a note exists.
-- **Notification email.** Which notification kinds, if any, also send email.
-- **Download formats.** Which document formats to offer (Word, Markdown, PDF).
-- **Requesting access** to a collection someone can't open.
-- **Account deletion** with export, and its retention rules.
-- **Monetization**, per the notes under review, including whether bulk import
-  is a paid feature.
+- **Access requests and blocking in Manage** — an Access tab with requests and
+  shares, blocking in context, and People as followers plus a Blocked list
+  (proposed; awaiting confirmation).
+- **Monetization** — deferred by choice: decided after everything is built
+  (notes in `docs/design-docs/monetization.md`), including whether bulk import
+  is paid.
 
 Settled since this list was written: role names stay `reader`/`editor` with
 labels chosen per surface (ADR-0013); imports resolve titles through reviewed
@@ -546,4 +552,11 @@ workspace scoped by role (ADR-0014); attribution and the hub audit come from
 activity records (ADR-0015); following works like YouTube subscriptions and
 saved collections like saved Drive documents; following notifies by default
 with a per-hub toggle; blocking only stops taking part, never public reading;
-everyone who shapes a collection is a curator.
+everyone who shapes a collection is a curator; sections are added and assigned
+in the collection's edit view; preview cards show the page description, with
+the curator's note (up to 280 characters) in full in the details; notifications
+stay in-app apart from codes, invitations, targeted shares and security; all
+three download formats; account deletion with a 14-day grace period; bulk
+import limits of 1,000 links, 10 MB, 3 open drafts and 30 days; popular tags from
+published collections over 90 days, no date-range filter. Details live in the
+design docs.

@@ -21,3 +21,9 @@ All three renderers are programmatic (markdown string-building, `pdfkit`,
 queue, no artifacts are stored server-side, and there is nothing to retain or
 clean up. BullMQ/Redis dispatch email delivery from the PostgreSQL outbox to a
 separate worker; exports do not use that queue.
+
+## Download formats
+
+Word, Markdown and PDF are all offered (the API already renders all three). A
+collection page offers **Download**; exporting several collections at once is
+in Manage › Import & export.

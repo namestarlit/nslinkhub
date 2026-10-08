@@ -48,7 +48,7 @@ Design: [bulk-import.md](../../design-docs/bulk-import.md). Decision:
   Rationale: one export serves any arrangement. Date/Author: 2026-10-08 / Paul
 - Decision: limits of 1,000 links per draft, 3 open drafts, 30-day expiry.
   Rationale: bounded storage and lookup load; larger exports import by folder.
-  Date/Author: 2026-10-08 / Claude (proposed, open to change)
+  Date/Author: 2026-10-08 / Claude, confirmed by Paul
 
 ## Outcomes & Retrospective
 

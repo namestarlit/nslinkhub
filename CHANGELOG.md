@@ -9,6 +9,12 @@ summary of what changed after completed work has been promoted out of `ref/`.
 
 ## Unreleased
 
+- Closed open product decisions: sections are added and assigned in a
+  collection's edit view; preview cards show the page description (the
+  curator's note, up to 280 characters, in full in the details); notifications
+  are in-app apart from codes, invitations, targeted shares and security; Word,
+  Markdown and PDF downloads; account deletion with a 14-day grace period; bulk
+  import limits confirmed; popular tags from published collections only.
 - Designed three directions and added them to the build order: **Manage**, one
   workspace scoped by role, where every hub owner manages their hub
   (collections, comments, people and blocking, import, activity) and operators
