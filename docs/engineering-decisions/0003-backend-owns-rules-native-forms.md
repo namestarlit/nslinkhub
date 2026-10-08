@@ -15,10 +15,11 @@ rules in clients drifts; JavaScript-only forms fail on slow or blocked scripts.
 
 ## Decision
 
-The API owns validation, authorization and derived state. Web forms post
-natively (URL-encoded) to `/forms/[action]`, which checks the Origin, calls the
-API and redirects with a `?notice=`; JavaScript only enhances. Client checks
-exist for early feedback and never replace server checks.
+The API owns validation, authorization and derived state. Clients are
+replaceable delivery surfaces whose checks give early feedback only. Web
+journeys are native form posts first, enhanced by JavaScript; the mechanics are
+in [ARCHITECTURE.md](../../ARCHITECTURE.md) (Runtime Architecture) and the
+[interface system](../design-docs/web-interface-system.md).
 
 ## Rationale
 

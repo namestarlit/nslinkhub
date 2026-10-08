@@ -15,11 +15,11 @@ operators into readers of private content.
 
 ## Decision
 
-Service admins and operators have a separate, explicitly granted authority.
-They manage accounts and public-content holds but never read private content;
-every action and read is audited. Sensitive actions need a recent email code:
-the person confirms it's them, chooses to send the code, and the waiting action
-then finishes by itself. Operator search text never appears in page URLs.
+Running the service is a separate, explicitly granted, site-wide authority
+(operators and admins), outside the collection access model. It manages
+accounts and public-content holds, never reads private content, and is fully
+audited; sensitive actions require recent verification. Scope and screens:
+[service-operations.md](../design-docs/service-operations.md).
 
 ## Rationale
 
@@ -28,7 +28,7 @@ then finishes by itself. Operator search text never appears in page URLs.
 ## Constraints to preserve
 
 - Operator listings show no private titles.
-- Actions require a reason; there are no confirmation checkboxes.
+- Every operator action carries a reason and is audited with its effect.
 
 ## Links
 

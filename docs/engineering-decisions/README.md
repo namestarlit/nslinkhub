@@ -10,8 +10,10 @@ Records are for business-process and architecture decisions that much else
 depends on: the tenancy and access model, identity and authentication, how
 writes are ordered, where rules live, how the team ships. Feature rules, limits,
 copy and visual guidance belong in the design docs; renames and field changes
-belong in `CHANGELOG.md`. A record is not a task list and does not replace a
-design document (the *how*) or an ExecPlan (the *work*).
+belong in `CHANGELOG.md`. A record states the decision, why, and what must hold; it
+is not a task list and holds no design scope. Journeys, statuses, endpoints,
+limits and screens belong in a design document (the *how*), which the record
+links to; implementation belongs in an ExecPlan (the *work*).
 
 ## Lifecycle
 

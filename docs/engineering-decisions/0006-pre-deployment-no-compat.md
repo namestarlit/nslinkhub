@@ -15,12 +15,12 @@ code from day one.
 
 ## Decision
 
-Until a production deployment exists: renamed routes, removed features and
-reversed decisions change outright with no redirects, aliases or shims;
-migrations may be squashed into one `0_init` (generated from the migrated schema
-so hand-written SQL survives) and local databases reset and reseeded
-(`bun run db:seed`). Large internal redesigns are welcome; the only blocker is a
-change to user-facing behaviour, business workflow or UX.
+Until a production deployment exists, the codebase describes only the current
+product: renamed or removed things change outright, with no redirects, aliases
+or shims; migrations may be squashed and local data reset and reseeded. Large
+internal redesigns are welcome; the only blocker is a change to user-facing
+behaviour, business workflow or UX. Procedure:
+[migrations runbook](../runbooks/migrations.md).
 
 ## Rationale
 

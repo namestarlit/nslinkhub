@@ -19,24 +19,10 @@ is what a person reads in one place, and the best word differs by place.
 ## Decision
 
 Permission roles are stable identifiers that describe capability, in two
-separate scopes:
-
-- **Per collection:** `owner` (derived from owning the collection's hub; moves
-  with a transfer), `reader` and `editor` (direct shares on that one collection;
-  nothing carries over to other collections).
-- **Site-wide service management:** `operator` and `admin`, granted to an
-  account by invitation. They never grant access to private collections and
-  make no one an owner (ADR-0009).
-
-They appear in API contracts, the database and policy code, and are not renamed
-for wording. Each surface chooses the label that serves its reader:
-
-- Discussion: replies from the owner or an editor are badged **Curator** —
-  readers only need to know the reply comes from someone who maintains the
-  collection.
-- Sharing: roles read **Can view** / **Can edit**, saying exactly what the
-  person can do.
-- Operations: "service operator" / "service admin".
+separate scopes: per collection (`owner`, `reader`, `editor`) and site-wide
+service management (`operator`, `admin`). They are not renamed for wording;
+each surface chooses the label that serves its reader. Role scopes and current
+labels: [tenancy-and-access.md](../design-docs/tenancy-and-access.md#roles-and-labels).
 
 ## Rationale
 

@@ -15,11 +15,12 @@ sensitive action and invitations all send a code; separate screens drifted.
 
 ## Decision
 
-All email-code situations share two screens (start, code) driven by a purpose:
-sign-in, first-link, continue, resume, confirm, invitation. A known address is
-shown in bold, never asked for. An action interrupted by verification is kept
-encrypted for 15 minutes and replayed once after the code — only for the person
-it belongs to (a keyed fingerprint of the last signed-in email).
+Every situation that needs an email code goes through one verification flow,
+parameterized by its purpose, rather than per-feature screens. An action
+interrupted by verification is kept and completed afterwards, once, and only
+for the account it belongs to. Purposes, screens and limits:
+[email-verification.md](../design-docs/email-verification.md) and
+[SECURITY.md](../SECURITY.md).
 
 ## Rationale
 

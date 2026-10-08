@@ -15,11 +15,10 @@ shares, receipts) matters more than write throughput.
 
 ## Decision
 
-Every authenticated non-GET request runs inside one transaction holding a single
-PostgreSQL advisory lock (`AUTHORITY_LOCK`), and rechecks the live session under
-it. Read-only commands (exports) and parsed uploads opt out explicitly. Network
-calls never run inside the lock; follow-up work (title lookups) runs after
-commit.
+Authenticated mutations are serialized: each runs in one transaction under a
+single global PostgreSQL advisory lock and rechecks the session there.
+Read-only and slow work opts out explicitly, and network calls never run under
+the lock. Details: [RELIABILITY.md](../RELIABILITY.md).
 
 ## Rationale
 

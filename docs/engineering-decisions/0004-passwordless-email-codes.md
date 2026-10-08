@@ -31,7 +31,6 @@ app-owned service callable from any auth path.
 ## Constraints to preserve
 
 - Codes are plain digits, single-use, short-lived, attempt-limited and resend-throttled.
-- Code inputs accept pasted spaces or dashes; only digits count.
 - The better-auth handler is mounted before body parsers.
 
 ## Links

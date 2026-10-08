@@ -15,11 +15,12 @@ and titles make a saved link no longer the thing that was saved.
 
 ## Decision
 
-A link's title comes from its page (`og:title`/`<title>`, YouTube via oEmbed),
-looked up server-side with SSRF guards; no add or edit endpoint accepts a title.
-What belongs to an item — a link's address and title, a reference's target, a
-heading's text — never changes after saving. People edit only what they add:
-tags, order, and (planned) notes. A wrong link is removed and added again.
+A link's title comes from its page, resolved by the server; no path that adds
+or edits a link accepts a title. What belongs to an item (a link's address and
+title, a reference's target, a heading's text) never changes after saving;
+people edit only what they add (tags, order, planned notes), and a wrong link is
+removed and added again. How titles are found:
+[collections-and-resources.md](../design-docs/collections-and-resources.md).
 
 ## Rationale
 

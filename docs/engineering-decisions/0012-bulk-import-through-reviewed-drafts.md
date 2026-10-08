@@ -18,18 +18,12 @@ they landed, and forced a whole bookmarks tree into a single collection.
 
 ## Decision
 
-Bulk import is Save a link at scale, through a server-side **import draft**:
-
-1. An upload (bookmarks HTML, CSV) or a pasted list becomes a draft owned by the
-   account. Rows get the same canonicalization and checks as Save a link; a
-   source title is never used.
-2. Titles resolve in the background (the worker queue), with their own lookup
-   budget, and the draft fills in as they arrive.
-3. The person reviews: fixes an address in place (re-checked), drops rows,
-   revalidates failures, and maps folders to destinations — sections of one
-   collection, separate collections (new or existing), or skipped.
-4. Importing commits the ready rows to their destinations; rows that still need
-   attention stay in the draft until fixed or dropped. Drafts expire.
+Bulk import is Save a link at scale. Imported links are staged in a
+server-side draft owned by the account, checked by the same rules as any save,
+with titles resolved in the background; the person reviews and fixes the draft,
+chooses destinations, and commits ready rows while the rest wait. Nothing is
+written straight into a collection from a file. Journey, statuses, folder
+mapping and limits: [bulk-import.md](../design-docs/bulk-import.md).
 
 ## Rationale
 
