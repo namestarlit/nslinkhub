@@ -15,7 +15,7 @@ import { isUUID } from "class-validator";
 import { CursorQueryDto } from "src/common/dto/cursor-query.dto";
 import { AuthUser } from "src/common/interfaces/auth-user.interface";
 import { decodeCursor, encodeCursor } from "src/common/utils/cursor.util";
-import { parseIfMatchVersion, toVersionEtag } from "src/common/utils/etag.util";
+import { toVersionEtag } from "src/common/utils/etag.util";
 import { normalizeTags } from "src/common/utils/tags.util";
 import { PrismaService } from "src/database/prisma.service";
 import { Collection, Hub, Prisma } from "src/generated/prisma/client";
@@ -50,15 +50,11 @@ export class CollectionsService {
 
   // --- settings / lifecycle ----------------------------------------------
 
-  async update(id: string, user: AuthUser, dto: UpdateCollectionDto, ifMatch?: string) {
+  async update(id: string, user: AuthUser, dto: UpdateCollectionDto) {
     const collection = await this.requireCollection(id);
     await this.policy.requireManage(collection, user);
 
     if (dto.published === true) await this.policy.requireUnrestricted(collection);
-    const versionFromHeader = parseIfMatchVersion(ifMatch);
-    if (versionFromHeader !== null && versionFromHeader !== Number(collection.version)) {
-      throw appError("version_conflict");
-    }
     if (Number(dto.version) !== Number(collection.version)) {
       throw appError("version_conflict");
     }

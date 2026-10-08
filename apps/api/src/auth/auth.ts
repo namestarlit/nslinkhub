@@ -18,10 +18,8 @@ export const auth = createDeliveryAuth({
   suppressionSecret: emailConfig().suppressionSecret,
   prisma,
   secret: readSecret("BETTER_AUTH_SECRET") ?? "dev-better-auth-secret",
-  // API-only local entry; align with port 3000 when the web proxy lands.
+  // Direct API default; the development launcher sets the public web origin.
   baseURL: process.env.BETTER_AUTH_URL ?? "http://localhost:4000",
   // Isolated verification shortens the gap; the web reads the same variable.
   codeResendSeconds: Number(process.env.AUTH_CODE_RESEND_SECONDS) || undefined,
 });
-
-export type Auth = typeof auth;

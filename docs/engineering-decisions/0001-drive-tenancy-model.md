@@ -17,10 +17,15 @@ query depend on membership state and made sharing a single collection awkward.
 
 ## Decision
 
-Every user owns exactly one hub. Collections are the unit of sharing. Access to a
-collection resolves through one policy service, in order: hub owner (full) →
-direct share (reader/editor) → active share link → published. There are no
-memberships, no roles beyond owner/reader/editor, and no admin bypass.
+Under ADR-0018’s amendment, a person owns at most one hub, created on first
+save or collection creation and never transferred. Collections are the unit of
+sharing. One policy service resolves access in order: hub owner (full) → direct
+share → active share link → published. There are no hub memberships or content
+admin bypasses.
+
+Signup-created hubs and `reader`/`editor` grants are the implemented contract;
+optional hubs and `viewer`/`contributor` identifiers are accepted work awaiting
+implementation. See [tenancy and access](../design-docs/tenancy-and-access.md).
 
 ## Rationale
 

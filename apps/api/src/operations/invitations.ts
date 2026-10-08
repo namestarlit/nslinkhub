@@ -83,27 +83,6 @@ export async function prepareAdminInvitation(
   return prisma.withAuthority(async () => {
     const bootstrap = await prisma.adminBootstrap.findUnique({ where: { id: 1 } });
     if (bootstrap && !recovery) {
-      // One-time upgrade of the previously mailed ID-only bootstrap link.
-      // An accepted/declined invitation or a changed configured email is inert.
-      const pending = await prisma.serviceInvitation.findUnique({
-        where: { id: bootstrap.invitationId },
-      });
-      if (pending?.state === "pending" && !pending.tokenHash && pending.email === email) {
-        const updated = await prisma.serviceInvitation.update({
-          where: { id: pending.id },
-          data: { expiresAt: new Date(Date.now() + invitationLifetime), version: { increment: 1 } },
-        });
-        await queueInvitation(prisma, updated);
-        await prisma.operatorAudit.create({
-          data: {
-            actorKind: "deployment",
-            authority,
-            action: "admin.invitation_refreshed",
-            invitationId: pending.id,
-            outcome: "success",
-          },
-        });
-      }
       return { created: false, id: bootstrap.invitationId };
     }
     if (await prisma.adminGrant.count({ where: { user: { accountState: "active" } } })) {

@@ -41,9 +41,9 @@ None yet.
 - Pre-deployment: schema changes go into new reviewed migrations on top of the
   squashed `0_init`; the dev database is reset and reseeded (`bun run db:seed`)
   if a change is easier that way. No compatibility code.
-- Settled 2026-10-08 (ADR-0013): roles stay `reader`/`editor`; the discussion
-  badges the owner and editors alike as "Contributor" (Curator is the
-  professional account type; ADR-0016).
+- Scope: this internals pass preserves current role contracts and labels. The
+  accepted `viewer`/`contributor` rename is separate product work in PRODUCT §11;
+  Curator names the professional account type (ADR-0016).
 
 ## Outcomes & Retrospective
 
@@ -66,19 +66,13 @@ None yet.
 
 ## Plan Of Work
 
-**M1 — Link titles** (superseded; see Progress). Add `resources.page_title` (nullable) and
-`resources.title_status` (`pending | found | none`, CHECK constraint) plus
-`title_checked_at`; headings keep their text in `title_override`, links stop
-writing it. The wire `titleOverride` becomes the displayed title computed by the
-API (heading text, or page title), so clients don't change. Lookups are a
-`link_title_lookups` outbox row written in the save transaction and processed by
-the worker (bounded concurrency, SSRF-guarded fetch unchanged), with a retry
-schedule (e.g. 1 h, 1 day) for failures; no version bump on fill. A short-lived
-Redis cache keyed by canonical URL holds preview results (title or "none") so
-the worker reuses what the preview just fetched. `getByCollection` no longer
-schedules work; it returns `meta.titlesPending` when any listed link is pending,
-and the web list re-reads once only then. Remove the per-process attempts map
-and `authorityContext.exit` scheduling.
+**M1 — Link metadata (complete).** The implemented storage, durable job and
+shared cache are one `link_metadata` row per canonical address; the wire field
+is `Resource.title`. See the
+[completed plan](../completed/deliver-link-metadata.md) and
+[current contract](../../design-docs/collections-and-resources.md#link-metadata).
+Do not add per-resource title-status columns, a separate lookup table or a
+Redis title cache.
 
 **M2 — Queries.** Add `CollectionPolicyService.resolveMany(collections, viewer)`
 (one active-viewer check, one owner lookup, one share lookup) and use it for
@@ -90,7 +84,7 @@ rows and access already loaded; `create` reuses the hold check it already did.
 
 **M3 — Write lock.** Replace the method list exceptions, the two metadata keys,
 the `ParsedUploadAuthorityInterceptor` subclass and the
-`/operations|/invitations` path regex with one `@Authority(mode)` decorator
+`/operations` path regex with one `@Authority(mode)` decorator
 (`lock` default, `read-only`, `after-parse`, `owns-transaction`) set on the
 controllers that need it; one shared `recheckSession(actor)` used by the
 interceptor and `OperationsService`.
@@ -106,7 +100,7 @@ most three per visitor as today); the cookie keeps only the id. Remove
 `fitDraft`, `sealDraft` size limits and the "too-many-links" fallback for
 oversized drafts (the 2-link cap stays as validation).
 
-**M6 — Smaller consolidations.** `fetchPageTitle` reports a missing host
+**M6 — Smaller consolidations.** `fetchPageMetadata` reports a missing host
 (ENOTFOUND/ENODATA) so the preview needs no second DNS lookup; the form compares
 rows by the canonical URL the preview returns; shared helpers for invitation
 state (`notifications.controller` + `administration.service`), time-id comment
@@ -128,7 +122,8 @@ tests, then the full gates in the isolated checkout. Migrations with
 
 - Saving a link shows its title as today; the page is fetched once for preview +
   save; a site that is down gets a title on a later retry without anyone opening
-  the collection; opening a collection performs no writes.
+  the collection. Reads may enqueue missing/stale metadata under the implemented
+  metadata contract; they never fetch pages under the authority lock.
 - A resource page with 20 references runs a constant number of access queries;
   a comment page runs a constant number of reply queries.
 - Only `@Authority(...)` decides lock behaviour; a new POST without it is locked.
@@ -152,9 +147,8 @@ altitude), 2026-10-07; the items they raised are summarized in
 
 ## Interfaces And Dependencies
 
-- Wire: `Resource.titleOverride` keeps its meaning (displayed title); resource
-  lists gain `meta.titlesPending`. `LinkPreview` unchanged.
-- New: `@Authority(mode)` decorator, `CollectionPolicyService.resolveMany`,
-  `link_title_lookups` table, Redis keys `link-title:<sha256>` and
-  `capture-draft:<id>`.
+- Implemented wire: `Resource.title` is the displayed title; metadata storage
+  and refresh rules live in the collections-and-resources design.
+- Planned internals: `@Authority(mode)`, `CollectionPolicyService.resolveMany`,
+  and Redis `capture-draft:<id>` storage.
 - Redis and the worker are already part of the local and production topology.

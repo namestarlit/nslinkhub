@@ -2424,11 +2424,8 @@ describe("account shell and appearance", () => {
         await page.getByRole("button", { name: "Clear all", exact: true }).click();
         await browserExpect(page.locator(".toast")).toContainText("Notifications cleared");
         await browserExpect(page.locator("main")).toContainText("You're all caught up");
-        await ready(page, `/invitations/${invitation.id}`);
-        await browserExpect(page.locator("h1")).toHaveText("Check your inbox");
-        await browserExpect(
-          page.getByRole("link", { name: "Open an invitation link" }),
-        ).toHaveCount(0);
+        const removedInvitation = await page.request.get(`${origin}/invitations/${invitation.id}`);
+        expect(removedInvitation.status()).toBe(404);
         await page.getByLabel("Account menu", { exact: true }).click();
         await page.getByRole("button", { name: "Sign out", exact: true }).click();
         await browserExpect(

@@ -20,16 +20,16 @@ see private content.
 
 ## Decision
 
-There is one management workspace, **Manage**. Every signed-in hub owner has
-it, scoped to their own hub; operator and admin roles add service-wide sections
-within their authority. The roles' boundaries are unchanged: owners manage only
-their hub, and service authority never grants access to private content.
+Under the recorded 2026-10-08 amendment, **Manage** is the hub owner’s workspace,
+scoped to their own hub. Admins and operators use a separate **platform console**
+at `/platform` (implemented at `/ops` until the route change ships). Owners
+manage only their hub; service authority never grants private-content access.
 Sections and routes: [manage-workspace.md](../design-docs/manage-workspace.md).
 
 ## Rationale
 
-- One place and one pattern to learn (tables, row actions, audit) for every
-  kind of management.
+- One place for hub-wide management, with consistent table, row-action and
+  audit patterns; the separate platform console preserves the scope boundary.
 - Owners can do what operators must not: moderate and manage private content
   in their own hub.
 - Hub-level work (imports, people, activity) gets a natural home.

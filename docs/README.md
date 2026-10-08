@@ -23,6 +23,17 @@ walk the [onboarding guide](guides/developer-onboarding-walkthrough.md) first.
   auth boundary.
 - [RELIABILITY.md](RELIABILITY.md) — idempotency, concurrency, jobs and data.
 
+## Reading status and history
+
+Designs state what is implemented and label accepted work that is still planned.
+`PRODUCT.md` §11 owns delivery order; code and shared contracts establish the
+implemented API. An accepted decision can precede its implementation.
+
+Current designs and runbooks describe behavior directly. Keep dates and before/
+after accounts in `CHANGELOG.md`, completed plans and ADR rationale when they
+explain a decision, migration or acceptance limit. Completed plans are historical
+evidence, not current implementation instructions.
+
 ## Where things go
 
 ```text

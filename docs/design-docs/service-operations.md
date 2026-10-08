@@ -1,27 +1,24 @@
 # Service operations
 
-> **Direction (2026-10-08):** this console becomes the service scope of one
-> workspace, [Manage](manage-workspace.md), which also gives every hub owner
-> their own sections (ADR-0014). The authority below is unchanged.
+Status: admin/operator invitations, account restrictions, distribution holds,
+audit and the `/ops` web console are implemented and locally verified. The
+accepted route is `/platform` (not implemented yet); the hub owner's
+[Manage workspace](manage-workspace.md) is separate. See the
+[operator runbook](../runbooks/service-operations.md) for procedures.
 
-Status: operator and admin/invitation workflows implemented and locally verified
-(2026-10-06); reviewed and committed. See
-[admin invitations](../exec-plans/completed/deliver-admin-operator-invitations.md).
-See the [implementation plan](../exec-plans/completed/deliver-service-operations.md)
-and [operator runbook](../runbooks/service-operations.md).
 This is the product-owned service-operator contract. It adds account operations
 and public-content moderation to the individual hub model; it does not add hub
 memberships, private-content access, or a new identity provider. The
 [tenancy and access](tenancy-and-access.md) and [product definition](../../PRODUCT.md)
-remain authoritative. Implementation must deliver the whole operator journey,
-including its sign-in dependency, before advertising an admin surface.
+remain authoritative. New operator capabilities must include their complete verified journey before
+appearing in navigation.
 
-## First milestone
+## Capabilities
 
 An explicitly authorized operator can find an account, suspend or reactivate
 it, revoke its sessions, place or release a hold on a published collection, and
 review who performed these operations and why. These are the complete initial
-capabilities. Two product capabilities now apply: `service_admin` manages users
+capabilities. Two product capabilities apply: `service_admin` manages users
 and operator invitations/access, while `service_operator` performs account and
 moderation work. Neither confers private-content access. There is no configurable
 permission builder. Operators cannot restrict another operator or admin account;
@@ -63,8 +60,8 @@ invitation, encrypted delivery and audit. It creates **no user, hub or grant**.
 The email contains a random 256-bit token in the fragment of
 `/invitations/accept#token=...`; only its digest is stored on the invitation.
 GET and preview consume nothing. Repeat startup neither duplicates mail nor
-restores revoked authority. The initial migration from ID-only links refreshes
-only a still-pending, tokenless bootstrap invitation once.
+restores revoked authority. Changing the configured address does not replace
+an existing bootstrap invitation; recovery is an explicit operator command.
 
 Both roles use the same email-entry journey, adapted from Pigfarm ADR-0012:
 
@@ -85,7 +82,7 @@ account, but cannot establish a session or role: the code goes only to the invit
 address. Codes are purpose-bound to the invitation and its version; ordinary
 login codes cannot activate invitations, and invitation codes cannot log in
 through the ordinary endpoint. Account invitation listings show status and direct
-recipients back to their email; ID-only acceptance is removed.
+recipients back to their email; IDs alone never authorize acceptance.
 With JavaScript disabled, recipients paste the emailed link into the native entry
 form. With JavaScript, its fragment is exchanged for an encrypted HttpOnly flow
 cookie and removed from browser history; raw tokens never enter HTTP URLs/logs.
@@ -187,7 +184,7 @@ collection is a separate moderation case; automated fingerprinting is deferred.
 
 ## Persistence and enforcement
 
-Additive persistence follows existing camelCase/snake_case conventions:
+Persistence follows camelCase/snake_case conventions:
 
 - Account availability and a version for optimistic concurrency, keyed by
   user ID; current suspension reason/time stored without a content payload.
@@ -219,7 +216,7 @@ publication, resource-reference or share mutation must not escape a newly applie
 suspension. Reads begun after a restriction commits must deny access; already
 returned/downloaded content cannot be recalled. Authenticated mutation races
 must be serialized so a revoked actor cannot commit a later privileged action.
-The implementation plan must name and test the shared lock order.
+The shared lock order is defined in [RELIABILITY.md](../RELIABILITY.md).
 
 Mutations take an expected version and an operation ID scoped to actor/action/
 target. After current authorization, same-ID retries return the recorded
@@ -276,24 +273,12 @@ user metadata to ordinary users. Add these literal routes ahead
 of the dynamic handle route. Detailed screen contracts and Impeccable work
 belong to implementation, under the existing web design documents.
 
-The implementation ExecPlan covers:
-
-1. Additive migration review, wire contracts, bootstrap/recovery invitations and
-   product-owned operations/audit services; no real grant during development.
-2. Shared auth and collection availability enforcement, concurrency locks,
-   expiry/retention cleanup and safe public/list/export behavior.
-3. Real email-code sign-in, safe local return paths, session expiry/sign-out,
-   operator actions with recent authentication, visible consequences and
-   conflict/retry recovery; ordinary users get no operator navigation.
-4. Production browser proof and an operator runbook; reconcile status docs,
-   then review the complete milestone before committing.
-
 Acceptance must prove active user versus operator versus suspended/revoked
 operator, cookie and bearer boundaries, cross-hub privacy, no implicit grants,
 email handover/re-invitation, admin protection and invitation races, pending-code/session races, audit
 rollback, stale/replayed actions, and restriction races with transfer/reference creation.
 Exercise ID/pretty/reference/resource/export routes, public/shared/saved lists,
-independent child holds, owner corrections, reactivation and explicit release.
+independent reference-target holds, owner corrections, reactivation and explicit release.
 Use isolated synthetic users, disposable DB/queues and capture email. Check
 no-JavaScript sign-in/recovery, keyboard, narrow screens, freshness/history and
 CSRF through the actual web origin. Run `bun run verify` and
@@ -307,7 +292,7 @@ operations. Nothing in this document claims deployed operator access today.
 
 Invitation notifications are informational messages directing recipients to the
 emailed Review invitation button. Notification IDs never authorize acceptance.
-Legacy status routes remain readable but do not send people through another
+Invitation status routes remain readable but do not send people through another
 link-entry page. The manual emailed-link field is shown only without JavaScript,
 as an accessible fallback for fragment handling; normal email links open review
 automatically. Invite codes are deferred.

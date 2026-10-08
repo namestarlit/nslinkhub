@@ -9,6 +9,21 @@ summary of what changed after completed work has been promoted out of `ref/`.
 
 ## Unreleased
 
+- Removed pre-production compatibility code: ID-only invitation status routes,
+  bootstrap re-mail upgrades and the duplicate collection If-Match parser.
+  Collection writes use body `version`; readiness uses `redisQueue` throughout.
+  Removed unused token/error helpers, title-only metadata wrappers, an obsolete
+  auth spike, dead styling and unused Nest adapters. Shared TypeScript checks
+  now reject unused locals and parameters. Live email invitation/OTP flows,
+  notification messages and conditional GETs remain covered by verification.
+
+- Reconciled living documentation with implemented contracts and accepted
+  direction: separate person/hub identity, pending role and route changes,
+  owner Manage versus platform operations, attribution, auth/delivery and
+  release boundaries. Consolidated web guidance, refreshed onboarding and
+  runbooks, and moved foundation adoption history into completed records.
+  ADR rationale and completed execution evidence remain available.
+
 - Designed people and hubs as separate identities (ADR-0018): a person has an
   @username and a name; their hub — the face that owns their collections and
   subscribers, with its own name and @handle — is optional and created on the

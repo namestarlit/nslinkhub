@@ -81,8 +81,9 @@ collections are private. Changing a destination re-marks "Already saved" and
 - `POST /api/v1/imports/:id/commit` → per-destination counts; idempotent per row.
 - `DELETE /api/v1/imports/:id` discards a draft.
 
-The previous one-shot `POST /imports/csv` and `/imports/bookmarks-html` are
-removed (pre-deployment, no compatibility).
+The implemented one-shot `POST /imports/csv` and `/imports/bookmarks-html`
+remain available until this draft workflow ships, when they will be removed
+without compatibility endpoints.
 
 ## Web
 
@@ -95,5 +96,6 @@ state, tag pills, destination picker.
 
 ## Paid or free
 
-Built free; whether it is paid is decided with the rest of monetization once
-everything is built ([monetization.md](monetization.md)).
+Everyday import is free. Higher limits or professional bulk tools are candidates
+for Curator accounts; features and pricing remain open
+([monetization.md](monetization.md)).

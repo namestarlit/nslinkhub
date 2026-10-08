@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import { BadRequestException, HttpException, ServiceUnavailableException } from "@nestjs/common";
-import { apiErrorDefinition, apiErrors, isApiErrorCode } from "@nslinkhub/types";
+import { isApiErrorCode } from "@nslinkhub/types";
 import { errorResponse } from "../filters/all-exceptions.filter";
 import { appError } from "./app-exception";
 
@@ -37,7 +37,7 @@ describe("safe application errors", () => {
       appError("dependencies_unavailable", {
         dependencies: {
           postgres: "unavailable",
-          redis_queue: "ready",
+          redisQueue: "ready",
         },
       }),
       "req_fixed",
@@ -45,14 +45,13 @@ describe("safe application errors", () => {
     expect(result.status).toBe(503);
     expect(result.unexpected).toBe(false);
     expect(result.body.error.details).toEqual({
-      dependencies: { postgres: "unavailable", redis_queue: "ready" },
+      dependencies: { postgres: "unavailable", redisQueue: "ready" },
     });
   });
-  it("offers a safe client fallback even for prototype names and future codes", () => {
+  it("recognizes only declared error codes, excluding prototype names", () => {
     for (const code of ["future_server_code", "__proto__", "constructor", null, {}]) {
       expect(isApiErrorCode(code)).toBe(false);
-      expect(apiErrorDefinition(code).message).toBe("Request failed");
     }
-    expect(apiErrorDefinition("version_conflict")).toEqual(apiErrors.version_conflict);
+    expect(isApiErrorCode("version_conflict")).toBe(true);
   });
 });

@@ -4,10 +4,6 @@ import { Request } from "express";
 import { auth } from "src/auth/auth";
 import { AuthUser } from "src/common/interfaces/auth-user.interface";
 
-export function toAuthUser(user: { id: string }): AuthUser {
-  return { userId: user.id };
-}
-
 export async function resolveSessionUser(request: Request): Promise<AuthUser | null> {
   const session = await auth.api.getSession({
     headers: fromNodeHeaders(request.headers),
@@ -17,7 +13,7 @@ export async function resolveSessionUser(request: Request): Promise<AuthUser | n
     return null;
   }
 
-  return { ...toAuthUser(session.user), sessionId: session.session.id };
+  return { userId: session.user.id, sessionId: session.session.id };
 }
 
 @Injectable()

@@ -1,18 +1,17 @@
 # Release preparation and operator handoff
 
-Status (2026-10-06): deployment image acceptance is separate from routine
-application verification and W3 development, by user direction. The earlier
-[release-foundations milestone](../exec-plans/completed/deliver-release-foundations.md)
-proved the image/migration/restore/outage/startup/shutdown rehearsal and Swarm
-configuration. Auth delivery subsequently passed 109 source tests and review;
-fresh image acceptance covering the handover-proof and production-throttle
-fixes remains outstanding. Retry that build and rehearsal during deployment
-preparation; earlier image evidence does not cover those fixes.
+Status: release artifacts and local rehearsal tooling exist; nothing is deployed.
+Image acceptance is separate from routine application verification. Rebuild and
+rehearse the exact release commit before publication; older image evidence does
+not validate the current source. The
+[completed release-foundations plan](../exec-plans/completed/deliver-release-foundations.md)
+retains milestone evidence.
 
-No GHCR publication, Swarm deployment, Dokploy promotion, Sentry project, or
-Alloy rollout is claimed. Browser CSRF, live sender/webhook validation, and an
-account-deletion/retention policy remain public-release gates. Profile credential
-writes and account deletion are disabled; auth delivery is implemented locally.
+GHCR publication, Swarm/Dokploy promotion, off-host restore, live email/webhooks
+and Sentry/Alloy rollout remain unverified. Browser Origin enforcement is
+implemented and tested locally; each new browser workflow needs its own
+acceptance. Account deletion is disabled until its verified workflow and
+retention policy are implemented.
 
 ## Deployment preparation checks
 
@@ -65,9 +64,8 @@ separate `image-check` job builds and rehearses the API/worker image. Only after
 both gates pass does the publication job build and publish to GHCR with a full
 commit SHA tag and build provenance/SBOM. Its summary supplies
 `API_IMAGE=<registry>/<repository>/api:<sha>@sha256:<digest>`. There is no
-deployment webhook yet. The reviewed #4 artifact plus UID-portability fix (`cb00a75`) passed
-[hosted verification](https://github.com/namestarlit/nslinkhub/actions/runs/37335644020).
-GHCR publication and live rollout remain unexecuted.
+deployment webhook yet. Publication and live rollout remain pending.
+
 
 The Dockerfile pins Bun 1.3.14 by digest, installs the frozen lockfile and
 compiles in the build stage. The runtime retains the pinned Prisma CLI so
@@ -105,7 +103,7 @@ The operator supplies non-secret references for:
   policy, and a named operator responsible for running the restore drill.
 
 Validate the fully supplied topology with `docker stack config`; never print
-resolved secret contents. Keep the public status contract for now:
+resolved secret contents. The public status contract is:
 `/api/v1/health` is dependency-free; `/api/v1/status` reveals dependency state
 and is 503 only for PostgreSQL failure. API liveness is the container health
 check; ingress uses readiness. Review this dependency-detail exposure before
@@ -136,14 +134,13 @@ logs and remove the one-shot service. Then let Dokploy deploy the reviewed
 `docker-stack.prod.yml` with registry authentication. Never run migration
 automatically in every API replica.
 
-The release-foundations migration adds `audit_records` and `request_budgets`
-plus indexes/CHECK constraints only. It preserved UUID generation, the then-existing
-hierarchy trigger, timestamp triggers, and partial unique indexes. The old image can run
-with these additional tables. Roll back the image on application failure;
-do not drop audit data or automatically reverse SQL. Prisma migration failure
-requires inspection and the existing [migration runbook](migrations.md).
-Changes to existing columns in future releases require a separate compatibility
-and rollback review.
+Review rollback compatibility for the exact image pair and migration set being
+released. The migration chain starts at `0_init` with reviewed additive changes;
+never assume an older binary can serve a newer schema. Roll back an image only
+when compatible, preserve audit data, and never automatically reverse SQL.
+Migration failures require inspection through the
+[migration runbook](migrations.md). Column or contract changes need an explicit
+compatibility and recovery review before promotion.
 
 ## Outstanding live acceptance
 
@@ -156,8 +153,11 @@ without secret values. Validate resource limits against measured load.
 
 Follow one deliberate synthetic sanitized API failure by request ID through
 Sentry issue/trace/log and Alloy/Loki; confirm dependency metrics and alert
-delivery, telemetry-outage behavior, and operator access/retention. Audit data
-currently has no automatic purge; choose the account-deletion and audit
+delivery, telemetry-outage behavior, and operator access/retention. Hub audit data
+has no automatic purge; choose the account-deletion and audit
 retention policy before that endpoint is publicly available. Auth events and
 shared address/source challenge budgets are implemented. Worker/browser spans
-and live sender proof remain separate acceptance work. See [adoption decisions](../design-docs/adoption-decisions.md).
+and live sender proof remain separate acceptance work. Review endpoint abuse
+limits against real traffic and the public status shape (what readiness
+exposes) before exposure. The foundation's adoption history is in
+[foundation-adoption-decisions.md](../exec-plans/completed/foundation-adoption-decisions.md).

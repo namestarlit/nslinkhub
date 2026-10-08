@@ -1,5 +1,5 @@
-// Preserve the existing readiness wire contract, including redis_queue.
-export type DependencyStatus = Record<"postgres" | "redis_queue", "ready" | "unavailable">;
+// Dependency readiness in the camelCase API wire contract.
+export type DependencyStatus = Record<"postgres" | "redisQueue", "ready" | "unavailable">;
 export type SystemStatus = "ready" | "degraded" | "unavailable";
 export interface Readiness {
   status: SystemStatus;

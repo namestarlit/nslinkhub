@@ -40,7 +40,7 @@ export function errorResponse(
     details = {
       dependencies: {
         postgres: deps.postgres === "ready" ? "ready" : "unavailable",
-        redis_queue: deps.redis_queue === "ready" ? "ready" : "unavailable",
+        redisQueue: deps.redisQueue === "ready" ? "ready" : "unavailable",
       },
     };
   } else if (trusted && code === "validation_failed" && "issues" in exception.details) {

@@ -31,6 +31,10 @@ Status and date; context; options considered; the decision; rationale;
 constraints that implementation must preserve; links to design docs and plans.
 Number records sequentially (`NNNN-short-slug.md`) and list them below.
 
+Accepted records can define work that has not shipped. Check `PRODUCT.md` §11
+and each linked design for implementation status. Apply recorded amendments
+alongside their original rationale.
+
 ## Current decisions
 
 - [0001-drive-tenancy-model.md](0001-drive-tenancy-model.md) — Google-Drive tenancy: one hub per user, per-collection sharing.
@@ -46,7 +50,7 @@ Number records sequentially (`NNNN-short-slug.md`) and list them below.
 - [0011-toolchain.md](0011-toolchain.md) — Toolchain: Bun, Biome, reviewed Prisma migrations.
 - [0012-bulk-import-through-reviewed-drafts.md](0012-bulk-import-through-reviewed-drafts.md) — Bulk import through reviewed drafts.
 - [0013-permission-roles-and-display-labels.md](0013-permission-roles-and-display-labels.md) — Permission roles are stable; display labels are chosen per surface.
-- [0014-one-management-workspace.md](0014-one-management-workspace.md) — One management workspace, scoped by role.
+- [0014-one-management-workspace.md](0014-one-management-workspace.md) — Owner Manage workspace and separate platform console (amended).
 - [0015-attribution-from-activity-records.md](0015-attribution-from-activity-records.md) — Attribution comes from activity records.
 - [0016-curator-accounts-are-the-paid-tier.md](0016-curator-accounts-are-the-paid-tier.md) — Everyone's library is free; Curator accounts are the paid tier.
 - [0017-hubs-are-entities-with-members.md](0017-hubs-are-entities-with-members.md) — Hubs as entities with members (rejected; GitHub-style organizations later if ever needed).

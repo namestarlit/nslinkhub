@@ -27,7 +27,7 @@ export class AdministrationController {
     @Req() req: OperatorRequest,
     @Query() query: CursorQueryDto,
   ) {
-    const result = await this.administration.list(req, query, true);
+    const result = await this.administration.list(req, query);
     return apiOk(result.items, result.meta);
   }
   @Post("operator-invitations") async create(@Req() req: OperatorRequest, @Body() dto: InviteDto) {
@@ -46,17 +46,5 @@ export class AdministrationController {
     @Body() dto: VersionDto,
   ) {
     return apiOk(await this.administration.revoke(req, id, dto));
-  }
-}
-@UseGuards(AuthGuard)
-@Controller("api/v1/invitations")
-export class InvitationsController {
-  constructor(private readonly administration: AdministrationService) {}
-  @Get() async list(@Req() req: OperatorRequest, @Query() query: CursorQueryDto) {
-    const result = await this.administration.list(req, query);
-    return apiOk(result.items, result.meta);
-  }
-  @Get(":id") async get(@Req() req: OperatorRequest, @Param("id", new ParseUUIDPipe()) id: string) {
-    return apiOk(await this.administration.get(req, id));
   }
 }

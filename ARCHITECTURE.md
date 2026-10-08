@@ -16,7 +16,12 @@ procedures in `docs/runbooks/`.
 User (1:1) Hub → Collections → Resources (links, references, headings)
 ```
 
-There are no memberships, invitations into hubs, hub roles or usernames.
+The implemented model has no usernames. The accepted
+[people-and-hubs design](docs/design-docs/people-and-hubs.md) introduces separate
+person usernames and makes hubs optional, created on first save. Until it ships,
+signup creates a hub and person references use its handle.
+
+There are no memberships, invitations into hubs or hub roles.
 Collaboration is per-collection sharing only; a hub is never a space others
 join.
 
@@ -215,7 +220,7 @@ explicit shared boundary.
 9. **Naming boundaries.** Product branding stays out of schemas, table/column
    names, API fields, and env-var names.
 
-Conventions in place and unchanged: Bun toolchain + runtime; Prisma as the
+Conventions: Bun toolchain + runtime; Prisma as the
 backend-only persistence boundary behind a Nest `PrismaService`; PostgreSQL 18
 with `app_uuid_v7()` defaults; `timestamptz` UTC; camelCase API / snake_case
 DB; global `ValidationPipe`; self-hosted better-auth with email codes; Biome; `bun test`; committed `bun.lock`.

@@ -1,12 +1,15 @@
-# Hub home, saved collections and following
+# Hub home, saved collections and subscriptions
 
-Status: designed, not built.
+Status: public hub and owner collection lists are implemented. Subscriptions,
+subscriber counts and the home tabs below are planned. Identity follows
+[people and hubs](people-and-hubs.md).
 
 ## Public hub page
 
-What visitors see at `/@handle` and `/h/<id>`: hub name, handle and owner
-attribution, description, **Follow** (signed-in visitors), the share row, and
-the hub's published collections. The follower count is shown — it is real data.
+At `/@handle` and `/h/<id>`, the planned public page shows the hub name, handle,
+owner attribution, description, **Subscribe** (signed-in visitors), the share row, and
+the hub’s published collections. Show a subscriber count only from real data
+once subscriptions are implemented.
 
 ## Your home
 
@@ -17,20 +20,20 @@ What the owner sees at their own hub, Google-Drive style, switching between:
   link shares you opened).
 - **Saved** — published collections you saved, like saved documents in Google
   Drive; dormant ones keep their place labelled "Currently unavailable".
-- **Following** — hubs you follow and their latest published collections, like
+- **Subscriptions** — hubs you subscribe to and their latest published collections, like
   YouTube subscriptions.
 
-A "View your public hub" link shows the page as visitors see it. Managing the
+Settings’ "View your public hub" link shows the page as visitors see it. Managing the
 hub happens in [Manage](manage-workspace.md), not here.
 
-## Following
+## Subscriptions
 
-Following a hub is like subscribing to a YouTube channel: it adds the hub to
-your Following list, its new published collections to your feed, and sends you
-a notification when it publishes. Each followed hub has a notifications toggle
-(on by default, like YouTube's bell), so you can keep following without the
-notices. A follow belongs to the hub, not its owner: it is keyed by the hub's
+Subscribing to a hub is like subscribing to a YouTube channel: it adds the hub to
+your Subscriptions list, its new published collections to your feed, and sends you
+a notification when it publishes. Each subscribed hub has a notifications toggle
+(on by default, like YouTube's bell), so you can keep subscribing without the
+notices. A person’s subscription targets the hub: it is keyed by the hub’s
 immutable id, so it survives handle and name changes, until the
-follower unfollows. Settings live with the rest of the
+subscriber unsubscribes. Settings live with the rest of the
 [notification settings](notifications.md). Owners see
-their followers in Manage › People; a blocked account cannot follow.
+their subscribers in Manage › People; a blocked account cannot subscribe.

@@ -1,7 +1,9 @@
 # Web interface system
 
-Status: W3 interface contract. Public reading and account navigation are implemented;
-other journeys retain their own browser acceptance.
+Status: interface contract for implemented reading, account, capture, discussion
+and service-operation journeys. Planned feature scope and delivery status live
+in [PRODUCT.md](../../PRODUCT.md#11-delivery). Each new journey requires its own
+browser acceptance.
 The [experience](web-product-experience.md) owns journeys and copy direction;
 [DESIGN.md](../../DESIGN.md) owns all concrete theme values.
 
@@ -28,9 +30,9 @@ at the shell's left content edge (the wordmark's edge); narrower surfaces keep
 their own measure without re-centering: reader 768 px, settings 736 px, sign-in
 and capture 512 px. Prose is capped at 65–70 characters. Below 640 px use 20 px
 gutters and stack the title/action group. The shell must fit 320 px without
-horizontal scrolling. At 1024 px a collection may place its section navigation
-beside the reader; the DOM reading order remains title, description, navigation,
-resources. No fixed mobile bottom bar in this slice.
+horizontal scrolling. At 1024 px the collection reader places sharing and discussion beside the
+resources; narrow screens put discussion after the reader. DOM reading order
+must remain meaningful. There is no fixed mobile bottom bar.
 
 All routes have a skip-to-content link, one `h1`, a labelled main region and
 semantic navigation. Native links handle navigation; buttons perform actions.
@@ -50,7 +52,7 @@ Do not make a row containing secondary controls into one enclosing link.
 | Email verification | One flow for every purpose (sign in, first link, continue, resume, confirm, invitation): the start screen (reason line; the known address in bold or an email field; what happens next; Send code, plus Cancel where backing out makes sense) and the code screen (where it went in bold, the code, the purpose's button, "Didn't receive the code? Send a new code"). Short paragraphs with clear space; no extra panels. |
 | Pagination | Visible continuation control with pending state and result-count announcement; prevent duplicate loads; preserve existing results on a retryable page failure. |
 | Feedback panel | Heading, short explanation, one recovery action. Errors use icon/text plus color. Request ID is optional expandable support detail, not the headline. |
-| Future input | Persistent label, instructions and inline error linked with `aria-describedby`; preserve entered values on retryable failure. |
+| Input | Persistent label, instructions and inline error linked with `aria-describedby`; preserve entered values on retryable failure. |
 
 Use one consistent stroke-icon family or simple standard glyphs with accessible
 names. Icons supplement text. Do not invent symbolic labels for unfamiliar
@@ -72,7 +74,7 @@ hover and feedback. Reduced motion makes transitions immediate.
 | Revoked share/unpublished collection | Remove formerly visible content on revalidation failure | Unavailable page |
 | 429 | Brief retry message honoring `Retry-After` | Manual retry after the wait |
 | Timeout/offline/5xx | Bounded failure with retry and retained public shell | One deliberate retry, no automatic loop |
-| Future 409 write | Keep local draft separate from fresh server state | Review changes and retry with current version |
+| 409 write | Keep local draft separate from fresh server state | Review changes and retry with current version |
 
 Transient network failure must not be treated as confirmed sign-out. Do not
 replace private data with another user's stale response: cancel outstanding
@@ -119,8 +121,8 @@ links, third-party links or unrelated API routes. Do not persist tokens in clien
 storage. Signed-in reads may record access to that collection; rotation still
 requires fresh authorization on subsequent reads.
 
-Same-origin routing does not prove CSRF protection. Before browser writes land,
-the API must reject untrusted origins on every cookie-authenticated mutation,
+Same-origin routing does not prove CSRF protection. The API rejects untrusted
+origins on every cookie-authenticated mutation,
 including bodyless actions, multipart uploads and auth routes. Product writes
 carrying a session cookie require an exact allowed `Origin`; missing and
 `null` origins fail closed. A bearer header alongside a session cookie does
@@ -136,11 +138,10 @@ one HTTPS origin. No CORS policy is added by implication.
 Runtime configuration has separate server and browser exports. Server secrets
 retain `_FILE` precedence and loud invalid-production failures. Web server
 configuration may contain the internal API origin; browser configuration may
-not. The implementation must add a mechanical boundary check and inspect the
-production client bundle for synthetic secret canaries. Do not introduce a
-dependency upgrade unrelated to scaffolding.
+not. `bun run check:web` enforces the import boundary; browser verification
+inspects the production bundle for synthetic secret canaries.
 
-## Browser proof required by gate #2
+## Browser acceptance
 
 Use the actual web origin and isolated API/database fixtures. Exercise discovery,
 hub, pretty URL, permalink and reference reads; cursor continuation; anonymous
@@ -154,9 +155,10 @@ journey lands, not just a mocked success notification.
 Focus rings are keyboard-only: a pointer press hides them page-wide (`FocusMode`) until Tab, arrows or F6 are used; text fields always keep their focused border. Check keyboard-only navigation and focus, 320/390/768/1280 px widths, 200% zoom,
 long unbroken titles/URLs, loading, empty, failure and reduced-motion states.
 Verify text contrast at least 4.5:1, large text 3:1 and meaningful control/focus
-boundaries 3:1. Do not declare the design browser-verified before an app exists.
+boundaries 3:1. Claim browser acceptance only for journeys exercised by the
+production browser fixtures.
 
-## Implemented foundation and reference adoption
+## Client architecture
 
 `apps/web` is a separate HTTP client, including its Server Components. It imports
 wire contracts from `@nslinkhub/types` and runtime config from `@nslinkhub/config`;
@@ -164,20 +166,12 @@ it never imports Prisma, Nest modules, database models or backend-owned business
 logic. Database-backed browser fixtures live under `apps/api/test/browser`,
 not in the web application. Backend validation and authorization remain decisive.
 
-Following the user-requested Pigfarm comparison (`f0bab0a`), adopted separate
-server/browser config exports, server-only readers, a central browser adapter,
-mechanical import checks and a single host development orchestrator. Reference
-paths: `docs/designs/backend-authority.md`, `docs/designs/client-surfaces.md`,
-`docs/designs/frontend-foundation.md`, `docs/designs/web-rendering-and-caching.md`,
-`apps/web/src/lib/api-client.ts`, and `tooling/dev.ts`. These are evidence, not
-dependencies or authorization to copy organization, locale or farm rules.
-
-Local differences are deliberate: one same-origin `/api/v1`, no public API-origin
-setting, eight-second server/ten-second browser deadlines, and no shared page
-or data caches. Normal document links avoid router prefetch/cache. Complete
-initial SSR preserves no-JavaScript pagination; streaming Suspense initially
-left the fallback page hidden without JavaScript, so these entry pages await
-their reads. Enhanced pagination retains position/focus and announces results.
+Server/browser config exports, server-only readers, a central browser adapter,
+mechanical import checks and the root development launcher enforce the client
+boundary. Normal document links avoid router prefetch/cache. Complete initial
+server rendering awaits its reads so pages and cursor navigation remain usable
+without JavaScript. Enhanced pagination preserves position/focus and announces
+results.
 If a document navigation is cancelled (for example with Escape), the loading
 surface keeps a keyboard-accessible reload action. It reloads the current URL
 through fresh server authorization; it never simply reveals the old hidden DOM.
@@ -226,15 +220,15 @@ it. Privacy and Terms join it when those pages exist. Service status is reserved
 has no client page or navigation entry.
 A single icon button beside the avatar cycles System → Light → Dark → System.
 Its icon shows the current mode; its accessible label and tooltip name the current
-and next modes. Settings offers all three choices directly. System remains the default. Only admins
+and next modes. System remains the default. Only admins
 see `Operators and invitations` in the ops nav.
 
-`/ops` is an account list with exact lookup and an explicit collection-ID
-moderation entry. Details use labelled identity/status rows, followed by named
+`/ops` is an account table searchable by email or hub handle. `/ops/collections`
+resolves a pasted public collection link and lists active holds. Details use labelled identity/status rows, followed by named
 actions with consequences, a required bounded reason and confirmation. Account
 suspension, reactivation and session revocation are separate forms. Collection
 moderation uses minimal IDs/hold state; operators read any content through the
-ordinary reader. `/ops/audit` has actor/target/action/date filters and explicit
+ordinary reader. `/ops/audit` has actor/target search and action/date filters and explicit
 cursor continuation. No metrics dashboard, private-content preview or disabled
 future actions. Error/reload and denied-access states work without JavaScript.
 
@@ -245,14 +239,16 @@ remove-access form only to admins. `/invitations/accept` receives the emailed fr
 states responsibilities, recipient and expiry, then asks only new users for a name
 and everyone for explicit consent. All recipients proceed to email OTP entry,
 including matching sessions; verification activates the role. Wrong sessions get a sign-out action. Declining
-is separate. Account invitation ID pages are status-only. Terminal states show the outcome without an active accept form.
+is separate. Invitations open through their emailed token link. Terminal states
+show the outcome without an active accept form.
 Wrong-account states offer sign-in with the invited email without disclosing it.
 
-Controls reuse the existing primary/danger/focus tokens, 44 px targets and
-system typography. Account details stack at phone widths; long emails/UUIDs
-wrap. Recent-auth expiry returns through sign-in to the target for a deliberate
-new submission; stale versions and uncertain responses ask for current-state
-review. Neither redirects nor hydration replay a mutation.
+Controls use the shared primary/danger/focus tokens, touch targets and
+Schibsted Grotesk typography. Account details stack at phone widths; long emails/UUIDs
+wrap. Recent-auth expiry opens “Confirm it’s you” and resumes the explicitly submitted
+action once, bound to its original account and operation ID. Stale versions and
+uncertain network responses require current-state review; hydration never
+replays a mutation.
 
 Native form requests use `x-web-form-source`, signed with the separate
 `web-form-source` HMAC domain under the existing source secret. The API accepts
@@ -266,27 +262,27 @@ no authentication or product permission. API/web both receive `BETTER_AUTH_URL`.
 `/settings` renders Profile and Hub directly without tabs or a sidebar, compact
 enough to fit one desktop viewport at its reading width; Sign out lives only in
 the account menu. The hub ID uses the body font with a short permanence note.
-Appearance is controlled only in the header. Legacy
-`section` query values render the same settings form. Desktop rows place labels left and
+Appearance is controlled only in the header. Settings ignores the
+`section` query when rendering its single form. Desktop rows place labels left and
 controls right; narrow screens stack labels and fields. Profile edits Full name
 (`User.name`, retained as `displayName` in the API), and shows email and member-since. Hub edits its
 independent Hub name (`Hub.name`, `hubName` in Profile), handle and Description
 (`Hub.description`, `hubDescription` in Profile), shows the
 immutable UUID and keeps a “View your public hub” link to `/h/:hubId`. The public
 hub also resolves by `/@handle` and shows its name, handle and description.
-The identity line reads “<owner name> @handle” when the owner shows a nonblank
-name; otherwise only “@handle”, never an email fallback (the universal person
-format below).
+The identity line reads “@handle by Owner Name” when the owner shows a nonblank
+name; otherwise only “@handle”, never an email fallback.
 The name, identity line and description form one header group,
 with the inline Share this hub section directly beneath the description.
 Hub creation and update dates are not displayed. Published collections has its own heading
 and quiet count; empty feedback sits immediately beneath it, never at the foot
 of the page. No row separators or decorative container borders are added.
 The count uses public visibility rules across all pages, excluding private or held content.
-Full-name/email/owner changes never rename a hub or change its description.
+Full-name or email changes never rename a hub or change its description. Hubs
+are not transferable.
 In Settings, the outlined Copy hub link button precedes the
 View your public hub text link (Settings only, using `/h/:hubId?view=public`). It copies the absolute `/h/:hubId` address,
-with a selectable fallback when clipboard access fails. `/profile` redirects to Settings.
+with a selectable fallback when clipboard access fails.
 Native POST forwards PATCH with signed form-source attribution; Origin, backend
 validation and ownership remain enforced. Credential changes are excluded.
 
@@ -303,7 +299,7 @@ contains no profile-picture row; the automatically resolved avatar stays in the 
 Appearance is a validated, HttpOnly, SameSite cookie containing only `light`,
 `dark` or `system`. Server rendering sets the root attribute, and CSS semantic
 `light-dark()` tokens follow it without a startup script or a theme flash. System
-reacts to the OS preference. Settings theme forms preserve the current safe local
+reacts to the OS preference. Header theme forms preserve the current safe local
 URL, including shared-link query context, and work without JavaScript. The account
 menu is a native disclosure enhanced with Escape and outside-click dismissal.
 
@@ -333,14 +329,14 @@ The owner’s hub view leads with the same hub name, handle, optional owner
 attribution and description as the public page, with Share this hub below the
 description. Save a link lives in the top bar for every signed-in page (a labelled
 “+” icon below 640 px). Your collections is a separate section below this identity;
-it includes the owner’s private collections as before.
+it includes the owner’s private collections.
 
 The wordmark links signed-in users directly to `/h/:hubId` for their personal hub
 and signed-out users to the landing page.
 Keep its normal ink color in all interaction states and remove link underlining;
 retain the shared focus outline. Notification rows are informational, with no
 link/hover affordance that implies in-app invitation acceptance. They direct
-recipients to their email. No invitation codes are introduced in this milestone.
+recipients to their email. Invitation codes are not implemented.
 
 
 Routine profile-save confirmation is a compact green “Saved” with a check beside
@@ -358,20 +354,19 @@ collection context retains its hub link. Signed-in visitors then see Save a link
 enlarged text.
 
 
-## Public entry and neutral surfaces (2026-10-06)
+## Public entry and neutral surfaces
 
 The root `/` introduces the product; `/discover` is the public feed.
 The header keeps the wordmark alone on the left and groups Discover before the
-account controls on the right, following the user-supplied DiceBear reference.
+account controls on the right.
 The landing uses a clearly labelled example collection, working discovery and
 sign-in/own-hub links, and no pretend collection editor. Dark surfaces are
 neutral charcoal; the blue accent, semantic feedback and system preference
-remain shared with account and reading pages. The self-hosted Schibsted Grotesk face (2026-10-07,
-replacing the system font) is part of the identity. Landing headings may scale up to 3.5rem; product headings
+remain shared with account and reading pages. The self-hosted Schibsted Grotesk face is part of the identity. Landing headings may scale up to 3.5rem; product headings
 retain the compact type scale. Layout stacks naturally on narrow screens.
 
 
-### Stable page frame and compact discovery (2026-10-06)
+### Stable page frame and compact discovery
 
 Header and footer frame a single scrollable main region, which is keyboard
 focusable. Content never scrolls behind either landmark. Very short viewports
@@ -392,7 +387,7 @@ longest question, keep the complete set available to screen readers without live
 announcements, and show static questions with reduced motion or without
 JavaScript. No animation library is needed.
 
-## First-link and desktop capacity refinement (2026-10-06)
+## Capture and collection lists
 
 Desktop discovery uses the remaining main-region height to show only complete
 collection rows, with Previous/Next controls. Capacity is recalculated on resize
@@ -415,9 +410,10 @@ The editor preserves submitted values on errors through progressive form state,
 including without JavaScript. Backend policy and version checks remain authoritative.
 Hide collection pagination entirely when all results fit and no further cursor exists.
 
-Collection previews and readers show description and tags, the owner as a
-person reference and the updated date; readers add “Created by <person>” when
-the immutable creator differs from the current owner.
+Collection previews and readers show description and tags, hub context and
+updated time. Reader metadata keeps the owner, contributor count and updated
+time on one line, with “Created by <person>” when creator and owner differ.
+The API supplies immutable creator provenance.
 Hub links use the immutable `/h/:hubId` route. No email fallback is used for
 publication attribution. Collection ownership follows the hub owner, not the
 original creator or the last editor.
@@ -442,10 +438,10 @@ queries, including pagination. Copy links omit the preview flag and use the
 immutable ID. Private listing authorization remains backend-owned.
 
 
-## Unified visual system (2026-10-07)
+## Shared visual system
 
-One self-hosted typeface (Schibsted Grotesk) replaces the OS font stack so the
-brand reads identically on every platform; the wordmark stays the plain text
+One self-hosted typeface (Schibsted Grotesk) keeps the brand consistent across
+platforms; the wordmark stays the plain text
 `nslinkhub` with no icon. All routes share one left content edge, one row
 vocabulary (collections and resources), one button vocabulary and one form
 control style (fields under `main` share border, hover and focus states).
@@ -455,11 +451,10 @@ Discover link is muted, turning ink on hover. The collection reader's hub link
 carries a small back chevron; operator section navigation does not. The account
 menu popup and the landing example are the only elevated surfaces. Hub and
 collection layouts add no row separators or container borders. Exact values live in
-[DESIGN.md](../../DESIGN.md); the change is tracked in
-`docs/exec-plans/completed/unify-web-visual-system.md`.
+[DESIGN.md](../../DESIGN.md).
 
 
-## Round 2 behavior (2026-10-07)
+## Reader, discussion and verification interactions
 
 - Collection reader: one sheet whose header (hub link, Edit for owners, title,
   description, tags, metadata with GitHub-style relative “Updated …” and the
@@ -501,11 +496,12 @@ collection layouts add no row separators or container borders. Exact values live
   as a document: anchor jumps are pinned back so header and footer stay put.
 - People appear in one format everywhere (collection metadata, comments,
   contributors, history, notifications, audits): their `@handle`, linking to
-  `/h/:hubId`. A name appears only on the person's own hub page, and only when
+  `/h/:hubId`. This is the implemented `PersonRef` contract; the planned
+  [people-and-hubs design](people-and-hubs.md) uses usernames and person profiles.
+  A name appears only on the person's own hub page, and only when
   they chose “Show my name on my hub”; otherwise it stays a private profile
   detail. The API carries people as `PersonRef { hubId, handle }` and never
   sends names elsewhere.
-- Comments read TikTok-style: "@handle · Contributor" (the role in the accent
-  color), the body, then the age leading the actions — "53m  Reply  Edit" —
+- Comments read TikTok-style: "@handle · Contributor" (a Contributor pill), the body, then the age leading the actions — "53m  Reply  Edit" —
   as now, 53m, 23h, 2d, then a date ("Oct 7"); the exact time is on hover.
 - Discovery is `GET /api/v1/discover` (web `/discover`).

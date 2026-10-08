@@ -1,7 +1,7 @@
 # Developer Onboarding Walkthrough
 
 The onboarding route for developers and coding agents new to this repository:
-six hands-on sessions from zero to ready for Track W3. Repository docs remain
+six hands-on sessions covering local development, product rules and verification. Repository docs remain
 authoritative; this guide orders them and pairs them with hands-on work — it
 never restates what a runbook, design doc, or the changelog already owns.
 
@@ -49,14 +49,14 @@ this guide's freshness pin, typechecks, format/lint, tooling/email tests,
 build, unit tests, isolated database lifecycle checks and e2e).
 
 ```bash
-bun run dev              # infra (idempotent) + API watch on :4000
+bun run dev              # infra + API :4000 + worker + web :3000
 ```
 
 In a second terminal:
 
 ```bash
 curl -s localhost:4000/api/v1/health | jq     # { status: "ok" }  (liveness)
-curl -s localhost:4000/api/v1/status | jq     # postgres + redis_queue "ready"
+curl -s localhost:4000/api/v1/status | jq     # postgres + redisQueue "ready"
 ```
 
 Open http://localhost:4000/api/docs — Swagger for every route you will use
@@ -66,7 +66,7 @@ in Session 3.
 
 - [ ] `bun run verify` green end to end.
 - [ ] `/health` and `/status` return different shapes — why do both exist?
-- [ ] The API runs on 4000. Which port is reserved, and for what?
+- [ ] The API runs on 4000. What runs on 3000, and how does it reach the API?
 
 ---
 
@@ -90,8 +90,9 @@ Read, in this order:
    access to their destinations; a resource's kind is
    set by *how it was added*, never URL inspection; tags are plain arrays;
    sharing = link / direct / publish; export reads like a Google Doc;
-   sign-in is code-first; hubs are entities with members, so handing one over is
-   adding a new owner (an email change is only an email change).
+   sign-in uses email codes; hubs have one owner and never transfer, while
+   collections can. The accepted next identity design gives people usernames
+   and optional hubs; distinguish that target from the implemented model.
 2. [ARCHITECTURE.md](../../ARCHITECTURE.md) — the domain model, codemap,
    runtime and architectural invariants.
 3. [tenancy-and-access.md](../design-docs/tenancy-and-access.md) — the access
@@ -178,8 +179,8 @@ curl -s localhost:4000/api/v1/imports/csv -H "Authorization: Bearer $T" \
 
 **Checkpoint 3**:
 
-- [ ] Why is create-then-nest two API calls, and what does the UI do about
-      it?
+- [ ] Why are collection creation and adding a reference separate actions,
+      and why does neither action grant access to the reference target?
 - [ ] What proves the export needed no job queue?
 - [ ] What happened to the CSV's bad row?
 
@@ -192,7 +193,7 @@ Goal: see the failure modes, then read the code that decides access.
 ```bash
 # Drill 1: degrade the queue Redis — the product keeps working
 docker stop nslinkhub-redis
-curl -s localhost:4000/api/v1/status | jq        # "degraded"; redis_queue "unavailable"
+curl -s localhost:4000/api/v1/status | jq        # "degraded"; redisQueue "unavailable"
 curl -s localhost:4000/api/v1/discover | jq '.data | length'   # still serves
 docker start nslinkhub-redis
 curl -s localhost:4000/api/v1/status | jq        # "ready" again
@@ -250,7 +251,7 @@ NODE_ENV=production bun run start   # refuses to boot: DATABASE_URL and
 cd ../..
 ```
 
-E2E now creates, migrates and drops a disposable database per run. Run
+E2E creates, migrates and drops a disposable database per run. Run
 `bun run verify` with local services available; inspect failing suites and
 connectivity rather than resetting development data. Read
 [verification.md](../runbooks/verification.md) for test-specific configuration
@@ -269,80 +270,53 @@ then `bun run db:seed`).
 
 ---
 
-## Session 6 — W3 Direction And The Gate
+## Session 6 — Web Journeys And Delivery Boundaries
 
-Goal: everything the web track has already decided, then the go/no-go gate.
+Goal: understand the working web surface, accepted direction and release gates.
 
 Read:
 
-1. [identity-and-handles.md](../design-docs/identity-and-handles.md) § Web URL
-   scheme and § Identity (code-first sign-in; the four-step double-verified
-   email change).
-2. [transactional-email.md](../design-docs/transactional-email.md) — the
-   built template trio, encrypted outbox, separate worker and locally verified
-   delivery path; distinguish these from live provider acceptance. Then open
-   [code-email.tsx](../../packages/email/src/code-email.tsx) — the shared
-   base all three templates render through.
-3. [design-docs/README.md](../design-docs/README.md) — the two `web-*` design
-   documents (experience, interface system) and [DESIGN.md](../../DESIGN.md),
-   the canonical theme tokens.
-4. [adoption-decisions.md](../design-docs/adoption-decisions.md) — the
-   foundation comparison and gates: isolated verification and safe typed
-   contracts now implemented before web work; auth delivery with the code-first journey;
-   observability and deployment acceptance before public release.
+1. [identity-and-handles.md](../design-docs/identity-and-handles.md) for
+   implemented identity, URL and email-change contracts, then
+   [people-and-hubs.md](../design-docs/people-and-hubs.md) for the accepted target.
+2. [transactional-email.md](../design-docs/transactional-email.md) and
+   [auth-delivery-integration.md](../design-docs/auth-delivery-integration.md)
+   for encrypted delivery, proof/session transactions and local/live acceptance.
+   Inspect [code-email.tsx](../../packages/email/src/code-email.tsx), the shared
+   base for code messages.
+3. [web-product-experience.md](../design-docs/web-product-experience.md),
+   [web-interface-system.md](../design-docs/web-interface-system.md) and
+   [DESIGN.md](../../DESIGN.md) for journeys, interaction and theme values.
+4. [release.md](../runbooks/release.md) for image rehearsal and outstanding
+   public-release requirements. [Engineering decisions](../engineering-decisions/README.md)
+   owns settled rationale; [PRODUCT.md §11](../../PRODUCT.md#11-delivery)
+   owns delivery status and order.
 
-The W3 session-starter itself lives in this machine's git-ignored
-`ref/w3-web-app-handoff.md` (disposable by contract — see
-[reference-context.md](../runbooks/reference-context.md)); it repeats nothing
-durable, it only sequences it.
+With `bun run dev` running, open the web on port 3000. Browse Discover, a public
+hub and a collection. Follow an independent reference. With a configured local
+sender and your own test account, save a link, edit the collection's details,
+read History and update Settings. These actions use development data; automated
+browser fixtures use their own database and capture email.
 
-**Readiness gate — start Track W3 only when every box is honest:**
+**Checkpoint 6:**
 
-- [ ] Checkpoints 1–5 all passed in your own words.
-- [ ] You can state the three web URL shapes and which one share buttons
-      emit.
-- [ ] You can explain why the web app will have no CORS config and no
-      `.env` for the API origin in dev (rewrites) or prod (path routing).
-- [ ] You can distinguish locally verified code delivery from the account
-      journey's browser and live-provider acceptance, and explain why Impeccable may restyle
-      but not reorder that journey.
-- [ ] You can name the foundation checks required before web implementation
-      and the separate public-release gates.
-- [ ] `bun run verify` is green on your machine right now.
+- [ ] Which URLs are durable, and which do share controls copy?
+- [ ] How do API and web agree on the public Origin, and why is a separate
+      internal API origin a server-only setting?
+- [ ] Which person identity and collection roles are implemented, and which
+      accepted changes are still planned?
+- [ ] Why are the owner's Manage workspace and platform console separate?
+- [ ] What does local code/browser acceptance prove, and what remains for live
+      email and deployment acceptance?
+- [ ] Which checks does your next complete journey need?
 
-The foundation, backend auth delivery, W3 design and first web reading journey
-are committed. Read the [pinned auth integration evidence](../design-docs/auth-delivery-integration.md)
-for the codes-only decision and the transaction-scoped integration that closes
-native delivery and email-change gaps. Profile credential writes and account
-deletion are disabled; password authentication has been removed.
-The reviewed backend auth-delivery implementation is committed and its source
-verification gate passes; see the
-[completed auth-delivery plan](../exec-plans/completed/prove-auth-delivery-boundary.md).
-The first W3 discover-to-resource journey is reviewed and committed. The
-[public hub/pretty-URL reading journey](../exec-plans/completed/deliver-public-hub-reading.md)
-is implemented and reviewed. The
-[service-status journey](../exec-plans/completed/deliver-service-status.md) is
-implemented and reviewed. [Service operations](../design-docs/service-operations.md)
-(separate operator authority, account restrictions, public-content holds and
-audit; never private collection access) and the unified web experience
-(one visual system, comments, notifications, saving one or two links with
-resolved titles and tags) are reviewed and committed, as is the operations
-redesign (tabbed tables, collection review by link, "Confirm it's you" for
-sensitive actions) and one reusable email-verification flow that resumes
-interrupted actions for their owner. Settled foundations are recorded in
-[engineering decisions](../engineering-decisions/README.md). The docs follow
-the PRODUCT / ARCHITECTURE / DESIGN layout. The link-metadata foundation (page metadata stored once per address, looked
-up by the worker) is done. Activity and attribution is done. Next: collaborators and routes, the Manage workspace,
-[bulk import](../exec-plans/active/deliver-bulk-import.md), your home and
-following, then preview cards (the full order is `PRODUCT.md` §11) and the
-[final internals pass](../exec-plans/active/final-pass-internals.md).
-Continue with one complete vertical MLP journey at a time.
-Local PostgreSQL/Redis run in containers; the API,
-worker and Next.js dev server run on the host. Keep application builds
-and tests in `bun run verify`; fresh Docker image acceptance belongs to
-[deployment preparation](../runbooks/release.md), not the W3 readiness gate.
-Apply Impeccable to interface work under repository guidance, then prove the
-account journey through the web origin.
+Apply Impeccable for interface work under the repository design documents.
+Run `bun run verify` before presenting a completed milestone; use
+`bun run test:browser` for browser changes and `bun run test:dev` for launcher
+or web-entry changes. Keep builds separate from an active dev server's `.next`
+directory. Current work lives in [active plans](../exec-plans/active/); completed
+plans and the changelog retain evidence rather than instructions to rebuild
+already delivered features.
 
 ---
 

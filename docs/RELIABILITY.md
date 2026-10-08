@@ -26,11 +26,13 @@
 - Email uses an encrypted PostgreSQL transactional outbox relayed to BullMQ,
   with delivery in a separate worker process. PostgreSQL stays authoritative;
   Redis dispatches opaque outbox IDs and is never the source of truth.
+- Link-metadata lookups use durable `link_metadata` rows, leases and BullMQ
+  dispatch; network fetches stay outside the authority transaction.
 - Exports are synchronous (programmatic renderers, file in the response) and
   do not queue. Other notification workflows remain separate product work.
 - Queue Redis (when production-shaped) runs with AOF persistence and
   `noeviction`, and is never reused as a cache.
-- The email slice includes leases, bounded retries, crash recovery, terminal
+- Email delivery includes leases, bounded retries, crash recovery, terminal
   failure handling, and credential-retention cleanup. Provider success and
   database bookkeeping are separate outcomes; an external send is not an
   exactly-once database transaction. See `docs/design-docs/transactional-email.md`.
@@ -71,7 +73,9 @@ Account restrictions, session/proof/grant revocation and audit writes
 commit atomically with the auth transaction boundary. Content holds
 serialize with publication, resource-reference, sharing and transfer mutations. Actions
 use expected versions and scoped operation IDs; stale/conflicting submissions
-fail safely, and the web never replays actions automatically. Operator audit
+fail safely. The web never retries uncertain network outcomes automatically;
+verification can resume an explicitly submitted action once for its original
+account and operation ID ([email verification](design-docs/email-verification.md)). Operator audit
 expires after 365 days in bounded cleanup, independently of active restrictions
 and the existing auth/hub audit policies.
 

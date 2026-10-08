@@ -117,10 +117,6 @@ export function extractMetadata(html: string): PageMetadata {
   };
 }
 
-export function extractTitle(html: string): string | null {
-  return extractMetadata(html).title;
-}
-
 function tidy(raw: unknown, max = 255): string | null {
   const value = typeof raw === "string" ? raw.replace(/\s+/g, " ").trim() : "";
   return value ? value.slice(0, max) : null;
@@ -163,10 +159,6 @@ interface PageFetchOptions {
 }
 
 const none: PageMetadata = { title: null, description: null, siteName: null };
-
-export async function fetchPageTitle(url: string, options: PageFetchOptions = {}) {
-  return (await fetchPageMetadata(url, options))?.title ?? null;
-}
 
 // Null when the page couldn't be reached at all (so a lookup can retry); a
 // reachable page without metadata gives all-null fields.

@@ -26,7 +26,7 @@ export class HealthService {
 
     const dependencies: DependencyStatus = {
       postgres: postgres.status === "fulfilled" ? "ready" : "unavailable",
-      redis_queue: redisQueue.status === "fulfilled" ? "ready" : "unavailable",
+      redisQueue: redisQueue.status === "fulfilled" ? "ready" : "unavailable",
     };
 
     // PostgreSQL is authoritative — without it nothing works. The queue Redis
@@ -35,7 +35,7 @@ export class HealthService {
     let status: SystemStatus;
     if (dependencies.postgres === "unavailable") {
       status = "unavailable";
-    } else if (dependencies.redis_queue === "unavailable") {
+    } else if (dependencies.redisQueue === "unavailable") {
       status = "degraded";
     } else {
       status = "ready";

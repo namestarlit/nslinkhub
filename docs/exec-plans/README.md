@@ -2,9 +2,10 @@
 
 Substantial work is recorded in versioned ExecPlans (format: `PLANS.md`).
 
-- `active/` — plans currently being implemented; updated at every meaningful
+- `active/` — planned or in-progress work; updated at every meaningful
   stopping point.
-- `completed/` — finished plans, kept as durable records after their decisions
+- `completed/` — finished plans and foundation adoption evidence, kept as
+  historical records after their decisions
   are represented in docs, tests, tooling, and `CHANGELOG.md`.
 - `TEMPLATE.md` — starting point for new plans.
 - `tech-debt-tracker.md` — accepted compromises with revisit conditions.

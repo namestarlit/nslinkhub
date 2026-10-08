@@ -1,6 +1,6 @@
 import { Module } from "@nestjs/common";
 import { HubsModule } from "../hubs/hubs.module";
-import { AdministrationController, InvitationsController } from "./administration.controller";
+import { AdministrationController } from "./administration.controller";
 import { AdministrationService } from "./administration.service";
 import { NotificationsController } from "./notifications.controller";
 import { OperationsController } from "./operations.controller";
@@ -13,7 +13,6 @@ import { SessionController } from "./session.controller";
     SessionController,
     NotificationsController,
     AdministrationController,
-    InvitationsController,
   ],
   providers: [OperationsService, AdministrationService],
 })

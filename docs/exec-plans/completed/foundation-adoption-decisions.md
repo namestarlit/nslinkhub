@@ -1,5 +1,12 @@
 # Foundation adoption decisions before W3
 
+> Historical foundation comparison and delivery evidence (2026-10-05–06).
+> This record does not describe current implementation status or delivery order.
+> Use [PRODUCT.md](../../../PRODUCT.md#11-delivery), the
+> [design map](../../design-docs/README.md) and
+> [release runbook](../../runbooks/release.md) for current guidance.
+
+
 Decision date: 2026-10-05. This document owns the adoption sequence and gates;
 focused designs own the resulting contracts. **Decided does not mean built.**
 The comparison itself was documentation-only; current implementation status
@@ -30,7 +37,7 @@ without adopting its product or infrastructure topology.
 Implemented API LogTape/Sentry privacy/correlation, transactional hub-scoped
 collection audit, shared source request budgets, a compiled API image, local
 and production Swarm files, verification/image-release workflows and the
-[release runbook](../runbooks/release.md). Isolated e2e databases and CI were
+[release runbook](../../runbooks/release.md). Isolated e2e databases and CI were
 pulled forward from #1 to verify #4 safely. Gate #3 subsequently added email
 jobs with isolated per-run queue namespaces and cleanup.
 
@@ -55,7 +62,7 @@ cover W3 reads, serialization/nullability, sharing privacy, hidden-resource
 404s, actionable conflicts and malicious error inputs. Verification includes
 local Markdown links and concurrent disposable-database success/failure/SIGTERM
 cleanup. Gate #3 extends that isolation to email queue namespaces. See
-[the completed foundation-contracts plan](../exec-plans/completed/finish-foundation-contracts.md).
+[the completed foundation-contracts plan](finish-foundation-contracts.md).
 
 The reviewed milestone and isolation-check correction are committed as
 `fb32eb9`, with guide pin `bf111f1`, and pushed after the full verification gate.
@@ -67,13 +74,13 @@ owns the next implementation step.
 **User sequencing update (2026-10-05):** after the reviewed W3 design milestone
 (`6d27cbe`, guide pin `a8802c5`), proceed with #3 auth delivery before the web
 scaffold. Gate #2's implementation/browser checks remain outstanding. The
-initial [auth integration evidence](auth-delivery-integration.md) records the
+initial [auth integration evidence](../../design-docs/auth-delivery-integration.md) records the
 pinned library gaps and the implemented transaction-scoped integration. The
 user approved email-code-only authentication, removing password fallback; TOTP and
 recovery codes follow separately. Delivery is implemented and tested locally,
 including auth audit, encrypted outbox, worker recovery, independent suppression
 keys and signed receipt reconciliation after code expiry. The
-[completed auth-delivery plan](../exec-plans/completed/prove-auth-delivery-boundary.md)
+[completed auth-delivery plan](prove-auth-delivery-boundary.md)
 records verification and review corrections. This milestone is reviewed and
 committed; live acceptance and web account screens remain outstanding.
 
@@ -83,7 +90,7 @@ User direction: complete one end-to-end MLP journey before the next. The first
 slice is explore → permalink → section/external resource, with production
 browser proof, no-JavaScript pagination, safe HTTP boundaries and access-change
 checks. Pigfarm's scaffold patterns and backend-authority rules were inspected
-and adapted; details are in [the interface system](web-interface-system.md).
+and adapted; details are in [the interface system](../../design-docs/web-interface-system.md).
 Public hub/pretty URLs, status, account and editing journeys follow separately;
 no placeholders or navigation for them ship in the first slice.
 
@@ -94,11 +101,11 @@ claim of remote publication, hosted CI, deployment or live email acceptance.
 
 **Completed milestone:** public hub → pretty collection URL → section/resource is
 implemented and reviewed. The
-[public hub reading ExecPlan](../exec-plans/completed/deliver-public-hub-reading.md)
+[public hub reading ExecPlan](deliver-public-hub-reading.md)
 records API evidence and acceptance. Public hub lists remain public-only for
 owners; pretty URLs share the reader and copied links use immutable IDs.
 The complete journey passed review. The subsequent
-[service-status journey](../exec-plans/completed/deliver-service-status.md) is now
+[service-status journey](deliver-service-status.md) is now
 implemented and reviewed. It uses the existing readiness/error contract,
 with 19 production browser cases passing across public reading and status.
 Account and mutation journeys remain later work, delivered one complete journey
@@ -107,7 +114,7 @@ at a time.
 ## Service-operations scope update (2026-10-06)
 
 The user requested service administration before further account implementation.
-[Service operations](service-operations.md) now defines account lookup,
+[Service operations](../../design-docs/service-operations.md) now defines account lookup,
 suspension/reactivation, session revocation, public-content holds and operator
 audit. This explicitly extends the earlier decision not to adopt platform
 authority by implication. No Pigfarm role graph, hub memberships, private-content
@@ -123,8 +130,8 @@ public-release gates remain. Account deletion and MFA retain their own scope.
 ## Gate #2 design status (2026-10-05)
 
 The three W3 design documents now define the
-[experience](web-product-experience.md), [interface](web-interface-system.md)
-and tokens (now the root [DESIGN.md](../../DESIGN.md)). They cover public reading first, actual
+[experience](../../design-docs/web-product-experience.md), [interface](../../design-docs/web-interface-system.md)
+and tokens (now the root [DESIGN.md](../../../DESIGN.md)). They cover public reading first, actual
 API fields, unavailable states, cookie/cache/CSRF boundaries and later account
 flows. The design milestone alone did not claim browser acceptance. The first vertical
 slice above now supplies reading proof; gate #2 stays open for the remaining
@@ -262,7 +269,7 @@ The user approved replacing direct authentication links with codes only on
 credential writes, session changes and durable delivery to the same database
 transaction. Preserve replay/resend/expiry/concurrency protection and cross-device
 sign-in. Optional TOTP/recovery codes follow separately. See
-[the integration contract](auth-delivery-integration.md) for the implementation
+[the integration contract](../../design-docs/auth-delivery-integration.md) for the implementation
 and failure evidence. Web states and browser acceptance still belong to gate #2.
 
 Delivery acceptance includes atomic business-intent persistence (and a proven

@@ -1,20 +1,22 @@
 import { describe, expect, it, spyOn } from "bun:test";
 import http from "node:http";
-import { extractMetadata, extractTitle, fetchPageTitle, isPublicAddress } from "./page-metadata";
+import { extractMetadata, fetchPageMetadata, isPublicAddress } from "./page-metadata";
 
 describe("page metadata for saved links", () => {
   it("prefers og:title, then twitter:title, then <title>, decoded and collapsed", () => {
     expect(
-      extractTitle(
+      extractMetadata(
         `<head><title>Fallback</title><meta content="Open &amp; Graph" property="og:title"></head>`,
-      ),
+      ).title,
     ).toBe("Open & Graph");
-    expect(extractTitle(`<meta name='twitter:title' content='Card title'>`)).toBe("Card title");
-    expect(extractTitle("<title>\n  Practical  Typography &#8212; Butterick\n</title>")).toBe(
-      "Practical Typography — Butterick",
+    expect(extractMetadata(`<meta name='twitter:title' content='Card title'>`).title).toBe(
+      "Card title",
     );
-    expect(extractTitle("<p>No title here</p>")).toBeNull();
-    expect(extractTitle(`<title>${"x".repeat(400)}</title>`)?.length).toBe(255);
+    expect(
+      extractMetadata("<title>\n  Practical  Typography &#8212; Butterick\n</title>").title,
+    ).toBe("Practical Typography — Butterick");
+    expect(extractMetadata("<p>No title here</p>").title).toBeNull();
+    expect(extractMetadata(`<title>${"x".repeat(400)}</title>`).title?.length).toBe(255);
   });
 
   it("reads description and site name as text, never images", () => {
@@ -69,13 +71,13 @@ describe("page metadata for saved links", () => {
         { address: "127.0.0.1", family: 4 },
       ];
     };
-    expect(await fetchPageTitle("http://127.0.0.1/", { lookup })).toBeNull();
-    expect(await fetchPageTitle("http://[::1]/", { lookup })).toBeNull();
-    expect(await fetchPageTitle("http://metadata.internal/", { lookup })).toBeNull();
+    expect(await fetchPageMetadata("http://127.0.0.1/", { lookup })).toBeNull();
+    expect(await fetchPageMetadata("http://[::1]/", { lookup })).toBeNull();
+    expect(await fetchPageMetadata("http://metadata.internal/", { lookup })).toBeNull();
     expect(lookups).toBe(1);
-    expect(await fetchPageTitle("http://example.com:8080/", { lookup })).toBeNull();
-    expect(await fetchPageTitle("ftp://example.com/", { lookup })).toBeNull();
-    expect(await fetchPageTitle("http://user:pass@example.com/", { lookup })).toBeNull();
+    expect(await fetchPageMetadata("http://example.com:8080/", { lookup })).toBeNull();
+    expect(await fetchPageMetadata("ftp://example.com/", { lookup })).toBeNull();
+    expect(await fetchPageMetadata("http://user:pass@example.com/", { lookup })).toBeNull();
     expect(lookups).toBe(1);
   });
 });
@@ -89,7 +91,7 @@ it("ends a stalled DNS lookup without starting a request after expiry", async ()
   try {
     const start = Date.now();
     expect(
-      await fetchPageTitle("http://public.example/", { timeoutMs: 40, lookup: () => pending }),
+      await fetchPageMetadata("http://public.example/", { timeoutMs: 40, lookup: () => pending }),
     ).toBeNull();
     expect(Date.now() - start).toBeLessThan(500);
     release([{ address: "93.184.216.34", family: 4 }]);
@@ -144,7 +146,7 @@ it("aborts a streaming socket at a single deadline across redirects", async () =
   try {
     const start = Date.now();
     expect(
-      await fetchPageTitle("http://public.example/redirect", {
+      await fetchPageMetadata("http://public.example/redirect", {
         timeoutMs: 140,
         lookup: async () => [{ address: "93.184.216.34", family: 4 }],
       }),

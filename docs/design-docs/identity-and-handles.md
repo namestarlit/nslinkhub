@@ -5,6 +5,10 @@ account's name, passwordless sign-in, email change and the web URL
 scheme. Settled in [ADR-0002](../engineering-decisions/0002-immutable-identities.md)
 and [ADR-0004](../engineering-decisions/0004-passwordless-email-codes.md).
 
+The implemented person reference still uses a hub handle, and signup creates a
+hub. [People and hubs](people-and-hubs.md) defines the accepted, unbuilt target:
+separate usernames, optional hubs created on first save, and person profiles.
+
 ## Identity
 
 - **Handle** — a hub's public, mutable, unique identity (YouTube-handle style,
@@ -14,8 +18,7 @@ and [ADR-0004](../engineering-decisions/0004-passwordless-email-codes.md).
 - **Hub display name** — free-form `hub.name`, the public name of the hub,
   independent of its owner, email and handle. It is neither unique nor a lookup key.
 - **Hub description** — optional `hub.description`, shown on the public hub and
-  edited in Account → Hub. The profile API uses `hubDescription`; historical
-  `User.bio` values remain stored but are neither edited nor published.
+  edited in Settings → Hub. The profile API uses `hubDescription`.
 - **Full name** — `user.name`, the account holder’s name (exposed as `displayName`
   in the existing profile API). It appears only on the person's own hub page,
   as "@handle by Name", when `user.showNameOnHub` is enabled (default true) —
@@ -23,10 +26,10 @@ and [ADR-0004](../engineering-decisions/0004-passwordless-email-codes.md).
   collections, comments, contributors, history, notifications, audits — people
   appear by their @handle, and the API never sends the name there. Opting out
   leaves the name a private profile detail. Email is never public attribution.
-- **Login direction: code-first, from the get-go.** The primary sign-in is
+- **Sign-in: email codes.** The primary sign-in is
   Substack-style passwordless — continue with email → enter the emailed code
   (email codes only; no direct authentication links or passwords). There is no
-  username. ns-series single sign-on (a centralized IAM) can join later without reshaping
+  username in the implemented account model. ns-series single sign-on (a centralized IAM) can join later without reshaping
   this. The web presents it as one verification flow (see [email-verification.md](email-verification.md)): a single code field that accepts pasted spaces or
   dashes. Live provider acceptance remains before release. Optional
   TOTP/recovery codes are a later follow-up.
@@ -55,7 +58,7 @@ the address. The public URL shapes are:
 | URL | Job |
 | --- | --- |
 | `/c/<collectionId>` | **Permalink** — any collection. Survives slug renames and ownership transfers. Backed by `GET /api/v1/collections/:id`. |
-| `/h/<hubId>` | Stable hub page, backed by `GET /api/v1/hubs/:hubId`. Survives handle and owner changes. |
+| `/h/<hubId>` | Stable hub page, backed by `GET /api/v1/hubs/:hubId`. Survives handle and name changes; hubs are not transferable. |
 | `/@handle` | Hub page. Backed by `GET /api/v1/hubs/by-handle/:handle`. |
 | `/@handle/<slug>` | **Pretty browse URL** — human-readable, *allowed to break* on rename/transfer (Drive path vs file id). Backed by `GET /api/v1/hubs/:hubId/collections/:slug` after handle resolution. Slugs are unique per hub. |
 
@@ -82,4 +85,4 @@ offered a download of all its collections and prompted to transfer collections
 others edit. A 14-day grace period allows changing one's mind; then the hub and
 its collections are deleted and the handle released, the person's comments read
 "[deleted]", activity entries keep only an anonymous actor, and shares and
-follows end.
+subscriptions end.

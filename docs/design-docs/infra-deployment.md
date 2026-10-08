@@ -1,7 +1,7 @@
 # Infrastructure & Deployment Direction (ns series)
 
-Platform direction recorded 2026-07-03; API release artifacts prepared
-2026-10-05. Live infrastructure comes later by explicit user direction.
+Status: API/worker release artifacts and local rehearsals exist; the web image
+and live deployment acceptance are pending. Nothing is deployed.
 The [release runbook](../runbooks/release.md) owns commands, required operator
 inputs, local evidence limits, migration ordering and outstanding live proof.
 
@@ -81,7 +81,7 @@ namestarlit VPS
        -> nslinkhub web + api
        -> nsworklog
        -> nsauth (when it exists)
-  -> product workers (e.g. the nslinkhub email worker, when email ships)
+  -> product workers (the nslinkhub email and link-metadata worker)
   -> PostgreSQL 18 (one instance, one database per product)
   -> dedicated queue Redis per product that needs one
   -> shared services (uptime/observability) as nsinfra adds them
@@ -110,16 +110,16 @@ relied on by the app code:
   + better-auth `trustedOrigins` deliberately, not flipping a wildcard.
 - better-auth cookies are host-only, first-party, and need no cross-site
   attributes; `BETTER_AUTH_URL` is the public origin in production and the
-  API's own origin (`http://localhost:4000`) in development.
+  web entry origin (`http://localhost:3000` by default) in development.
 - File responses (exports) and headers like `X-Request-Id` are readable by
   the web app without exposed-header lists.
 
-The current development auth URL describes the API-only setup. When W3 adds
-the web proxy, align the browser auth URL and trusted-origin configuration with
-the web entry origin (`http://localhost:3000`) and verify real cookie, redirect,
-and CSRF behavior through it. Preserve direct API/bearer clients. Same-origin
-routing does not by itself establish cookie-mutation safety; the W3 gate is in
-`adoption-decisions.md` and `docs/SECURITY.md`.
+The root development launcher gives API and web the same public
+`BETTER_AUTH_URL` and a shared ephemeral `WEB_SOURCE_SECRET`; server reads use
+`API_INTERNAL_ORIGIN`. The browser receives no API-origin setting. Cookie
+mutations require the exact public Origin; cookie-free bearer clients remain
+supported. [Local development](../runbooks/local-development.md) owns setup and
+[SECURITY.md](../SECURITY.md) owns the origin and source-attribution rules.
 
 ## Conventions (apply to every ns product)
 
@@ -136,48 +136,27 @@ routing does not by itself establish cookie-mutation safety; the W3 gate is in
   release risk warrants them; workflows get only the GHCR and Dokploy
   permissions they need.
 
-## What This Means For NSLinkHub Now
+## Repository artifacts and release boundary
 
-Nothing blocks the hub upgrade. The pieces the plan already produces line up
-with this direction:
+The workspace has separate `apps/api` and `apps/web` boundaries. The API
+Dockerfile also supplies the worker process; local/production Swarm topologies
+and verification/release workflows are repository-owned. Web image preparation
+and automatic Dokploy promotion remain pending.
 
-1. Track W's workspace split (`apps/api`, `apps/web`) is exactly the image
-   boundary: one API image (also runnable as a worker process later), one web
-   image.
-2. The `_FILE` secret contract is **implemented** for `DATABASE_URL` and
-   `BETTER_AUTH_SECRET` (`apps/api/src/config/secret.ts`: `<NAME>_FILE` wins
-   over `<NAME>`, trimmed file content, loud failure on an unreadable path).
-   **Zero-config dev, required prod**: development needs no configuration —
-   in-code localhost defaults match `compose.yml` — but nothing is ignored
-   when provided. Resolution order: exported env var → `apps/api/.env`
-   (optional, loaded at startup) → in-code default; so overriding, say, the
-   port is one `.env` line, never a code change. `_FILE` inputs are the
-   *deployed* contract (previews/staging/production). Validation
-   enforces the boundary: with `NODE_ENV=production` the app refuses to boot
-   when `DATABASE_URL`/`BETTER_AUTH_SECRET` are absent or the auth secret is
-   the public dev default. Redis credentials join through the same
-   `readSecret` when the email worker wires BullMQ (`REDIS_URL` /
-   `REDIS_URL_FILE` already feed the readiness check). Health endpoints are
-   **implemented**: `GET /api/v1/health` (liveness, dependency-free) and
-   `GET /api/v1/status` (readiness: postgres + queue Redis →
-   ready/degraded/unavailable; 503 only when postgres is down, so
-   orchestration gates on the authoritative store while a Redis-only outage
-   reads as degraded). The repo now supplies the API Dockerfile, local/production Swarm topologies
-   and verification/image-release workflows. The email worker shares the API
-   image; web artifacts arrive during deployment preparation after W3.
-3. The existing `compose.yml` remains a **local development** file; the
-   production topology is a separate repository-owned
-   `docker-stack.prod.yml` consumed by Dokploy.
-4. nsauth, when built, deploys to the same platform — which is what makes the
-   "Continue with namestarlit" flow operationally cheap for every future ns
-   product.
+`readSecret` in `apps/api/src/config/secret.ts` resolves `<NAME>_FILE` before
+`<NAME>`, trims file content and fails on unreadable paths. Database, auth,
+Redis and email credentials use that contract. Development defaults match
+`compose.yml`; supplied configuration is validated, and production requires
+explicit secrets rather than public development defaults.
 
-Verification CI and release artifacts now exist. Local image and database
-rehearsals are separate from Swarm/Dokploy/Traefik, off-host restore and shared
-Alloy proof. The manually dispatched image workflow publishes only after its
-application verification and image-rehearsal jobs. Push/PR CI runs application
-compilation and real-service tests without building images. Local development
-uses PostgreSQL/Redis containers and host app processes; image acceptance is a
-deployment prerequisite, not a W3 prerequisite (user direction, 2026-10-06).
-Automatic Dokploy promotion remains deferred. No reference
-repository's collector configuration proves namestarlit is operational.
+`GET /api/v1/health` is dependency-free liveness. `/api/v1/status` probes
+PostgreSQL and queue Redis: ready, degraded for Redis-only failure, unavailable
+with HTTP 503 when PostgreSQL fails. Public probe exposure must be reviewed
+before deployment.
+
+Push/PR CI runs application builds and real-service tests. The manual release
+workflow gates image publication on verification and image rehearsal. Local
+application development needs PostgreSQL/Redis containers and host app
+processes, not image acceptance. Before exposure, complete the release runbook's
+Swarm/Dokploy/Traefik, TLS, off-host restore, live email and shared telemetry
+checks. Local image evidence is not proof of a working production platform.

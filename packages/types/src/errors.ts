@@ -51,11 +51,6 @@ export type ApiErrorCode = keyof typeof apiErrors;
 export function isApiErrorCode(value: unknown): value is ApiErrorCode {
   return typeof value === "string" && Object.hasOwn(apiErrors, value);
 }
-// Forward-compatible fallback for a client encountering a newer server code.
-export function apiErrorDefinition(code: unknown): { status: number; message: string } {
-  return isApiErrorCode(code) ? apiErrors[code] : { status: 500, message: "Request failed" };
-}
-
 export type ValidationRule =
   | "required"
   | "string"

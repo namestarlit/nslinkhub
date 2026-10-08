@@ -70,7 +70,7 @@ In the interface hubs read as **@handle** and people as their plain
 
 People subscribe to hubs (like YouTube), with a per-hub notifications toggle;
 subscriptions belong to the person, subscribers to the hub. People are not
-followed. (`hub-home-and-following.md` uses "follow"; it reads as subscribe.)
+followed. See [hub home and subscriptions](hub-home-and-following.md).
 
 ## Data
 

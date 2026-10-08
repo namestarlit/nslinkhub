@@ -36,7 +36,7 @@ export class AuthorityInterceptor implements NestInterceptor {
     if (
       !req.user ||
       ["GET", "HEAD", "OPTIONS"].includes(req.method) ||
-      /^\/api\/v1\/(?:operations|invitations)(?:\/|$)/i.test(req.path)
+      /^\/api\/v1\/operations(?:\/|$)/i.test(req.path)
     )
       return next.handle();
     const actor = req.user;

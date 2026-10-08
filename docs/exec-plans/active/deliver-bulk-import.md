@@ -56,9 +56,10 @@ Not started.
 
 ## Context And Orientation
 
-Today `apps/api/src/modules/imports/` parses CSV (`url`, optional `title`) and
+`apps/api/src/modules/imports/` parses CSV (`url`, optional `title`) and
 bookmarks HTML (anchors only, no folders) and writes straight into one
-collection with a per-row report, keeping source titles. Save a link
+collection with a per-row report, ignoring source titles and enqueuing shared
+link-metadata lookups. Save a link
 (`collections/capture.service.ts`, `POST /api/v1/capture`) holds the rules to
 reuse: canonical URLs (`resources`), `isPublicLinkHost` (`@nslinkhub/types`),
 tag normalization (`maxTags`, `maxTagLength`), title lookup

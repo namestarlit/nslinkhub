@@ -42,7 +42,7 @@ export class OperationsService {
     req: OperatorRequest,
     mutation: boolean,
     work: () => Promise<T>,
-    capability: "operator" | "admin" | "account" = "operator",
+    capability: "operator" | "admin" = "operator",
   ): Promise<T> {
     // Operations owns its transaction, including audited denials. Nest's ordinary
     // mutation interceptor deliberately excludes this module.
@@ -61,8 +61,7 @@ export class OperationsService {
       if (!session) return { error: appError("unauthorized") };
       const grant = await this.prisma.operatorGrant.findUnique({ where: { userId: actor.userId } });
       const admin = await this.prisma.adminGrant.findUnique({ where: { userId: actor.userId } });
-      const authorized =
-        capability === "account" || (capability === "admin" ? !!admin : !!admin || !!grant);
+      const authorized = capability === "admin" ? !!admin : !!admin || !!grant;
       const cookie = /(?:^|;\s*)(?:__Secure-)?better-auth\.session_token=/.test(
         req.headers.cookie ?? "",
       );

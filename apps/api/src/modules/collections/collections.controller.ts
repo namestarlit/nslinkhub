@@ -50,9 +50,8 @@ export class CollectionsController {
     @Param("id", new ParseUUIDPipe()) id: string,
     @CurrentUser() user: AuthUser,
     @Body() dto: UpdateCollectionDto,
-    @Headers("if-match") ifMatch?: string,
   ) {
-    return apiOk(await this.collectionsService.update(id, user, dto, ifMatch));
+    return apiOk(await this.collectionsService.update(id, user, dto));
   }
 
   @ApiBearerAuth()

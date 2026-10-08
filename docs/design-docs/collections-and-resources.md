@@ -1,7 +1,7 @@
 # Collections and resources
 
-Status: implemented. Item kinds and their API, link titles and public
-addresses, tags, and the Save a link command. Settled in
+Status: item APIs, link metadata and Save a link are implemented. Web resource
+organization, preview/details and notes are planned as labelled below. Settled in
 [ADR-0007](../engineering-decisions/0007-resolved-titles-read-only-items.md) and
 [ADR-0008](../engineering-decisions/0008-references-grant-nothing.md).
 
@@ -46,8 +46,8 @@ stores what it fetches. Imports ignore titles in the source file.
 Reference edits, reorders and removal require only source write access. The
 viewer-filtered `linkedCollection` payload is `{ id, title }` or null; it never
 reveals an unreadable destination's title. Deleting a target nulls its reference
-FK and leaves an unavailable resource. No nest/children endpoints, hierarchy
-trigger, parent field, compatibility aliases or inherited-grant backfills remain.
+FK and leaves an unavailable resource. Collections are independent; references
+create no structural parent or inherited grant.
 Resources carry no summary. Titles and tags clarify links; headings organize guides.
 
 ## Sections in the web (planned)
@@ -75,9 +75,8 @@ is shareable and works without JavaScript.
 Optional labels stored **directly on** a collection or resource as a normalized
 `text[]` (lowercase, de-duplicated, capped at write time) — set as part of
 create/update, not a separate attach/detach step. There is no shared tag table,
-no global namespace, and no "click a tag → everything tagged it" view: that
-global machinery added complexity without value for a single-user tool.
-Cross-library retrieval is a full-text search concern (Phase E), covering
+no global namespace, and no "click a tag → everything tagged it" view.
+Planned cross-library retrieval uses text search, covering
 titles, tags, and text together. Keep tags flat — no hierarchies or governance.
 
 ## First-link capture command

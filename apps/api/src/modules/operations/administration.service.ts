@@ -47,52 +47,21 @@ export class AdministrationService implements OnModuleInit {
       delivery: delivery?.state ?? null,
     };
   }
-  private async recipient(req: OperatorRequest) {
-    const user = await this.prisma.user.findUniqueOrThrow({ where: { id: req.user.userId } });
-    if (!user.emailVerified) throw appError("forbidden");
-    return user;
-  }
-  private async own(req: OperatorRequest, id: string) {
-    const user = await this.recipient(req);
-    const row = await this.prisma.serviceInvitation.findUnique({ where: { id } });
-    if (!row || row.email !== user.email || (row.inviteeUserId && row.inviteeUserId !== user.id))
-      throw appError("not_found");
-    return { user, row };
-  }
-  list(req: OperatorRequest, query: CursorQueryDto, admin = false) {
+  list(req: OperatorRequest, query: CursorQueryDto) {
     return this.ops.run(
       req,
       false,
       async () => {
-        const page = this.ops.page(
-          query,
-          admin ? "admin-invitations" : `invitations:${req.user.userId}`,
-        );
-        const user = admin ? null : await this.recipient(req);
+        const page = this.ops.page(query, "admin-invitations");
         const rows = await this.prisma.serviceInvitation.findMany({
-          where: {
-            AND: [
-              page.where,
-              user
-                ? { email: user.email, OR: [{ inviteeUserId: null }, { inviteeUserId: user.id }] }
-                : {},
-            ],
-          },
+          where: page.where,
           orderBy: [{ createdAt: "desc" }, { id: "desc" }],
           take: page.limit + 1,
         });
         await this.ops.audit(req, { action: "invitations.list", outcome: "success" });
         return this.ops.paged(await Promise.all(rows.map((row) => this.view(row))), page);
       },
-      admin ? "admin" : "account",
-    );
-  }
-  get(req: OperatorRequest, id: string) {
-    return this.ops.run(
-      req,
-      false,
-      async () => this.view((await this.own(req, id)).row),
-      "account",
+      "admin",
     );
   }
   operators(req: OperatorRequest, query: CursorQueryDto) {

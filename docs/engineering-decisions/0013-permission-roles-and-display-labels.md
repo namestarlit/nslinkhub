@@ -1,6 +1,8 @@
 # ADR-0013: Permission roles are stable; display labels are chosen per surface
 
-**Status:** accepted  
+**Status:** accepted; the collection-role rename to `viewer` / `contributor`
+is recorded in [ADR-0017](0017-hubs-are-entities-with-members.md) and
+[PRODUCT.md](../../PRODUCT.md#11-delivery), pending implementation.
 **Date:** 2026-10-08
 
 ## Context

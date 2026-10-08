@@ -11,9 +11,9 @@ Use one application telemetry pipeline:
   PostgreSQL/Redis metrics for the Grafana metrics backend. It is outside the
   application image and owns shipping credentials, buffering, and retries.
 
-This decision supersedes the earlier Pino + application OpenTelemetry/OTLP +
-Tempo direction. Do not introduce a second application tracing pipeline.
-`adoption-decisions.md` records scope, evidence, and the delivery sequence.
+Use one application tracing pipeline. The [release runbook](../runbooks/release.md)
+owns deployment acceptance; the [completed foundation record](../exec-plans/completed/foundation-adoption-decisions.md)
+retains adoption rationale and evidence.
 
 ## Implemented API foundation
 
@@ -201,14 +201,13 @@ and exception-to-trace correlation against pinned versions before relying on
 them. Record limitations rather than adding a second SDK or exporter. The implemented API pins and local proof are recorded above; browser and
 worker compatibility remain future acceptance.
 
-Use runtime-specific typed configuration and the `_FILE` contract. Add a
-focused structured-log boundary check alongside the implementation, covering
+Use runtime-specific typed configuration and the `_FILE` contract. Maintain the
+structured-log boundary check (`bun run check:telemetry`), covering
 message interpolation and unsafe object fields. Metric labels stay bounded;
 request IDs and pseudonymous actor/entity references are never labels.
 
-Retain `/api/v1/health` and `/api/v1/status` and their current contracts through
-W3. A friendly web status surface can map dependency readiness to an aggregate
-state. Review public status details versus internal probes before deployment;
+`/api/v1/health` and `/api/v1/status` are monitoring APIs. The web explains
+failures in the affected task and has no standalone status page. Review public status details versus internal probes before deployment;
 changing that API requires updated contracts and consumers.
 
 Before release, prove a synthetic sanitized failure can be followed from the

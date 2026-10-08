@@ -136,7 +136,6 @@ export const operatorAuditActions = [
   "invitation.verified",
   "invitation.decline",
   "operator.revoke",
-  "admin.invitation_refreshed",
   "account.handover",
   "accounts.list",
   "accounts.lookup",

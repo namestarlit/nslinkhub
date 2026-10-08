@@ -413,7 +413,7 @@ describe("W3 serialized contracts and safe HTTP errors", () => {
           status,
           dependencies: {
             postgres: status === "unavailable" ? "unavailable" : "ready",
-            redis_queue: status === "ready" ? "ready" : "unavailable",
+            redisQueue: status === "ready" ? "ready" : "unavailable",
           },
         };
         readiness.mockResolvedValueOnce(fixture);

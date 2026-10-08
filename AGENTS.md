@@ -112,14 +112,16 @@ authoritative.
   collection access flows through the single policy service — Google-Drive
   model: hub owner (full) → direct share (reader/editor) → active link →
   published. One hub per user; no memberships, no roles beyond owner/reader/
-  editor for collection access, no admin bypass. Service-operator
+  editor in the implemented collection contract, no admin bypass. Accepted
+  direction: optional hubs and separate person usernames (ADR-0018), then
+  viewer/contributor role identifiers; see `PRODUCT.md` §11. Service-operator
   permissions are separate and never grant private-content access; see
   `docs/design-docs/service-operations.md`.
 - NestJS route order: literal routes are declared before parameter routes in
   the same controller, and catch-all lookups never share a prefix with
   `:id/*` subresources.
 - Clients (web, extension) never import Prisma Client, generated Prisma
-  types, or `apps/api` internals once the workspace split lands.
+  types, or `apps/api` internals.
 - `main.ts`/`app.setup.ts` mount the better-auth handler before body parsers;
   new global middleware must respect that ordering. E2E tests boot through
   `configureApp` so they run the production HTTP stack.

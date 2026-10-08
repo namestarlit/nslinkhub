@@ -27,7 +27,6 @@ function destination(returnTo: string) {
   if (returnTo.startsWith("/settings")) return "open your settings";
   if (returnTo.startsWith("/notifications")) return "see your notifications";
   if (returnTo.startsWith("/ops")) return "use service operations";
-  if (returnTo.startsWith("/invitations")) return "review your invitation";
   if (/^\/(c\/|@)/.test(returnTo)) return "open this collection";
   return null;
 }

@@ -4,10 +4,9 @@
 
 Implementation status: codes-only templates, transaction-scoped auth,
 encrypted PostgreSQL outbox, BullMQ relay/worker, capture and Resend providers,
-and signed webhooks are implemented locally. The user approved removing direct
-authentication links on 2026-10-05. See the
+and signed webhooks are implemented locally. See the
 [integration contract](auth-delivery-integration.md) for endpoints, evidence and
-retention. Web account screens, live sender/domain validation and live webhook
+retention. Web email-change screens, live sender/domain validation and live webhook
 configuration remain separate acceptance work; no live sending is claimed.
 
 Use Resend as the initial transactional-email provider. It fits the
@@ -20,14 +19,14 @@ Implemented messages:
 
 - sign-in code (continue-with-email);
 - account-email change (confirmation to the current address, then
-  verification to the new address).
+  verification to the new address);
+- service admin/operator invitations and their acceptance codes.
 
 Other message kinds require their own product workflow and template work:
 
 - collection-share notification (a collection was shared directly with an
   account);
-- pending collection share to an unregistered email (Phase E — activated on
-  sign-up);
+- targeted collection-share invitation to an unregistered email (planned);
 - account-security notification;
 - high-priority operational alert when explicitly configured.
 
@@ -83,10 +82,8 @@ Template inputs:
 - remain typed and discriminated so unsupported message kinds fail before
   provider delivery.
 
-Implement this boundary alongside authentication delivery, not as late
-production polish. Email verification and share notifications are not usable until
-the provider-neutral outbox path, worker delivery, and an
-environment-appropriate sender exist.
+New email workflows must use the provider-neutral outbox, worker and an
+environment-appropriate sender before they are exposed to users.
 
 Use:
 
@@ -115,10 +112,8 @@ delivery:
 8. process signed Resend webhooks idempotently;
 9. update delivery, bounce, complaint, delay, failure, and suppression status.
 
-This is the outbox + worker split brought into the W3 auth-delivery slice
-(`ARCHITECTURE.md`); email is the first — and currently
-only — consumer that makes it mandatory (exports are synchronous and never
-queue). Run delivery in a separate worker process
+Email and link-metadata lookups use durable PostgreSQL intent and BullMQ
+dispatch; exports are synchronous and do not queue. Run delivery in a separate worker process
 built from the API image. Scale the worker independently or split specialized
 workers only when measured load or failure isolation justifies it.
 
@@ -150,13 +145,11 @@ is not a product feature; sign-in uses mailbox codes.
 **Visual direction (decided):** Substack-style minimal transactional layout —
 the lowercase `nslinkhub` wordmark (text, no image logo), one large
 letter-spaced code, a short validity line, one bold "do not share" warning, then a muted footer with the
-support route. Neutral near-black palette until product brand tokens exist;
-the web Tailwind theme (Track W3) remains not an email rendering contract.
+support route. Use a neutral near-black palette; the web theme is not an email rendering contract.
 
 Each render returns an application-owned subject, HTML body, and plain-text
 body. Keep subjects free of personal or sensitive data. Use conservative
-email-client-compatible layout and inline styles; the web Tailwind theme (Track
-W3) is not an email rendering contract.
+email-client-compatible layout and inline styles.
 
 Every approved template:
 
@@ -178,7 +171,7 @@ tests remain responsible for proving that sensitive content stays out of
 ordinary logs, Redis payloads, and external telemetry
 (`docs/design-docs/observability.md`).
 
-### Shared footer and warning (2026-10-07)
+### Shared footer and warning
 
 Code emails carry one warning line, “Do not share this code with anyone.”, and
 every email (codes and invitations) ends with the same footer as the web: a
@@ -220,8 +213,7 @@ success; where better-auth and the outbox cannot share a transaction, document
 and test the recovery path. Preserve `resolveSessionUser`, app-owned hub
 onboarding, and the raw auth handler before body parsers.
 
-The user approved email-code-only authentication on 2026-10-05, explicitly removing
-password authentication. The transaction-scoped integration proves one-time consumption,
+Authentication uses email codes only. The transaction-scoped integration proves one-time consumption,
 resend invalidation, concurrent completion, cross-device sign-in and replay
 rejection on the pinned dependency. GET never consumes proof. Eight-digit
 verification codes are keyed-hashed through the supported auth integration;
@@ -247,15 +239,15 @@ Using a subdomain isolates transactional sending reputation from other domain
 mail.
 
 Production sending-domain verification and DNS rollout can finish during
-deployment preparation, but the Resend adapter and queued delivery path ship
-with the auth-delivery slice.
+deployment preparation. The Resend adapter and queued delivery path are
+implemented.
 
 ## Webhooks
 
-Expose an API webhook endpoint such as:
+The API webhook endpoint is:
 
 ```txt
-POST /webhooks/resend
+POST /api/v1/webhooks/resend
 ```
 
 Requirements:
@@ -292,8 +284,9 @@ Minimize provider-visible data:
 - do not emit recipient addresses, subjects, template variables, or webhook
   payloads into external telemetry.
 
-Store only the minimum delivery metadata required by the application. Define a
-retention policy before production.
+Store only the minimum delivery metadata. Delivery/webhook metadata retains
+30 days; credential payloads are erased on terminal outcomes or expiry. The
+[integration contract](auth-delivery-integration.md) owns retention details.
 
 Credential-bearing render inputs need an explicit shorter lifecycle than
 delivery metadata. Strip them on delivery or terminal failure; sweep abandoned

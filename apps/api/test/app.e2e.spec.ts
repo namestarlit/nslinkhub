@@ -28,10 +28,10 @@ describe("AppController (e2e)", () => {
   it("/api/v1/status (GET) reports per-dependency readiness", async () => {
     const res = await request(app.getHttpServer()).get("/api/v1/status").expect(200);
     const body = res.body as {
-      data: { status: string; dependencies: { postgres: string; redis_queue: string } };
+      data: { status: string; dependencies: { postgres: string; redisQueue: string } };
     };
     expect(body.data.status).toBe("ready");
     expect(body.data.dependencies.postgres).toBe("ready");
-    expect(body.data.dependencies.redis_queue).toBe("ready");
+    expect(body.data.dependencies.redisQueue).toBe("ready");
   });
 });

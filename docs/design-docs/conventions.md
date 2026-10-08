@@ -7,8 +7,8 @@ one, because three layers meet here.
 
 - **JSON field keys → camelCase.** Every request and response key is
   camelCase: `hubId`, `linkedCollectionId`, `linkSharingEnabled`,
-  `requestId`, `nextCursor`. No snake_case keys in payloads, ever. The whole
-  stack is TypeScript (Prisma models, DTOs, response mappers, and both future
+  `requestId`, `nextCursor`, `redisQueue`. The whole
+  stack is TypeScript (Prisma models, DTOs, response mappers, and
   clients), so camelCase keeps payloads transform-free from the database row
   to the client.
 - **Machine-token values → `lower_snake`.** Values that a client matches on
@@ -35,16 +35,17 @@ camelCase everywhere; hold the line.
 - Failure: `{ "error": { "code", "message", "requestId", "details" } }`.
 - Every response carries a server-generated `X-Request-Id` header.
 - Growth-prone lists paginate by opaque cursor: `meta: { limit, nextCursor }`.
+- Collection PATCH requires `version` in the body for optimistic concurrency.
+  Read responses use ETags with `If-None-Match` for conditional GETs.
 
-See `docs/runbooks/verification.md` and the Phase A exec-plan for the
-originating decisions.
+See [verification](../runbooks/verification.md) for contract checks.
 
 ## Typed errors and safe details
 
 `packages/types/src/errors.ts` owns the product API's error catalog, status and
 safe fallback text. `ApiError.error` is a discriminated union: narrowing its
 `code` narrows `details`. Clients branch on codes and own user-facing copy;
-`apiErrorDefinition(unknownCode)` provides a safe fallback for newer servers.
+`isApiErrorCode` validates incoming codes before clients select safe fallback copy.
 Never render arbitrary remote exception text as trusted content.
 
 Application services throw the backend-only `appError(code, details?)`.
@@ -76,8 +77,7 @@ Other failures use safe generic status codes such as `bad_request`,
 `unauthorized`, `forbidden`, `not_found`, `conflict`, and `internal_error`.
 The catalog is authoritative; do not duplicate message-to-code parsing.
 
-Validation now returns `details: { issues: [{ field, rule }] }`, replacing
-`details.messages`. Field paths come only from class-validator DTO metadata;
+Validation returns `details: { issues: [{ field, rule }] }`. Field paths come only from class-validator DTO metadata;
 `*` denotes an array item and `$` an unspecified/unknown field. A submitted
 unknown property name is never reflected. Rules are a bounded union, not
 constraint messages. At most 32 distinct issues and eight nested levels are
@@ -85,16 +85,15 @@ reported; neither submitted values nor validation targets leave the server.
 UUID/JSON parser failures use a safe generic `bad_request`.
 
 The only other nonempty details variant is readiness:
-`dependencies_unavailable` includes the existing `{ dependencies: { postgres,
-redis_queue } }` shape, with only `ready`/`unavailable` values. `redis_queue`
-is a preserved pre-existing wire-key exception to the general casing rule.
+`dependencies_unavailable` includes `{ dependencies: { postgres,
+redisQueue } }`, with only `ready`/`unavailable` values.
 All remaining codes carry `{}`.
 
 The raw `/api/v1/auth/*` handler retains better-auth's own response protocol;
 it runs ahead of Nest's filter. The shared endpoint budget can still reject a
-request before that handler using the product error envelope. The W3 auth
-adapter must normalize these protocols deliberately, without changing raw
-handler/body-parser ordering.
+request before that handler using the product error envelope. The web auth
+adapter normalizes both protocols without changing raw handler/body-parser
+ordering.
 
 ## Wire-contract verification
 

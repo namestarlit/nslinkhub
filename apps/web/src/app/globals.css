@@ -2474,12 +2474,6 @@ html[data-revalidating="true"] .session-nav {
   margin: 0;
   overflow-wrap: anywhere;
 }
-.list-heading {
-  margin-top: 2.5rem;
-  margin-bottom: 0.5rem;
-  font-size: var(--text-section);
-  font-weight: 650;
-}
 /* ---------- Service operations ---------- */
 
 .ops-page {

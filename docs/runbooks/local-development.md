@@ -38,7 +38,7 @@ a real value for anything beyond local development.
 Root scripts follow the `<service>:<action>` convention (`infra:*`, `api:*`,
 `email:*`, `types:*`, `web:*`). Bare `dev` is the daily
 orchestrator: it brings up infrastructure, API/worker watchers and Next.js.
-Like Pigfarm's launcher, it delegates to each workspace's script: API
+It delegates to each workspace's script: API
 `start:dev`, worker `email:worker:dev` and web `dev`. It prints the starting
 services and URLs; the custom web server prints `[web] Ready at ...` once it
 has bound its socket. A child failure names the process that stopped the stack.
@@ -134,12 +134,13 @@ codes expire after five minutes; delivery stops after expiry. Run the worker
 for cleanup even during provider/Redis outages. Retention and endpoint contracts
 are in [auth delivery](../design-docs/auth-delivery-integration.md).
 
-## Web reading slice
+## Web development
 
 Open `http://localhost:3000` after `bun run dev` for the landing page. `/discover`
 and `/c/<id>` are available alongside public hubs, profile/settings,
-notifications, email-code sign-in and `/ops`. Personal collection editing
-remains a later slice. The
+notifications, email-code sign-in, capture, collection details editing,
+discussion, History and `/ops`. Resource organization and sharing controls
+remain planned. The
 root orchestrator sets `BETTER_AUTH_URL=http://localhost:3000` (or `WEB_PORT`)
 and the trusted `API_INTERNAL_ORIGIN=http://127.0.0.1:4000` (or `PORT`). Use
 `localhost` for the web entry so browser origin checks match. If starting
@@ -169,8 +170,8 @@ see [verification](verification.md) for browser prerequisites and isolation.
 Service operators sign in through the ordinary code flow and receive an explicit
 product grant; no development account is automatically privileged. Follow
 [service operations](service-operations.md) for the interactive grant/recovery
-command. After this migration lands, apply the additive migrations before
-starting API/web; tests still use disposable databases rather than developer data.
+command. Apply pending migrations before starting API/web; tests use
+disposable databases rather than developer data.
 
 ## Link metadata and code resend timing
 

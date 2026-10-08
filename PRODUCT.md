@@ -76,7 +76,7 @@ improvement.
 NSLinkHub serves two audiences:
 
 - **Everyone** gets a complete personal library for free: save, organize,
-  share, publish, follow and discuss.
+  share, publish, subscribe and discuss.
 - **Professional curators** — people for whom links are the work — opt into a
   paid **Curator account** with the tools that work needs (§6.13).
 
@@ -106,7 +106,7 @@ should make a collection more useful to follow, or easier to keep current.
 ### Free Library, Paid Curator Accounts
 
 Everything an everyday person needs stays free, so collections spread through
-readers, followers and shares. NSLinkHub charges professional curators, who get
+readers, subscribers and shares. NSLinkHub charges professional curators, who get
 professional value: analytics, members-only collections, bulk work at their
 scale, link health, API access and AI curation (ADR-0016). Nothing free today
 moves behind the Curator account.
@@ -128,8 +128,9 @@ Needs:
 
 ### Contributor
 
-Someone the owner granted Can edit on one collection (role `editor`). Works on
-that collection from their own hub, without joining anything.
+Someone the owner granted Can contribute on one collection (`editor` in the
+implemented API; `contributor` in the accepted rename). They act as a person;
+collaboration requires no hub membership or hub of their own.
 
 Needs:
 
@@ -140,13 +141,13 @@ Needs:
 ### Reader
 
 Opens a collection someone sent, shared or published — with or without an
-account — and discovers more through Discover and hubs they follow.
+account — and discovers more through Discover and hubs they subscribe to.
 
 Needs:
 
 - Understand what a collection covers and open the right resource.
 - Ask questions and get answers in the discussion.
-- Follow hubs, save collections, and find them again later.
+- Subscribe to hubs, save collections, and find them again later.
 
 ### Professional Curator
 
@@ -159,7 +160,7 @@ crawling, research datasets).
 
 Needs (planned, through a Curator account):
 
-- See how their collections are used: views, link clicks, saves, follows.
+- See how their collections are used: views, link clicks, saves, subscriptions.
 - Give members-only access to their best collections.
 - Bring in and keep large libraries healthy: bulk work at scale, dead-link
   alerts, AI curation.
@@ -384,35 +385,37 @@ only; access requests and targeted invitations Planned.
   Publication, like every grant, applies only to that collection; referenced
   collections need their own.
 - **Request access** *(planned)*: signed-in people who can't open a collection
-  can ask for Can view or Can edit; the owner answers in Manage › Access. The
+  can ask for Can view or Can contribute; the owner answers in Manage › Access. The
   request always reads "sent", so it never reveals whether a private
   collection exists.
 - **Transfer:** a collection moves to one of its editors' hubs; references are
   untouched, the previous owner becomes an editor, the creator stays on
-  record. Handing over a whole hub is adding the new person as its owner and
-  leaving (hub membership, §5); a person's own access never moves with it.
+  record. Hubs are never transferred; an email change only updates the same
+  person’s address. The optional-hub design must handle a recipient without a
+  hub when collection transfer is implemented against it.
 
-### 6.6 Discover, Following And Your Home
+### 6.6 Discover, Subscriptions And Your Home
 
 Purpose: find good collections and come back to them. Status: Discover Built;
-saves API only; following and your home Planned
+saves API only; subscriptions and home tabs Planned
 (`docs/design-docs/hub-home-and-following.md`).
 
 - **Discover** lists published collections, newest first, page by page. Search
   by text and tags, tag filters (popular tags from published collections over
   the last 90 days) and full-text search are planned; no date-range filter.
-- **Public hub page:** the hub's name, handle, description, **Follow**, the
+- **Public hub page:** the hub's name, handle, description, the planned **Subscribe** action, the
   share row and its published collections.
-- **Follow** a hub like subscribing to a YouTube channel: it joins your
-  Following list, its new published collections appear there, and you're
+- **Subscribe** to a hub like subscribing to a YouTube channel: it joins your
+  Subscriptions list, its new published collections appear there, and you're
   notified when it publishes (a per-hub notifications toggle, on by default).
-  A follow belongs to the hub and stays if the hub changes hands.
+  A person subscribes to the hub’s immutable ID; the subscription survives
+  name and handle changes. Hubs never change owners.
 - **Save** a published collection like saving a document in Google Drive. If
   it is unpublished, the save goes dormant — it keeps its place labelled
   "Currently unavailable", can't be opened or downloaded, can be removed, and
   no snapshot is kept — and comes back when it is republished.
 - **Your home:** your own hub page, Google-Drive style — **My collections**,
-  **Shared with me**, **Saved**, **Following** — with "View your public hub".
+  **Shared with me**, **Saved**, **Subscriptions**. Settings offers "View your public hub".
 
 ### 6.7 Discussion
 
@@ -435,10 +438,10 @@ Purpose: questions and answers next to the resources. Status: Built.
 Purpose: one inbox for everything that concerns you. Status: invitation
 notifications Built; the rest Planned (`docs/design-docs/notifications.md`).
 
-- Kinds, scoped by role: following (a followed hub published), comments, saves
-  and follows of your hub, sharing, invitations, imports, and service notices
+- Kinds, scoped by role: subscriptions (a subscribed hub published), comments, saves
+  and subscriptions to your hub, sharing, invitations, imports, and service notices
   for operators.
-- **Settings** on the Notifications page: a switch per kind and per followed
+- **Settings** on the Notifications page: a switch per kind and per subscribed
   hub; invitations and security notices are always on.
 - Notifications are in-app. Email is kept for sign-in codes, invitations,
   targeted shares and security notices.
@@ -452,11 +455,11 @@ the platform console, moving from `/ops` to `/platform` (§6.12).
 - **The owner:** **Collections** (all collections as a table),
   **Comments** across the hub (hide, show, mark answers), **Access** (access
   requests, every share, link-shared collections; each collection's Manage
-  access opens it filtered), **People** (followers and blocked accounts),
+  access opens it filtered), **People** (subscribers and blocked accounts),
   **Import & export**, and **Activity** — the hub's audit trail.
-- **Blocking** happens where a person appears — a comment, a follower, an
+- **Blocking** happens where a person appears — a comment, a subscriber, an
   access request, a share — and is undone in People. A blocked account can't
-  comment, follow, be shared into or open link-shared collections; published
+  comment, subscribe, be shared into or open link-shared collections; published
   collections stay public to everyone.
 
 ### 6.10 Download And Export
@@ -479,7 +482,7 @@ Status: sign-in, verification and settings Built; email change API only;
 deletion Planned.
 
 - **Sign-in:** email, then an eight-digit emailed code. Emails carry codes
-  only, never sign-in links; no passwords, no usernames.
+  only, never sign-in links; neither passwords nor usernames are login credentials.
 - **Verification:** every situation that sends a code uses the same two
   screens, worded for the purpose (sign in, first link, signing in to do
   something, a session that ended mid-action, confirming a sensitive action,
@@ -568,8 +571,11 @@ are scoped, revocable and rate-limited per plan.
 
 ### Privacy
 
-- Email addresses are never public. People appear everywhere by their @handle;
-  a name shows only on that person's hub page, and only if they choose.
+- Email addresses are never public. The accepted identity design shows people
+  by username, with names on profiles/hub credit when they choose; invited
+  collaborators’ names and emails are visible only in the owner’s access list.
+  The implemented person reference still uses a hub handle; separate usernames
+  and profiles are planned (ADR-0018).
 - Saved links must be public addresses; link previews are text only and never
   make readers' browsers contact linked sites.
 - Activity records hold ids, never names, emails or authored text.
@@ -663,7 +669,7 @@ Nothing is deployed; everything built runs and is verified locally. The API
 | 6.5 Access requests, targeted invitations | Planned | Planned |
 | 6.6 Discover | Built | Built |
 | 6.6 Saves, shared with me | Not yet | Built |
-| 6.6 Following, your home, search | Planned | Planned |
+| 6.6 Subscriptions, your home, search | Planned | Planned |
 | 6.7 Discussion | Built | Built |
 | 6.8 Notifications | Invitations only | Invitations only |
 | 6.9 Manage: hub sections, blocking | Planned | Planned |
@@ -697,7 +703,7 @@ Delivery order (everything is built; what to charge for is chosen after):
    [deliver-bulk-import](docs/exec-plans/active/deliver-bulk-import.md).
 7. **Notifications** (§6.8) —
    [notifications](docs/design-docs/notifications.md).
-8. **Your home and following** (§6.6) —
+8. **Your home and subscriptions** (§6.6) —
    [hub-home-and-following](docs/design-docs/hub-home-and-following.md).
 9. **Link previews and notes** (§6.4), with Add to my collection.
 10. **Organizing and sharing in the web** (§6.3, §6.5, §6.10) — items,

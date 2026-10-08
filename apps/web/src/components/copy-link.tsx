@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { permalink } from "../lib/http";
 import { useDismissible } from "./dismissible";
 import { showToast } from "./toast";

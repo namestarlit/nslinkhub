@@ -35,8 +35,8 @@ are the hub's audit trail. The creator remains a record, never a role
 ## Constraints to preserve
 
 - Entries hold ids and actions only — no names, emails, tokens or authored text
-  (people are shown by their @handle; a name appears only on their own hub
-  page).
+  (display identity follows [ADR-0018](0018-people-and-hubs-are-separate.md);
+  the implemented person reference still uses the hub handle).
 - Entries are written atomically with the change and never edited.
 - Attribution never grants access, and shows only what the viewer may read.
 

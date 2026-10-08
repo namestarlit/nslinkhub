@@ -17,12 +17,11 @@ Unreadable or deleted targets produce a generic unavailable notice, not private
 metadata or silent omission. External links remain hyperlinks without fetched content.
 
 All three renderers are programmatic (markdown string-building, `pdfkit`,
-`docx`) — milliseconds even for large collections — so no format needs a job
-queue, no artifacts are stored server-side, and there is nothing to retain or
+`docx`), so no format uses a job queue, no artifacts are stored server-side, and there is nothing to retain or
 clean up. BullMQ/Redis dispatch email delivery from the PostgreSQL outbox to a
 separate worker; exports do not use that queue.
 
-## Download formats
+## Planned web download controls
 
 Word, Markdown and PDF are all offered (the API already renders all three). A
 collection page offers **Download**; exporting several collections at once is

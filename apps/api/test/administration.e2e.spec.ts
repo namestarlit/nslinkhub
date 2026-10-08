@@ -103,12 +103,17 @@ describe("email-entry service invitations (HTTP)", () => {
     ]);
     expect([a.created, b.created].sort()).toEqual([false, true]);
     expect(a.id).toBe(b.id);
-    await p.serviceInvitation.update({ where: { id: a.id as string }, data: { tokenHash: null } });
-    const beforeRefresh = await p.emailOutbox.count();
-    await prepareAdminInvitation(p, admin.email);
-    expect(await p.emailOutbox.count()).toBe(beforeRefresh + 1);
-    await prepareAdminInvitation(p, admin.email);
-    expect(await p.emailOutbox.count()).toBe(beforeRefresh + 1);
+    const original = await p.serviceInvitation.findUniqueOrThrow({ where: { id: a.id as string } });
+    const mailCount = await p.emailOutbox.count();
+    expect(await prepareAdminInvitation(p, admin.email)).toEqual({ created: false, id: a.id });
+    expect(await prepareAdminInvitation(p, "changed@example.com")).toEqual({
+      created: false,
+      id: a.id,
+    });
+    expect(await p.emailOutbox.count()).toBe(mailCount);
+    expect(await p.serviceInvitation.findUnique({ where: { id: a.id as string } })).toEqual(
+      original,
+    );
     const token = await tokenFor(a.id as string);
     const state = (await preview(token, admin).expect(200)).body;
     expect(state.session).toBe("match");
@@ -197,6 +202,8 @@ describe("email-entry service invitations (HTTP)", () => {
       "invitation_session_mismatch",
     );
     expect(await p.user.findUnique({ where: { email: i.email } })).toBeNull();
+    await as("get", "/api/v1/invitations", admin).expect(404);
+    await as("get", `/api/v1/invitations/${i.id}`, admin).expect(404);
     await as("post", `/api/v1/invitations/${i.id}`, admin)
       .send({ action: "accept", version: 1, operationId: randomUUID() })
       .expect(404);

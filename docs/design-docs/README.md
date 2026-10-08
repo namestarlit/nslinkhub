@@ -6,6 +6,9 @@ system is shaped, `DESIGN.md` how it looks; settled rationale is in
 [../engineering-decisions/](../engineering-decisions/README.md) and
 implementation work in [../exec-plans/active/](../exec-plans/active/).
 
+Each document distinguishes implemented contracts from planned behavior.
+[PRODUCT.md §11](../../PRODUCT.md#11-delivery) owns delivery status and order.
+
 ## Domain and system
 
 - [tenancy-and-access.md](tenancy-and-access.md): the access model (owner →
@@ -22,20 +25,20 @@ implementation work in [../exec-plans/active/](../exec-plans/active/).
 - [email-verification.md](email-verification.md): the one verification flow and
   interrupted actions.
 - [attribution-and-activity.md](attribution-and-activity.md): activity
-  entries, creator, contributors, "added by" and the hub audit (designed).
-- [manage-workspace.md](manage-workspace.md): Manage — one workspace scoped by
-  role (hub owner, operator, admin), blocking (designed).
-- [people-and-hubs.md](people-and-hubs.md): people (@username) and their
+  entries, creator, contributors, "added by" and the hub audit (API and History built; Manage planned).
+- [manage-workspace.md](manage-workspace.md): Manage — the hub owner’s workspace and blocking
+  (designed); the platform console is separate.
+- [people-and-hubs.md](people-and-hubs.md): people (username) and their
   optional hub (name, @handle) as separate identities; `/username` and `/@handle`,
   subscriptions, hub created on first save (designed; next to build).
 - [notifications.md](notifications.md): one inbox for every kind, scoped by
   role, with per-kind and per-hub settings (designed).
 - [hub-home-and-following.md](hub-home-and-following.md): the public hub page,
-  your home (My collections, Shared with me, Saved, Following) and following
+  your home (My collections, Shared with me, Saved, Subscriptions) and subscriptions
   (designed).
 - [bulk-import.md](bulk-import.md): bulk import through reviewed drafts —
   statuses, fixing rows, folders as sections or separate collections, limits
-  (designed; being built).
+  (designed; implementation pending).
 - [exports.md](exports.md): synchronous Markdown/PDF/Word exports and reference
   expansion.
 - [service-operations.md](service-operations.md): operator authority, account
@@ -54,7 +57,7 @@ implementation work in [../exec-plans/active/](../exec-plans/active/).
 ## Platform and delivery
 
 - [auth-delivery-integration.md](auth-delivery-integration.md): better-auth
-  delivery and verified email change, with compatibility evidence.
+  delivery and verified email change, with transaction and acceptance boundaries.
 - [transactional-email.md](transactional-email.md): Resend adapter, React Email
   templates, PostgreSQL outbox and BullMQ worker, signed webhooks.
 - [observability.md](observability.md): LogTape/Sentry boundary, telemetry and
@@ -63,10 +66,9 @@ implementation work in [../exec-plans/active/](../exec-plans/active/).
   mode, GHCR images and topology files.
 - [identity-sso.md](identity-sso.md): ns-series IAM direction ("Continue with
   namestarlit").
-- [adoption-decisions.md](adoption-decisions.md): the 2026-10 foundation
-  comparison and delivery gates.
+- [monetization.md](monetization.md): the accepted free-library/Curator-account
+  direction; features and pricing remain open.
 
-## Proposals under review
-
-- [monetization.md](monetization.md): what people might pay for, a tier sketch
-  and an early valuation take. Nothing decided.
+Foundation comparison and delivery history live in the
+[completed adoption record](../exec-plans/completed/foundation-adoption-decisions.md).
+Current release requirements live in the [release runbook](../runbooks/release.md).

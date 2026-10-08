@@ -48,11 +48,12 @@ API, worker and web environments; the owned database URL remains explicit.
 including real Prisma/worker configuration resolution and nested Bun/Node
 spawns, without connecting to the conflicting database.
 
+Shared TypeScript configuration rejects unused locals and parameters.
 Formatting and linting are Biome (`biome.json`). `useImportType` is disabled
 for `apps/api` only (via a Biome override) because NestJS dependency injection
 and `emitDecoratorMetadata` need runtime imports for decorated
-classes/parameters; it stays enabled for `packages/*`, `tooling/`, and the
-future `apps/web`. Autofix everything with `bun run check` (adds
+classes/parameters; it stays enabled for `packages/*`, `tooling/`, and
+`apps/web`. Autofix everything with `bun run check` (adds
 `biome check --write`).
 
 Requirements: `bun run infra:up` (PostgreSQL + Redis) for the e2e stage.
@@ -71,8 +72,7 @@ push with `bun run infra:up` done — or bypass an emergency push with
 no-branding-in-env-vars rule).
 
 Keep the hook fast enough that nobody is tempted to bypass it by habit.
-When later milestones make the full suite slow (integration tests,
-container-backed checks), split the tiers: keep a fast command (format,
+If gate duration becomes impractical, split the tiers: keep a fast command (format,
 lint, typechecks, unit tests, static checks) as the pre-push gate and move
 the full suite to hosted CI as the authoritative gate — enforced
 server-side through required status checks once a paid plan is justified.
@@ -91,7 +91,7 @@ This escalation path is the decided design; only its trigger is pending.
   part of verification; Docker image builds and rehearsals are separate.
 - `.github/workflows/release.yml` is manually dispatched for deployment
   preparation. It requires the full gate, then builds and rehearses an image
-  before the publication job can run. Image acceptance does not block W3
+  before the publication job can run. Image acceptance is separate from local application
   development. See [release preparation](release.md) for evidence and live gates.
 - `bun run verify:release-image -- <image>` runs that additional Docker release
   check locally when preparing deployment artifacts. The completed
@@ -103,7 +103,7 @@ This escalation path is the decided design; only its trigger is pending.
 
 ## Adding Checks
 
-Promote repeated manual checks into Bun scripts (root `package.json`, later
+Promote repeated manual checks into Bun scripts (root `package.json` and
 `tooling/`) once they have been run manually twice. `bun run verify` should
 remain the single command a contributor needs before committing.
 
@@ -123,19 +123,17 @@ local Chromium executable. CI installs Playwright Chromium explicitly. No
 missing-service or missing-browser case becomes a skipped pass.
 
 The journey covers explore and public hubs/continuation (including no JavaScript),
-pretty URLs, collection and nested reading, public-only owner views, handle/slug
+pretty URLs, collection and reference reading, explicit public previews for owners, handle/slug
 rename durability, hidden/missing equivalence, unpublish/history, token
 rotation, session expiry, real browser-cookie issuance, error recovery and
 Origin enforcement for unsafe requests. It also checks keyboard interaction,
 saved section metadata, independent client read budgets, forged source headers,
 Escape-cancelled document navigation and reload recovery after access revocation,
 320/390/768/1280 px widths, enlarged text, reduced motion and clipboard fallback.
-Status coverage exercises real ready/degraded and dependency-unavailable HTTP
-responses by overriding only readiness probes in the isolated test app; shared
-development services stay running. It also proves unknown/malformed/timeout
-states, throttling, no-JavaScript retry, history and cancelled rechecks.
-Tests leave only synthetic screenshots under `/tmp/w3-reader-*.png`,
-`/tmp/w3-hub-*.png` and `/tmp/w3-status-*.png`; their
+API suites cover readiness and dependency failures with isolated fixtures;
+shared development services stay running. Browser journeys also cover account
+settings, capture, discussion, attribution/History, invitations and operations.
+Tests leave synthetic screenshots under `/tmp/w3-*.png`; their
 processes and database are owned fixtures. Do not run two web builds or dev
 and production browser builds concurrently in the same checkout (`.next` is shared).
 

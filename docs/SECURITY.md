@@ -11,7 +11,9 @@
 ## Authorization
 
 - The API is the source of truth. UI hiding is never a security rule.
-- Each user owns one hub. There are no hub memberships or administrative
+- The implementation creates one hub per user; the accepted optional-hub
+  design is in [people and hubs](design-docs/people-and-hubs.md).
+  There are no hub memberships or administrative
   content-access bypasses. Service-operator authority is separate; it
   grants account operations and distribution restrictions, never private reads.
 - Collection access resolves through `CollectionPolicyService`: hub owner
@@ -30,7 +32,7 @@
 availability and admin/operator grants in the backend, including raw auth/session
 paths and every content
 surface. Suspension revokes sessions, proofs and service roles; email
-handover removes both service roles and cancels incoming/authored invitations. Recent code authentication is required
+change removes both service roles and cancels incoming/authored invitations. Recent code authentication is required
 for operator mutations. Startup/recovery only issues the initial admin invitation. The recipient must explicitly accept using the emailed token before a UUID
 grant exists, then verify a fresh invitation-bound email OTP. Consent creates no
 session or role; every recipient verifies, including matching signed-in accounts.
@@ -44,7 +46,7 @@ Public-content holds restrict distribution without giving operators new read
 permissions. Operators cannot impersonate, change credentials, delete accounts
 or inspect other users' hub audit feeds. Operator events use their own access
 and 365-day retention policy; current restrictions outlive event cleanup.
-These additions preserve ordinary collection authorization and hidden/missing
+These rules preserve ordinary collection authorization and hidden/missing
 404 equivalence. Refer to the contract for recovery and atomic audit rules.
 
 ## Tokens And Secrets
@@ -86,8 +88,8 @@ Recorded so a future security review doesn't read the absence as an oversight:
   default strength. The absence *is* the implementation.
 - Nothing needs the relaxation by design: the web app is same-origin with the
   API (one public origin, Traefik path-routes `/api/*`; Next.js rewrites in
-  dev — `docs/design-docs/infra-deployment.md` § Origins), and the W4
-  extension fetches with `host_permissions` + bearer tokens, outside page
+  dev — `docs/design-docs/infra-deployment.md` § Origins), and the planned
+  extension uses with `host_permissions` + bearer tokens, outside page
   origin rules.
 - CORS could never be the security boundary anyway: non-browser clients
   (curl, servers, apps) do not enforce the Same-Origin Policy. Real access
@@ -97,7 +99,7 @@ Recorded so a future security review doesn't read the absence as an oversight:
   even when it cannot read the response; whether cookies accompany them also
   depends on cookie/site policy. JSON preflight is not sufficient protection
   for every route: imports accept multipart and some commands are bodyless.
-  The HTTP boundary now rejects every unsafe request carrying a session cookie
+  The HTTP boundary rejects every unsafe request carrying a session cookie
   unless its Origin exactly matches `BETTER_AUTH_URL`, including multipart,
   bodyless actions and bearer-plus-cookie requests. Missing/null/foreign
   origins fail closed; cookie-free bearer clients remain supported. Auth routes
@@ -125,9 +127,10 @@ Recorded so a future security review doesn't read the absence as an oversight:
 
 ## Auditability
 
-Collection publication (including published creation), deletion, direct-share
-changes, link enable/rotation/disable, ownership transfer and hub-handle changes
-now write `audit_records` inside the same PostgreSQL transaction as the action.
+Content changes, discussion moderation, collection management, sharing, transfer
+and hub name/handle changes write `audit_records` in the action’s PostgreSQL
+transaction. [Attribution and activity](design-docs/attribution-and-activity.md)
+owns the action catalog and reader-facing history contract.
 The audit row has typed action, immutable actor/hub/collection/target-user IDs,
 optional role and database timestamp; no email, handle, token or authored text.
 Collection management rechecks ownership under a row lock before mutation.
@@ -139,12 +142,11 @@ rows stay with their original hub. Audit identifiers deliberately have no
 cascading foreign keys: deleting a collection cannot erase its history.
 
 There is no audit purge or public account-deletion retention policy yet.
-Account deletion is disabled: the profile DELETE route is removed and
-better-auth delete-user stays explicitly disabled. Profile writes no longer
-accept email/password. Password authentication is disabled in better-auth and
+Account deletion is disabled at both profile and better-auth boundaries.
+Profile writes accept neither email nor password. Password authentication is disabled in better-auth and
 its public signup, login, enrollment, change and reset routes are unavailable.
-Email handover revokes every session; the former owner has no password path
-back into the account. Re-enabling deletion requires
+Email change revokes every session; the person must sign in with the new
+address. It never transfers the account or hub. Re-enabling deletion requires
 verified proof and a reviewed retention policy. See
 [auth integration](design-docs/auth-delivery-integration.md).
 Auth security outcomes, double-verified email changes and all-session
@@ -165,7 +167,7 @@ addresses. Rotating the secret resets effective budgets. Trust no forwarded
 source by default; `TRUSTED_PROXY_CIDRS` accepts explicit addresses/CIDRs only.
 Configure the actual ingress boundary before deployment. These conservative
 per-source limits share capacity for users behind NAT and are not a distributed
-attack solution. Add account/challenge limits in auth delivery and ingress
+attack solution. Auth delivery also enforces account/challenge budgets. Configure ingress
 connection/body limits during live deployment.
 
 Web server rendering preserves the visitor's source budget through signed
@@ -197,7 +199,7 @@ never external telemetry payloads.
 ## Personal Data
 
 - Store the minimum: email, full name and optional image. The public description
-  belongs to the hub. Historical user bios are retained without being published.
+  belongs to the hub.
 - Logs and API telemetry use a strict allowlist; request IDs are
   server-generated and never echo caller input.
 

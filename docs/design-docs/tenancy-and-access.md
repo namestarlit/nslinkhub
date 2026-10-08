@@ -5,6 +5,15 @@ independent collections, per-collection access through one policy service.
 Settled in [ADR-0001](../engineering-decisions/0001-drive-tenancy-model.md);
 product behavior in [PRODUCT.md](../../PRODUCT.md).
 
+## Accepted changes awaiting implementation
+
+[People and hubs](people-and-hubs.md) makes hubs optional and gives people their
+own usernames. Collection grants will use `viewer` / `contributor`, with **Can
+view** / **Can contribute** labels; code still uses `reader` / `editor` below.
+[Manage](manage-workspace.md) is the planned owner workspace; the service console
+will use `/platform`, while its implemented route is `/ops`. These changes do
+not alter the policy order or grant operators private-content access.
+
 ## Access model
 
 A single policy service (`CollectionPolicyService`) is the one source of truth.
@@ -32,7 +41,7 @@ Roles come in two separate scopes ([ADR-0013](../engineering-decisions/0013-perm
 
 | Role | Scope | Comes from | Can |
 | --- | --- | --- | --- |
-| `owner` | Every collection in the hub | Owning the hub (`hub.ownerUserId`); moves with a collection transfer | Read, write content, manage; manage the hub in [Manage](manage-workspace.md), including blocking accounts |
+| `owner` | Every collection in the hub | Owning the hub (`hub.ownerUserId`); moves with a collection transfer | Read, write content, manage; planned hub-wide management and blocking in [Manage](manage-workspace.md) |
 | `editor` | One collection | A direct share (`CollectionShare`) | Read, write content |
 | `reader` | One collection | A direct share, or a recorded link share | Read |
 | `operator`, `admin` | The service, site-wide | An accepted, verified invitation (`OperatorGrant`, `AdminGrant`) | Run service operations; never read private collections ([service-operations.md](service-operations.md)) |
@@ -42,7 +51,7 @@ kept through transfers, shown only as attribution, never consulted for access.
 
 Role names are stable identifiers in the API and database; each surface picks
 its own label: the discussion badges replies from the owner or an editor as
-**Contributor**, sharing reads **Can view** / **Can edit**, operations reads
+**Contributor**, the planned sharing surface reads **Can view** / **Can contribute**, operations reads
 "service operator" / "service admin". Changing a label never renames a role.
 
 ## Service operations
@@ -65,7 +74,7 @@ available to its active owner for correction, but unavailable to non-owners;
 publication, sharing and transfer cannot bypass the hold. References confer no access.
 Recovery preserves owner settings without restoring revoked sessions/grants.
 Actions and audit are atomic. The linked contract owns concurrency, authority
-lifecycle, privacy and retention details. The web console (`/ops`) finds
+lifecycle, privacy and retention details. The web console (`/ops`) searches
 accounts by email or handle, resolves a public collection from its link, manages
 the operator team and filters the audit; search text never appears in URLs.
 

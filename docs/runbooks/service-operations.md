@@ -25,8 +25,7 @@ Acceptance uses the private token in the emailed link, not the account's status
 listing. The link creates no session and GET consumes nothing. Without JavaScript,
 paste the email link into the invitation entry form. Existing recipient accounts
 are also pinned to immutable user IDs. Changing the configured bootstrap address
-does not create another admin. The transition from old ID-only links sends one
-replacement email for a still-pending tokenless initial-admin invitation.
+does not create another admin.
 
 ## Invite and manage operators
 
@@ -40,7 +39,8 @@ active; removal takes effect on the next privileged request. Restoring access
 requires a fresh invitation and acceptance. Operators cannot administer another
 operator or admin account. Admin suspension is unavailable through these tools.
 Routine admin/operator mutations require email-code verification within five minutes;
-reauthentication returns to the page for another deliberate submission.
+the web asks “Confirm it’s you” and resumes the waiting action once after
+verification, preserving its operation ID and account binding.
 
 Verified email handover removes both service roles, ends sessions, and cancels
 pending incoming/authored invitations. Account suspension also invalidates these
@@ -66,10 +66,12 @@ an uncertain result. Never delete bootstrap records to force a startup resend.
 
 ## Everyday operations
 
-Open `/ops` and use exact email, user UUID or hub handle lookup. Account pages
+Open `/ops` and search the account table by email or hub handle. Account detail
+routes use immutable user IDs. Account pages
 show identity, availability, active session count and operational authority.
 They do not enumerate private collections. Each action shows its effect and
-requires a reason and confirmation. No mutation is submitted automatically.
+requires a reason and deliberate submission. Verification may resume that
+submission once; network errors never trigger automatic retries.
 
 - **Suspend account:** ends sessions, invalidates outstanding proofs and removes
   operator authority; hides the owned hub/content from others. Records and
@@ -79,7 +81,7 @@ requires a reason and confirmation. No mutation is submitted automatically.
   and operator grants stay revoked.
 - **End all sessions:** forces fresh sign-in without changing account availability.
   Using it on yourself signs you out too.
-- **Hold distribution:** enter a public collection's immutable ID on `/ops`.
+- **Hold distribution:** paste a public collection's permalink or pretty URL on `/ops/collections`.
   Inspect it with normal reader access, then hold its distribution to all
   non-owners, including shares, links and sections. The active owner can read
   and correct it. No private preview is retained for the operator.
@@ -87,8 +89,8 @@ requires a reason and confirmation. No mutation is submitted automatically.
   sharing, account state and any independent collection hold. It never republishes
   a collection. Review those consequences before confirming.
 
-Owner correction remains available through the existing content API; personal
-editing screens are a later W3 milestone. Owners see a restriction notice and
+Owners can edit collection details and add links in the web; other resource
+corrections use the content API until organization controls ship. Owners see a restriction notice and
 the configured support link on their collection page. The hold's active record
 remains independent of the audit history.
 
@@ -98,11 +100,12 @@ A stale state returns 409. Reload, review current state and deliberately submit
 a new action. A repeated operation ID with the identical payload returns its
 original result; a changed payload conflicts. After a timeout the action may
 have committed: inspect current state/audit before deciding to resubmit.
-Expired recent authentication leads to sign-in and back to the target page;
-it never replays the operation. An expired/revoked session cannot use `/ops`.
+Expired recent authentication leads to “Confirm it’s you”; successful
+verification resumes the original account’s waiting action once. A different
+account cannot resume it. See [verification](../design-docs/email-verification.md). An expired/revoked session cannot use `/ops`.
 
-Use `/ops/audit` to filter by actor ID, target user/collection/invitation ID, action or UTC
-date range. Pagination keeps a snapshot cutoff while audit reads themselves
+Use `/ops/audit` to search actors/targets by email, handle or ID and filter by
+action or UTC date range. Pagination keeps a snapshot cutoff while audit reads themselves
 are recorded. Lookups never store their searched email/handle in this history.
 The audit records bounded reasons and immutable IDs, not free-text allegations,
 credentials or content. Service operators cannot edit/delete audit entries.

@@ -11,10 +11,6 @@ export interface CursorMeta {
   nextCursor: string | null;
 }
 
-export interface EtagMeta {
-  etag: string;
-}
-
 export interface ApiSuccess<T, M = undefined> {
   data: T;
   meta?: M;
@@ -25,10 +21,6 @@ export interface ApiError {
 }
 
 export type ApiResponse<T, M = undefined> = ApiSuccess<T, M> | ApiError;
-
-export function isApiError<T, M>(response: ApiResponse<T, M>): response is ApiError {
-  return (response as ApiError).error !== undefined;
-}
 
 // How a person appears anywhere in the product: their @handle, linking to
 // their hub (/h/:hubId). A name appears only on their own hub page, and only

@@ -1,9 +1,9 @@
 # Auth-delivery integration
 
-Decision: 2026-10-05. Dependency pinned by `bun.lock`: better-auth **1.6.23**.
-The user approved email codes as the only signup/sign-in method and both
-email-change proofs; the earlier password-fallback decision is superseded. Optional TOTP/recovery codes follow separately;
-collection invitations remain sharing work, without hub memberships.
+Status: implemented and locally verified. Dependency pinned by `bun.lock`:
+better-auth **1.6.23**. Email codes are the only signup/sign-in method and
+supply both email-change proofs. Web email-change screens, optional
+TOTP/recovery codes and targeted collection invitations are planned.
 
 ## Ownership and transaction boundary
 
@@ -13,9 +13,10 @@ mints, hashes and consumes OTPs, writes credentials, creates sessions and
 revokes them. No parallel proof store or custom OTP comparison exists.
 
 Every mutating auth request takes PostgreSQL transaction advisory lock
-`74201931`. This initially serializes auth writes across replicas, including
-code session creation, resend and handover. Reads and domain writes remain
-concurrent. This is a deliberate small-installation throughput tradeoff: measure
+`74201931`. This serializes authenticated product mutations, auth writes and
+operator commands across replicas, including code session creation, resend and
+email change. Read-only product requests remain concurrent; see
+[RELIABILITY.md](../RELIABILITY.md). This is a deliberate small-installation throughput tradeoff: measure
 lock wait before replacing it with carefully ordered account/challenge locks.
 Transaction acquisition is bounded to 5 seconds and execution to 15 seconds.
 No provider request occurs inside an auth transaction.
@@ -27,10 +28,10 @@ callback count detect better-auth's swallowed callback errors, so a failed
 persistence operation cannot report success. HTTP 5xx rolls back; invalid proof
 responses commit attempt consumption. Responses are returned only after commit.
 
-The original seven native compatibility tests remain negative evidence for the
-unwrapped library. `auth-delivery.e2e.spec.ts` proves the production wrapper,
-including separate-process consumption and rollback after final handover work.
-Native magic-link behavior is historical evidence, no longer a product blocker.
+`auth-delivery.e2e.spec.ts` proves the production wrapper, including
+separate-process consumption and rollback after final email-change work.
+Library integration limitations and the wrapper's original proof are preserved
+in the [completed integration plan](../exec-plans/completed/prove-auth-delivery-boundary.md).
 
 The pinned library's `change-email-otp-${old}-${new}` identifier is ambiguous:
 distinct address pairs can share it. Before invoking handover endpoints,
@@ -40,8 +41,7 @@ initiating session ID, current address and target address. Creation, lookup,
 atomic consumption, updates and deletion all delegate to better-auth under
 that namespace; proof generation, hashing, comparison and attempt accounting
 remain library-owned. Outbox challenge keys use the same identifiers. Sign-in
-proofs keep their existing namespace. No lookup falls back to legacy handover
-identifiers; pre-fix in-progress handovers must restart.
+proofs keep their existing namespace. Lookups accept only the purpose-bound email-change namespace.
 
 Restarting handover deletes both prior scoped proofs through better-auth and
 erases their pending email payloads in the same transaction as intent replacement.
@@ -99,7 +99,7 @@ profiles are unchanged by sign-in. `PATCH /profile` accepts the account's full
 name (`displayName`), plus its owned hub's name (`hubName`), handle and description
 (`hubDescription`). It does not edit credentials.
 Account deletion is disabled until verified deletion and ownership/retention
-rules are designed. Handover preserves the immutable user and hub identity.
+rules are implemented. Email change preserves the immutable user and hub identity.
 
 ## Delivery and privacy
 
@@ -145,14 +145,12 @@ bounced, suppressed and complained. Only minimal outcome metadata survives.
 
 ## Local and deployment status
 
-Resend provider/key/sender settings were copied, at user request, into ignored
-mode-0600 `apps/api/.env`; they are excluded from Docker. No values belong in
-docs, logs or telemetry. No source webhook secret was available. Local tests
-force capture and isolated queue namespaces. No real email was sent and no live
-provider/domain/webhook acceptance is claimed.
+Local tests force capture delivery and isolated queue namespaces. Source and
+browser acceptance cover code sign-in and verification; verified email change
+has API acceptance but no web screens. Live provider/domain/webhook acceptance
+remains a release prerequisite. Local configuration is private and provides no
+release evidence.
 
-See [transactional email](transactional-email.md) for the architectural policy,
-[local development](../runbooks/local-development.md) for worker setup, and
-[verification](../runbooks/verification.md) for the test lifecycle. Web forms and
-browser acceptance remain gate #2 work; do not mark the entire W3 journey done
-based on API tests.
+See [transactional email](transactional-email.md) for policy,
+[local development](../runbooks/local-development.md) for setup, and the
+[release runbook](../runbooks/release.md) for outstanding live proof.
