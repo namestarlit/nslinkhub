@@ -247,7 +247,8 @@ email.
 **Discover** lists published collections, newest first, continuing page by page
 (no popularity score, recommendations or sort options yet). Opening one shows
 which hub published it. Signed-in readers can **follow** a hub *(planned)*, like
-subscribing to a YouTube channel: the hub joins their Following list, its new
+subscribing to a YouTube channel (the follow belongs to the hub and stays if
+the hub changes hands): the hub joins their Following list, its new
 published collections appear there, and they're notified when it publishes (each
 followed hub has a notifications toggle, on by default). They can also **save**
 a published collection to keep it *(API only today)*, like saving a document in
@@ -304,11 +305,16 @@ reveals no title or content. Signed-out readers can only browse.
 roles *(planned; today it is the service-operations console)*:
 
 - **Every hub owner** manages their own hub: all collections as a table,
-  comments across the hub (hide, show, mark answers), people (who has access,
-  followers, blocking someone from taking part in the hub), **Import &
+  comments across the hub (hide, show, mark answers), **Access** (requests
+  to view or edit, every share, link-shared collections — like Google Drive's
+  "Manage access"), **People** (followers and blocked accounts), **Import &
   export** (bulk import, exporting several collections), and the hub's
-  activity — its audit trail. Blocking never hides published collections:
-  what is published is public to everyone.
+  activity — its audit trail. Signed-in people who can't open a collection can
+  **Request access**; the request always reads "sent", so it never reveals
+  whether a private collection exists. Owners block someone where that person
+  appears (a comment, a follower, a request, a share) and unblock in People.
+  Blocking stops taking part, never public reading: what is published is
+  public to everyone.
 - **Service operators** find an account by email or handle and restrict it
   (suspend, reactivate, sign out everywhere); look up a public collection by
   its link and hold or release it, or moderate its comments; and review the
@@ -537,9 +543,6 @@ Next, in order (everything is to be built; what to charge for is chosen after):
 
 ## 10. Open decisions
 
-- **Access requests and blocking in Manage** — an Access tab with requests and
-  shares, blocking in context, and People as followers plus a Blocked list
-  (proposed; awaiting confirmation).
 - **Monetization** — deferred by choice: decided after everything is built
   (notes in `docs/design-docs/monetization.md`), including whether bulk import
   is paid.
@@ -558,5 +561,7 @@ the curator's note (up to 280 characters) in full in the details; notifications
 stay in-app apart from codes, invitations, targeted shares and security; all
 three download formats; account deletion with a 14-day grace period; bulk
 import limits of 1,000 links, 10 MB, 3 open drafts and 30 days; popular tags from
-published collections over 90 days, no date-range filter. Details live in the
+published collections over 90 days, no date-range filter; access requests
+and shares live in Manage › Access, blocking happens in context with People
+holding followers and blocked accounts, and follows belong to the hub. Details live in the
 design docs.
