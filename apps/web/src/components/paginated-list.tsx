@@ -75,29 +75,37 @@ export function PaginatedList(props: Props) {
   useEffect(() => {
     if (props.kind !== "resources") return;
     const untitled = (props.initial as Resource[]).some(
-      (r) => r.kind === "external_link" && !r.titleOverride,
+      (r) => r.kind === "external_link" && !r.title,
     );
     if (!untitled) return;
+    // The worker looks titles up within seconds of a save (a slow site takes up
+    // to its 3 s deadline); read again twice to pick them up.
     const controller = new AbortController();
-    const timer = setTimeout(async () => {
+    const refresh = async () => {
       const result = await browserRead<Resource[]>(
         props.path,
         controller.signal,
         props.token,
       ).catch(() => null);
       if (!result?.ok) return;
-      const titles = new Map(result.data.map((r) => [r.id, r.titleOverride]));
+      const fresh = new Map(result.data.map((r) => [r.id, r]));
       setItems((current) =>
         current.map((item) => {
-          const title = titles.get(item.id);
-          return title && !(item as Resource).titleOverride
-            ? { ...item, titleOverride: title }
+          const found = fresh.get(item.id);
+          return found?.title && !(item as Resource).title
+            ? {
+                ...item,
+                title: found.title,
+                description: found.description,
+                siteName: found.siteName,
+              }
             : item;
         }),
       );
-    }, 2500);
+    };
+    const timers = [2500, 6000].map((delay) => setTimeout(refresh, delay));
     return () => {
-      clearTimeout(timer);
+      for (const timer of timers) clearTimeout(timer);
       controller.abort();
     };
   }, []);

@@ -27,8 +27,10 @@ collections.
 
 ## Rows and statuses
 
-Each row holds an address, optional tags and its folder path. A source title
-(bookmark text, a CSV `title` column) is ignored: titles come from the page.
+Each row holds an address, optional tags and its folder path — the only things
+taken from the person: the link, and where it goes. A title in the file
+(bookmark text, a CSV `title` column) is a hint for whoever reads the file and
+is ignored; titles, descriptions and site names always come from the page.
 
 | Status | Meaning | Importable |
 | --- | --- | --- |

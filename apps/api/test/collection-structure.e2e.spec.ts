@@ -176,7 +176,8 @@ describe("Independent collection resources (e2e)", () => {
       .auth(owner, { type: "bearer" })
       .send({ url: "https://fixture-links.dev/typed", position: 1, titleOverride: "Typed" })
       .expect(400);
-    // Rows saved by the removed nesting feature copied the target's title.
+    // Rows saved by the removed nesting feature copied the target's title; a
+    // reference's title is always its readable target's, never a stored copy.
     await app.get(PrismaService).resource.updateMany({
       where: { collectionId: source },
       data: { titleOverride: "Q3 private plan" },
@@ -197,7 +198,7 @@ describe("Independent collection resources (e2e)", () => {
       kind: "collection_link",
       linkedCollection: null,
       linkedCollectionId: null,
-      titleOverride: null,
+      title: null,
     });
     expect(JSON.stringify(anonymous.body)).not.toContain("Q3 private plan");
     expect(JSON.stringify(anonymous.body)).not.toContain(target);
@@ -205,10 +206,9 @@ describe("Independent collection resources (e2e)", () => {
       .get(`/api/v1/collections/${source}/resources`)
       .auth(owner, { type: "bearer" })
       .expect(200);
-    expect(ownView.body.data[0]).toMatchObject({
-      linkedCollectionId: target,
-      titleOverride: "Q3 private plan",
-    });
+    expect(ownView.body.data[0]).toMatchObject({ linkedCollectionId: target });
+    expect(ownView.body.data[0].title).toBe(ownView.body.data[0].linkedCollection.title);
+    expect(JSON.stringify(ownView.body)).not.toContain("Q3 private plan");
   });
 
   it("stores headings as ordered editable resources without creating collections", async () => {
@@ -218,16 +218,16 @@ describe("Independent collection resources (e2e)", () => {
     await request(app.getHttpServer())
       .post(route)
       .auth(token, { type: "bearer" })
-      .send({ titleOverride: "   ", position: 0 })
+      .send({ title: "   ", position: 0 })
       .expect(400);
     const heading = await request(app.getHttpServer())
       .post(route)
       .auth(token, { type: "bearer" })
-      .send({ titleOverride: "Getting started", position: 0 })
+      .send({ title: "Getting started", position: 0 })
       .expect(201);
     expect(heading.body.data).toMatchObject({
       kind: "heading",
-      titleOverride: "Getting started",
+      title: "Getting started",
       linkedCollectionId: null,
     });
     await request(app.getHttpServer())

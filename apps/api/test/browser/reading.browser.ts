@@ -296,26 +296,25 @@ beforeAll(async () => {
   });
   // The referrer check opens a local test server, an address the API refuses
   // to save, so this one link is written directly. Titles are resolved from
-  // pages (disabled under test); set them as a lookup would.
+  // pages (disabled under test); store them as a lookup would.
+  const lookedUp = (url: string, title: string) =>
+    prisma.linkMetadata.upsert({
+      where: { url },
+      create: { url, title, state: "ready", fetchedAt: new Date() },
+      update: { title, state: "ready", fetchedAt: new Date() },
+    });
+  const referenceUrl = `http://127.0.0.1:${capture.port}/reference`;
   await prisma.resource.create({
-    data: {
-      collectionId: sourceId,
-      kind: "external_link",
-      url: `http://127.0.0.1:${capture.port}/reference`,
-      titleOverride: "Open the reference",
-      position: 1,
-    },
+    data: { collectionId: sourceId, kind: "external_link", url: referenceUrl, position: 1 },
   });
+  await lookedUp(referenceUrl, "Open the reference");
   for (let position = 2; position < 22; position++) {
     const added = await request(app.getHttpServer())
       .post(`/api/v1/collections/${sourceId}/resources/external`)
       .auth(owner, { type: "bearer" })
       .send({ url: `https://fixture-links.dev/reference/${position}`, position })
       .expect(201);
-    await prisma.resource.update({
-      where: { id: added.body.data.id },
-      data: { titleOverride: `Reference ${position}` },
-    });
+    await lookedUp(added.body.data.url, `Reference ${position}`);
   }
   const link = await request(app.getHttpServer())
     .put(`/api/v1/collections/${sourceId}/link-sharing`)
@@ -1225,7 +1224,7 @@ describe("explore to resource: production browser journey", () => {
       await request(app.getHttpServer())
         .post(`/api/v1/collections/${guideId}/resources/heading`)
         .auth(owner, { type: "bearer" })
-        .send({ titleOverride: "Getting started", position: 0 })
+        .send({ title: "Getting started", position: 0 })
         .expect(201);
       await request(app.getHttpServer())
         .post(`/api/v1/collections/${guideId}/resources/collection`)

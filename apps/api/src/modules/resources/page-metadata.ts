@@ -1,4 +1,5 @@
-// Fetches a public web page's title for a saved link, defensively: the URL is
+// Fetches a public web page's metadata (title, description, site name) for a
+// saved link, defensively: the URL is
 // user-supplied, so this is an SSRF surface. Only http(s) on default ports,
 // only public unicast addresses (checked after DNS and pinned for the
 // connection, so a rebinding answer cannot redirect it), manual redirects that
@@ -79,8 +80,17 @@ function decode(text: string) {
   });
 }
 
-// og:title, then twitter:title, then <title>; whitespace collapsed, ≤255 chars.
-export function extractTitle(html: string): string | null {
+export interface PageMetadata {
+  title: string | null;
+  description: string | null;
+  siteName: string | null;
+}
+
+// Text only — never images or icons. Title: og:title, then twitter:title, then
+// <title> (≤255). Description: og:description, twitter:description, then
+// <meta name="description"> (≤500). Site name: og:site_name, then
+// application-name (≤120). Whitespace collapsed, entities decoded.
+export function extractMetadata(html: string): PageMetadata {
   const metas = html.match(/<meta\b[^>]*>/gi) ?? [];
   const meta = (name: string) => {
     for (const tag of metas) {
@@ -91,16 +101,29 @@ export function extractTitle(html: string): string | null {
     }
     return undefined;
   };
-  const raw =
-    meta("og:title") ??
-    meta("twitter:title") ??
-    /<title\b[^>]*>([\s\S]*?)<\/title>/i.exec(html)?.[1];
-  return tidy(raw ? decode(raw) : undefined);
+  const text = (raw: string | undefined, max: number) => tidy(raw ? decode(raw) : undefined, max);
+  return {
+    title: text(
+      meta("og:title") ??
+        meta("twitter:title") ??
+        /<title\b[^>]*>([\s\S]*?)<\/title>/i.exec(html)?.[1],
+      255,
+    ),
+    description: text(
+      meta("og:description") ?? meta("twitter:description") ?? meta("description"),
+      500,
+    ),
+    siteName: text(meta("og:site_name") ?? meta("application-name"), 120),
+  };
 }
 
-function tidy(raw: unknown): string | null {
-  const title = typeof raw === "string" ? raw.replace(/\s+/g, " ").trim() : "";
-  return title ? title.slice(0, 255) : null;
+export function extractTitle(html: string): string | null {
+  return extractMetadata(html).title;
+}
+
+function tidy(raw: unknown, max = 255): string | null {
+  const value = typeof raw === "string" ? raw.replace(/\s+/g, " ").trim() : "";
+  return value ? value.slice(0, max) : null;
 }
 
 // YouTube puts the title far beyond the body cap (~700 KB into the page) but
@@ -124,7 +147,7 @@ function oembedEndpoint(url: string): string | null {
   }
 }
 
-// Outbound title lookups (and the DNS check behind link previews) are on by
+// Outbound metadata lookups (and the DNS check behind link previews) are on by
 // default; LINK_TITLES=off disables them, and tests run offline unless
 // LINK_TITLES=on.
 export function linkTitlesEnabled() {
@@ -132,22 +155,30 @@ export function linkTitlesEnabled() {
   return setting !== "off" && (process.env.NODE_ENV !== "test" || setting === "on");
 }
 
-interface PageTitleOptions {
+interface PageFetchOptions {
   timeoutMs?: number;
   maxBytes?: number;
   maxRedirects?: number;
   lookup?: Lookup;
 }
 
-export async function fetchPageTitle(
+const none: PageMetadata = { title: null, description: null, siteName: null };
+
+export async function fetchPageTitle(url: string, options: PageFetchOptions = {}) {
+  return (await fetchPageMetadata(url, options))?.title ?? null;
+}
+
+// Null when the page couldn't be reached at all (so a lookup can retry); a
+// reachable page without metadata gives all-null fields.
+export async function fetchPageMetadata(
   url: string,
   {
     timeoutMs = 3000,
     maxBytes = 256 * 1024,
     maxRedirects = 3,
     lookup = defaultLookup,
-  }: PageTitleOptions = {},
-): Promise<string | null> {
+  }: PageFetchOptions = {},
+): Promise<PageMetadata | null> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   const oembed = oembedEndpoint(url);
@@ -161,10 +192,16 @@ export async function fetchPageTitle(
         lookup,
         "json",
       );
+      if (!body) return null;
       try {
-        return body ? tidy(JSON.parse(body).title) : null;
+        const data = JSON.parse(body);
+        return {
+          ...none,
+          title: tidy(data.title, 255),
+          siteName: tidy(data.provider_name, 120),
+        };
       } catch {
-        return null;
+        return none;
       }
     }
     const html = await fetchWithinDeadline(
@@ -175,7 +212,7 @@ export async function fetchPageTitle(
       lookup,
       "html",
     );
-    return html ? extractTitle(html) : null;
+    return html === null ? null : extractMetadata(html);
   } finally {
     clearTimeout(timer);
   }
@@ -277,7 +314,7 @@ function request(
         signal,
         headers: {
           accept: accepted[kind][0],
-          "user-agent": "nslinkhub-link-title/1.0 (+title lookup for saved links)",
+          "user-agent": "nslinkhub-link-metadata/1.0 (+metadata lookup for saved links)",
         },
         // Pin the vetted address; TLS still verifies the original host name.
         lookup: (_host, options, callback) => {

@@ -172,11 +172,13 @@ product grant; no development account is automatically privileged. Follow
 command. After this migration lands, apply the additive migrations before
 starting API/web; tests still use disposable databases rather than developer data.
 
-## Link titles and code resend timing
+## Link metadata and code resend timing
 
-Untitled saved links get their page title fetched after the save (see
-`docs/SECURITY.md`); set `LINK_TITLES=off` in the API environment to disable it
-locally. Sign-in codes can be resent once every 30 seconds per address;
+Saved links get their page title, description and site name from the worker
+(`bun run dev` starts it; alone: `email:worker:dev` in `apps/api`; see
+`docs/SECURITY.md`), usually within seconds; without a running worker, links
+show their address until it runs. Set `LINK_TITLES=off` in the API environment
+to disable lookups locally. Sign-in codes can be resent once every 30 seconds per address;
 `AUTH_CODE_RESEND_SECONDS` (read by both API and web) changes the gap and is set
 short only by the isolated browser verification.
 

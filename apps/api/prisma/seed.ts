@@ -3,28 +3,28 @@
 //
 //   bun run db:seed                       # curator account seed-curator@nslinkhub.dev
 //   SEED_OWNER_EMAIL=you@… bun run db:seed  # seed into the account you sign in with
-//   SEED_OFFLINE=1 bun run db:seed        # skip page-title lookups (fallback titles)
+//   SEED_OFFLINE=1 bun run db:seed        # skip page lookups (the worker fetches later)
 import { publicLinkUrl } from "../src/common/utils/url.util";
 import { PrismaService } from "../src/database/prisma.service";
-import { fetchPageTitle } from "../src/modules/resources/page-title";
+import { fetchPageMetadata, type PageMetadata } from "../src/modules/resources/page-metadata";
 import { type SeedItem, seedCollections, seedHub } from "./seed/toolkit";
 
 const email = (process.env.SEED_OWNER_EMAIL ?? "seed-curator@nslinkhub.dev").toLowerCase();
 const offline = process.env.SEED_OFFLINE === "1";
 const prisma = new PrismaService();
 
-// Titles come from the pages, as for any saved link; the curated text is the
-// fallback when a page can't be read. A few lookups run at a time.
-async function resolveTitles(urls: string[]) {
-  const titles = new Map<string, string | null>();
+// Metadata comes from the pages, as for any saved link. A few lookups run at a
+// time; unreadable pages are left to the worker.
+async function resolveMetadata(urls: string[]) {
+  const found = new Map<string, PageMetadata | null>();
   const queue = [...new Set(urls)];
   await Promise.all(
     Array.from({ length: 6 }, async () => {
       for (let url = queue.shift(); url; url = queue.shift())
-        titles.set(url, offline ? null : await fetchPageTitle(url));
+        found.set(url, offline ? null : await fetchPageMetadata(url));
     }),
   );
-  return titles;
+  return found;
 }
 
 async function main() {
@@ -45,7 +45,7 @@ async function main() {
   const links = seedCollections.flatMap((c) =>
     c.items.filter((item): item is Extract<SeedItem, ["l", ...unknown[]]> => item[0] === "l"),
   );
-  const titles = await resolveTitles(links.map((item) => publicLinkUrl(item[1])));
+  const metadata = await resolveMetadata(links.map((item) => publicLinkUrl(item[1])));
 
   const ids = new Map<string, string>();
   for (const c of seedCollections) {
@@ -84,17 +84,25 @@ async function main() {
         });
       } else {
         const url = publicLinkUrl(item[1]);
-        const title = titles.get(url);
-        if (title) resolved++;
+        const page = metadata.get(url);
+        if (page?.title) resolved++;
         await prisma.resource.create({
-          data: {
-            collectionId,
-            position,
-            kind: "external_link",
-            url,
-            titleOverride: title ?? item[2],
-            tags: item[3] ?? [],
-          },
+          data: { collectionId, position, kind: "external_link", url, tags: item[3] ?? [] },
+        });
+        // Only text read from the page enters the shared metadata; a page that
+        // couldn't be read stays pending for the worker (the curated text is
+        // never stored, since every saver of that address would see it).
+        const ready = page && {
+          title: page.title,
+          description: page.description,
+          siteName: page.siteName,
+          state: "ready",
+          fetchedAt: new Date(),
+        };
+        await prisma.linkMetadata.upsert({
+          where: { url },
+          create: { url, ...(ready ?? {}) },
+          update: ready ?? {},
         });
       }
     }

@@ -89,11 +89,14 @@ Collection      — belongs to a hub (hubId = owner). creatorUserId immutable
 Resource        — an item in a collection; the smallest unit of content.
                   kind = external_link (its own canonical `url`, one per
                   collection) | collection_link (linkedCollectionId) | heading.
-                  titleOverride (a link's server-resolved page title, or a
-                  heading's text — never editable), tags (text[]), position,
-                  version. What belongs to an item (address, resolved title,
-                  target, heading text) is fixed; only what people add (tags,
-                  position; notes planned) is editable. No shared tables.
+                  title_override holds a section's text (never a link's
+                  title), tags (text[]), position, version. What belongs to
+                  an item (address, page title, target, section text) is
+                  fixed; only what people add (tags, position; notes planned)
+                  is editable.
+LinkMetadata    — one row per canonical address: page title, description,
+                  site name (text only); a pending row is the durable lookup
+                  job the worker claims (docs/design-docs/collections-and-resources.md).
 CollectionShare — (collectionId, userId, role reader|editor, source
                   direct|link). Per-collection access without any hub
                   membership. Feeds the shared/ surface.
@@ -150,7 +153,8 @@ itself with `Content-Disposition: attachment`.
 
 Authenticated mutations run inside one transaction holding a single advisory
 lock and recheck the session under it (see `docs/RELIABILITY.md`); network
-calls such as title lookups run after commit. Web forms post natively to
+calls such as page lookups run in the worker, from rows written in the same
+transaction (the outbox shape, as for email). Web forms post natively to
 `/forms/[action]`, which checks the Origin, calls the API and redirects with a
 notice; JavaScript only enhances.
 

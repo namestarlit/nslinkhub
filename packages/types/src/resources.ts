@@ -9,7 +9,14 @@ export interface Resource {
   linkedCollectionId: string | null;
   /** Viewer-authorized destination metadata; null means unavailable. */
   linkedCollection?: { id: string; title: string } | null;
-  titleOverride: string | null;
+  /**
+   * A link's title from its page (null until looked up), a section's text, or
+   * a readable reference's target title. Never an input for links.
+   */
+  title: string | null;
+  /** A link's page description and site name; null for other kinds. */
+  description: string | null;
+  siteName: string | null;
   tags: string[];
   position: number;
   version: number;
@@ -41,6 +48,6 @@ export interface CreateCollectionResourceRequest {
   position: number;
 }
 export interface CreateHeadingResourceRequest {
-  titleOverride: string;
+  title: string;
   position: number;
 }

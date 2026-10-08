@@ -6,7 +6,6 @@ import { AuthUser } from "src/common/interfaces/auth-user.interface";
 import { decodeCursor, encodeCursor } from "src/common/utils/cursor.util";
 import { normalizeTags } from "src/common/utils/tags.util";
 import { publicLinkUrl } from "src/common/utils/url.util";
-import { authorityContext } from "src/database/authority-context";
 import { PrismaService } from "src/database/prisma.service";
 import { Collection, Resource } from "src/generated/prisma/client";
 import { appError } from "../../common/errors/app-exception";
@@ -19,7 +18,7 @@ import {
 import { CreateExternalResourceDto } from "./dto/create-external-resource.dto";
 import { ReorderResourcesDto } from "./dto/reorder-resources.dto";
 import { UpdateResourceDto } from "./dto/update-resource.dto";
-import { fetchPageTitle, linkTitlesEnabled } from "./page-title";
+import { type LinkMeta, metadataFor, readLinkMetadata, requestLinkMetadata } from "./link-metadata";
 
 @Injectable()
 export class ResourcesService {
@@ -41,13 +40,13 @@ export class ResourcesService {
       throw appError("duplicate_resource");
     }
 
-    return this.toPublicResource(
-      await this.insertExternal(collection.id, url, dto.tags ?? [], dto.position),
-    );
+    const saved = await this.insertExternal(collection.id, url, dto.tags ?? [], dto.position);
+    return this.toPublicResource(saved, await readLinkMetadata(this.prisma, [url]));
   }
 
   // Inserts a canonical, non-duplicate link into a collection the caller has
-  // already authorized, then looks its title up after the save commits.
+  // already authorized, and requests its page metadata in the same
+  // transaction; the worker looks it up once the save commits.
   async insertExternal(collectionId: string, url: string, tags: string[], position: number) {
     const saved = await this.prisma.resource.create({
       data: {
@@ -58,41 +57,8 @@ export class ResourcesService {
         position,
       },
     });
-    this.fillTitleLater(saved.id, url);
+    await requestLinkMetadata(this.prisma, [url]);
     return saved;
-  }
-
-  // Saving never waits on a remote site (mutations hold the authority lock).
-  // After the save commits (or when a collection is opened), fetch the page
-  // title and use it only if the link still has no title. Best effort and in-process: a restart or failure just
-  // leaves the URL as the title. Disabled under test unless LINK_TITLES=on.
-  // A URL is looked up at most once per hour per process, whether from a save
-  // or from opening a collection, so a failing site is not fetched repeatedly.
-  private readonly titleAttempts = new Map<string, number>();
-  private fillTitleLater(id: string, url: string) {
-    if (!linkTitlesEnabled()) return;
-    const now = Date.now();
-    const last = this.titleAttempts.get(url);
-    if (last !== undefined && now - last < 3600_000) return;
-    if (this.titleAttempts.size >= 5000)
-      for (const [key, at] of this.titleAttempts)
-        if (now - at >= 3600_000 || this.titleAttempts.size >= 5000) this.titleAttempts.delete(key);
-    this.titleAttempts.set(url, now);
-    authorityContext.exit(() => {
-      void (async () => {
-        const title = await fetchPageTitle(url);
-        if (!title) return;
-        // The creating transaction may still be committing; retry briefly.
-        for (const wait of [0, 1000, 3000]) {
-          if (wait) await new Promise((done) => setTimeout(done, wait));
-          const updated = await this.prisma.resource.updateMany({
-            where: { id, url, titleOverride: null },
-            data: { titleOverride: title, version: { increment: 1 } },
-          });
-          if (updated.count) return;
-        }
-      })().catch(() => undefined);
-    });
   }
 
   async createCollectionLink(
@@ -133,7 +99,7 @@ export class ResourcesService {
         data: {
           collectionId,
           kind: ResourceKind.HEADING,
-          titleOverride: dto.titleOverride.trim(),
+          titleOverride: dto.title.trim(),
           position: dto.position,
         },
       }),
@@ -174,15 +140,9 @@ export class ResourcesService {
     const nextCursor =
       rows.length > limit ? encodeCursor({ p: items[items.length - 1].position }) : null;
 
-    // Opening a collection resolves links that still have no title (saved
-    // before titles were looked up, or whose lookup failed earlier).
-    for (const item of items
-      .filter((row) => row.kind === ResourceKind.EXTERNAL_LINK && row.url && !row.titleOverride)
-      .slice(0, 5))
-      this.fillTitleLater(item.id, item.url as string);
-
+    const metadata = await readLinkMetadata(this.prisma, linkUrls(items));
     return {
-      items: await Promise.all(items.map((item) => this.resourceView(item, viewer))),
+      items: await Promise.all(items.map((item) => this.resourceView(item, viewer, metadata))),
       meta: { limit, nextCursor },
     };
   }
@@ -216,7 +176,7 @@ export class ResourcesService {
       },
     });
 
-    return this.resourceView(saved, user);
+    return this.resourceView(saved, user, await readLinkMetadata(this.prisma, linkUrls([saved])));
   }
 
   async remove(collectionId: string, resourceId: string, user: AuthUser) {
@@ -344,8 +304,12 @@ export class ResourcesService {
     }
   }
 
-  private async resourceView(resource: Resource, viewer: AuthUser | null): Promise<WireResource> {
-    const base = this.toPublicResource(resource);
+  private async resourceView(
+    resource: Resource,
+    viewer: AuthUser | null,
+    metadata = new Map<string, LinkMeta>(),
+  ): Promise<WireResource> {
+    const base = this.toPublicResource(resource, metadata);
     if (resource.kind !== ResourceKind.COLLECTION_LINK) return base;
     const target = resource.linkedCollectionId
       ? await this.prisma.collection.findUnique({ where: { id: resource.linkedCollectionId } })
@@ -355,18 +319,35 @@ export class ResourcesService {
     // metadata: an unreadable target's id and any stored title (which may have
     // been copied from it) stay out of the response.
     if (!readable)
-      return { ...base, linkedCollectionId: null, titleOverride: null, linkedCollection: null };
-    return { ...base, linkedCollection: { id: target.id, title: target.title } };
+      return { ...base, linkedCollectionId: null, title: null, linkedCollection: null };
+    return {
+      ...base,
+      title: target.title,
+      linkedCollection: { id: target.id, title: target.title },
+    };
   }
 
-  private toPublicResource(resource: Resource): WireResource {
+  // A link's title, description and site name come from its page metadata; a
+  // section's title is its text; a reference's title is its target's (above).
+  private toPublicResource(
+    resource: Resource,
+    metadata = new Map<string, LinkMeta>(),
+  ): WireResource {
+    const link = resource.kind === ResourceKind.EXTERNAL_LINK;
+    const meta = metadataFor(metadata, resource.url);
     return {
       id: resource.id,
       collectionId: resource.collectionId,
       kind: wireToken(resource.kind, ["external_link", "collection_link", "heading"]),
       url: resource.url ?? undefined,
       linkedCollectionId: resource.linkedCollectionId,
-      titleOverride: resource.titleOverride,
+      title: link
+        ? meta.title
+        : resource.kind === ResourceKind.HEADING
+          ? resource.titleOverride
+          : null,
+      description: link ? meta.description : null,
+      siteName: link ? meta.siteName : null,
       tags: resource.tags,
       position: resource.position,
       version: Number(resource.version),
@@ -374,4 +355,10 @@ export class ResourcesService {
       updatedAt: resource.updatedAt.toISOString(),
     };
   }
+}
+
+function linkUrls(items: Resource[]) {
+  return items
+    .filter((item) => item.kind === ResourceKind.EXTERNAL_LINK && item.url)
+    .map((item) => item.url as string);
 }

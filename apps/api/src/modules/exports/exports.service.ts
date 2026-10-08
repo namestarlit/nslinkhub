@@ -88,20 +88,32 @@ export class ExportsService {
     return new URL(`/c/${id}`, process.env.BETTER_AUTH_URL ?? "http://localhost:3000").href;
   }
 
-  private async inlineItem(resource: Resource, user: AuthUser): Promise<ExportInline> {
+  // Stored page titles for links (read-only: an export never requests lookups).
+  private async linkTitles(resources: Resource[]) {
+    const urls = resources.filter((r) => r.kind === ResourceKind.EXTERNAL_LINK && r.url);
+    const rows = urls.length
+      ? await this.prisma.linkMetadata.findMany({
+          where: { url: { in: urls.map((r) => r.url as string) }, title: { not: null } },
+          select: { url: true, title: true },
+        })
+      : [];
+    return new Map(rows.map((row) => [row.url, row.title as string]));
+  }
+
+  private async inlineItem(
+    resource: Resource,
+    user: AuthUser,
+    titles: Map<string, string>,
+  ): Promise<ExportInline> {
     if (resource.kind === ResourceKind.HEADING)
       return { kind: "heading", title: resource.titleOverride ?? "Untitled heading" };
-    if (resource.kind !== ResourceKind.COLLECTION_LINK) return this.toLink(resource);
+    if (resource.kind !== ResourceKind.COLLECTION_LINK) return this.toLink(resource, titles);
     const target = resource.linkedCollectionId
       ? await this.prisma.collection.findUnique({ where: { id: resource.linkedCollectionId } })
       : null;
     if (!target || !(await this.policy.resolve(target, user)).canRead)
       return { kind: "notice", title: "Collection unavailable — not included in this export." };
-    return {
-      kind: "link",
-      title: resource.titleOverride ?? target.title,
-      url: this.collectionUrl(target.id),
-    };
+    return { kind: "link", title: target.title, url: this.collectionUrl(target.id) };
   }
 
   // Expansion is explicit and bounded to one reference level. Cycles and deeper
@@ -115,6 +127,7 @@ export class ExportsService {
       where: { collectionId: collection.id },
       orderBy: { position: "asc" },
     });
+    const titles = await this.linkTitles(resources);
     const items: ExportItem[] = [];
     for (const resource of resources) {
       if (
@@ -131,23 +144,26 @@ export class ExportsService {
             where: { collectionId: target.id },
             orderBy: { position: "asc" },
           });
+          const entryTitles = await this.linkTitles(entries);
           items.push({
             kind: "section",
-            title: resource.titleOverride ?? target.title,
+            title: target.title,
             description: target.description ?? undefined,
-            links: await Promise.all(entries.map((entry) => this.inlineItem(entry, user))),
+            links: await Promise.all(
+              entries.map((entry) => this.inlineItem(entry, user, entryTitles)),
+            ),
           });
           continue;
         }
       }
-      items.push(await this.inlineItem(resource, user));
+      items.push(await this.inlineItem(resource, user, titles));
     }
     return { title: collection.title, description: collection.description ?? undefined, items };
   }
 
-  private toLink(resource: Resource): ExportLink {
+  private toLink(resource: Resource, titles: Map<string, string>): ExportLink {
     const url = resource.url ?? "";
-    return { kind: "link", title: resource.titleOverride ?? (url || "Untitled"), url };
+    return { kind: "link", title: titles.get(url) ?? (url || "Untitled"), url };
   }
 
   private render(format: ExportFormat, document: ExportDocument): Promise<Buffer> {

@@ -7,6 +7,7 @@ import { PrismaService } from "src/database/prisma.service";
 import { appError } from "../../common/errors/app-exception";
 import { CollectionPolicyService } from "../hubs/collection-policy.service";
 import { HubsService } from "../hubs/hubs.service";
+import { requestLinkMetadata } from "../resources/link-metadata";
 import { ImportTargetDto } from "./dto/import-target.dto";
 
 const MAX_IMPORT_SIZE_BYTES = 10 * 1024 * 1024;
@@ -98,6 +99,11 @@ export class ImportsService {
 
     for (const row of rows) {
       try {
+        // Same address limit as Save a link (and within the metadata index).
+        if (row.url.length > 2048) {
+          errors.push({ row: row.index, reason: "url_too_long", value: row.url.slice(0, 128) });
+          continue;
+        }
         const url = canonicalizeUrl(row.url);
         if (!isPublicLinkHost(new URL(url).hostname)) {
           errors.push({ row: row.index, reason: "not_public_url", value: row.url.slice(0, 128) });
@@ -109,17 +115,19 @@ export class ImportsService {
           continue;
         }
 
-        await this.prisma.withSavepoint((tx) =>
-          tx.resource.create({
+        // A source title is ignored: titles come from the page (ADR-0012), so a
+        // lookup is requested with the link in the same savepoint.
+        await this.prisma.withSavepoint(async (tx) => {
+          await tx.resource.create({
             data: {
               collectionId,
               kind: ResourceKind.EXTERNAL_LINK,
               url,
-              titleOverride: row.title ?? null,
               position: nextPosition,
             },
-          }),
-        );
+          });
+          await requestLinkMetadata(tx, [url]);
+        });
 
         existingUrls.add(url);
         importedCount += 1;

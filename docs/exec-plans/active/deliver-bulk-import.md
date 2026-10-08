@@ -62,7 +62,7 @@ collection with a per-row report, keeping source titles. Save a link
 (`collections/capture.service.ts`, `POST /api/v1/capture`) holds the rules to
 reuse: canonical URLs (`resources`), `isPublicLinkHost` (`@nslinkhub/types`),
 tag normalization (`maxTags`, `maxTagLength`), title lookup
-(`resources/page-title.ts`, SSRF-guarded) and the default collection naming.
+(`resources/page-metadata.ts`, SSRF-guarded) and the default collection naming.
 Background work runs in the BullMQ worker that already delivers email
 (`apps/api/src/email/worker.ts`). Writes run under the global authority lock
 (ADR-0005); lookups must not. The web posts native forms to
@@ -82,7 +82,8 @@ duplicates, already saved). Endpoints: create, read summary, list rows with
 status filter and cursor, edit/drop a row, discard a draft; all scoped to the
 owning account (other accounts get 404).
 
-**M2 — Title lookups.** A `link-titles` queue: one job per row after the draft
+**M2 — Title lookups.** Reuse the link-metadata queue and shared
+`link_metadata` rows (delivered first): one pending row per address after the draft
 commits, bounded concurrency, per-host spacing, a per-account budget separate
 from link previews. Results move rows to Ready or Failed with a reason;
 editing an address or **Revalidate failed** re-queues. No lookup runs under the
@@ -138,4 +139,4 @@ None yet.
 ## Interfaces And Dependencies
 
 New `@nslinkhub/types` contracts for drafts, folders, rows and statuses; the
-worker gains the `link-titles` queue; `resources/page-title.ts` is reused.
+worker's `link-metadata` queue and `resources/page-metadata.ts` are reused.

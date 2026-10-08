@@ -86,7 +86,9 @@ const resourceShape = {
     v === undefined ||
     v === null ||
     (typeof v === "object" && "id" in v && uuid(v.id) && "title" in v && string(v.title)),
-  titleOverride: nullableString,
+  title: nullableString,
+  description: nullableString,
+  siteName: nullableString,
   tags: strings,
   position: number,
   version: number,
@@ -231,7 +233,7 @@ describe("W3 serialized contracts and safe HTTP errors", () => {
       .expect(201);
     shape(resource.body.data, resourceShape);
     expect(resource.body.data.linkedCollectionId).toBeNull();
-    expect(resource.body.data.titleOverride).toBeNull();
+    expect(resource.body.data.title).toBeNull();
     const resources = await request(server).get(`/api/v1/collections/${cid}/resources`).expect(200);
     shape(resources.body.data[0], resourceShape);
     shape(resources.body.meta, cursorShape);

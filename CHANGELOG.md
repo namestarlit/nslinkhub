@@ -9,6 +9,16 @@ summary of what changed after completed work has been promoted out of `ref/`.
 
 ## Unreleased
 
+- Link metadata foundation: every link's page title, description and site name
+  (text only) is stored once per address in `link_metadata` and shared across
+  collections. Saving writes a pending lookup in the same transaction; the
+  worker resolves it within seconds, retrying at 1 minute, 10 minutes, 1 hour
+  and 6 hours (a failed address is retried when saved again, or when read a
+  day later), and refreshes metadata older than 30 days when read. Lookups no
+  longer run in the API process or change an item's version, and Save a link's
+  preview reuses stored metadata. The resource field `titleOverride` is now
+  `title`, with `description` and `siteName`; imports ignore source titles and
+  cap addresses at 2,048 characters.
 - `PRODUCT.md` reorganized as a PRD in pigfarm's flow: design context,
   overview, goals (guides north star; free library, paid Curator accounts),
   target users with their needs, proposed success measures, the hub and access

@@ -372,6 +372,28 @@ model ServiceInvitation {
 
 // Retry receipts contain only immutable identifiers and an input digest. They
 // survive content deletion so replay cannot silently recreate removed content.
+// Metadata for one public web address, shared by every item that links to it.
+// A pending row is also the durable lookup job (outbox shape, like email):
+// written in the save's transaction, relayed and claimed by the worker.
+model LinkMetadata {
+  id          String    @id @default(dbgenerated("app_uuid_v7()")) @db.Uuid
+  url         String    @unique
+  title       String?   @db.VarChar(255)
+  description String?   @db.VarChar(500)
+  siteName    String?   @map("site_name") @db.VarChar(120)
+  state       String    @default("pending") @db.VarChar(16)
+  attempts    Int       @default(0)
+  availableAt DateTime  @default(now()) @map("available_at") @db.Timestamptz(6)
+  leaseUntil  DateTime? @map("lease_until") @db.Timestamptz(6)
+  leaseToken  String?   @map("lease_token") @db.Uuid
+  fetchedAt   DateTime? @map("fetched_at") @db.Timestamptz(6)
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime  @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  @@index([state, availableAt])
+  @@map("link_metadata")
+}
+
 model CaptureReceipt {
   userId       String   @map("user_id") @db.Uuid
   operationId  String   @map("operation_id") @db.Uuid

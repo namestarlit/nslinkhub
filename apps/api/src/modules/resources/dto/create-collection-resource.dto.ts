@@ -14,7 +14,7 @@ export class CreateHeadingResourceDto {
   @IsString()
   @Matches(/\S/)
   @MaxLength(255)
-  titleOverride: string;
+  title: string;
 
   @IsInt()
   @Min(0)

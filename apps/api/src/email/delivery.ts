@@ -102,9 +102,10 @@ export class EmailDelivery {
   }
 }
 
-export function startEmailQueue(delivery: EmailDelivery, redisUrl: string, prefix: string) {
+// BullMQ connection settings for the worker's queues, from one Redis URL.
+export function redisConnection(redisUrl: string) {
   const url = new URL(redisUrl);
-  const connection = {
+  return {
     host: url.hostname,
     port: Number(url.port || 6379),
     username: decodeURIComponent(url.username) || undefined,
@@ -114,6 +115,10 @@ export function startEmailQueue(delivery: EmailDelivery, redisUrl: string, prefi
     connectTimeout: 2000,
     retryStrategy: (n: number) => Math.min(n * 200, 2000),
   };
+}
+
+export function startEmailQueue(delivery: EmailDelivery, redisUrl: string, prefix: string) {
+  const connection = redisConnection(redisUrl);
   const queue = new Queue("email", {
     connection: { ...connection, maxRetriesPerRequest: 1, enableOfflineQueue: false },
     prefix,

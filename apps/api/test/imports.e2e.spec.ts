@@ -75,11 +75,12 @@ describe("Imports (e2e)", () => {
     // No snake_case keys leaked into the payload.
     expect(Object.keys(body.data)).not.toContain("imported_count");
   });
-  it("commits valid CSV and bookmark rows on both sides of a database-invalid row", async () => {
+  it("commits valid CSV and bookmark rows on both sides of an invalid row, ignoring source titles", async () => {
     const prisma = app.get(PrismaService);
     for (const kind of ["csv", "bookmarks-html"]) {
       const urls = [0, 1, 2].map((n) => `https://fixture-links.dev/${kind}-${sfx}-${n}`);
-      const titles = ["Before", "x".repeat(256), "After"];
+      urls[1] = `${urls[1]}/${"x".repeat(2100)}`; // over the 2048-character address limit
+      const titles = ["Before", "Middle", "After"];
       const text =
         kind === "csv"
           ? `url,title\n${urls.map((url, n) => `${url},${titles[n]}`).join("\n")}`
@@ -101,6 +102,13 @@ describe("Imports (e2e)", () => {
       });
       expect(saved.map((row) => row.url)).toEqual([urls[0], urls[2]]);
       expect(saved[1].position).toBe(saved[0].position + 1);
+      // Titles come from the pages: a lookup is pending, the file's title unused.
+      const metadata = await prisma.linkMetadata.findMany({ where: { url: { in: urls } } });
+      expect(metadata.map((m) => [m.state, m.title])).toEqual([
+        ["pending", null],
+        ["pending", null],
+      ]);
+      expect(response.body.data.errors[0].reason).toBe("url_too_long");
     }
   });
 

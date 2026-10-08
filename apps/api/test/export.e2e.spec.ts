@@ -137,11 +137,11 @@ describe("Export (e2e)", () => {
   it("preserves ordered headings and bounds cyclic guide expansion in every format", async () => {
     const a = await createCollection(`guide-order-${sfx}`);
     const b = await createCollection(`topic-order-${sfx}`);
-    const heading = (id: string, titleOverride: string, position: number) =>
+    const heading = (id: string, title: string, position: number) =>
       request(app.getHttpServer())
         .post(`/api/v1/collections/${id}/resources/heading`)
         .auth(bearer, { type: "bearer" })
-        .send({ titleOverride, position })
+        .send({ title, position })
         .expect(201);
     const reference = (source: string, target: string, position: number) =>
       request(app.getHttpServer())

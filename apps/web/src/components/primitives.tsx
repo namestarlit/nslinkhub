@@ -84,7 +84,7 @@ export function ResourceRow({ item }: { item: Resource }) {
   if (item.kind === "heading")
     return (
       <li className="resource-heading">
-        <h2>{item.titleOverride}</h2>
+        <h2>{item.title}</h2>
       </li>
     );
   if (item.kind === "collection_link")
@@ -93,7 +93,7 @@ export function ResourceRow({ item }: { item: Resource }) {
         <h2>
           {item.linkedCollection ? (
             <a href={permalink(item.linkedCollection.id)}>
-              {item.titleOverride || item.linkedCollection.title}
+              {item.title || item.linkedCollection.title}
             </a>
           ) : (
             "Collection unavailable"
@@ -122,10 +122,10 @@ export function ResourceRow({ item }: { item: Resource }) {
       <h2>
         {url ? (
           <a href={url.href} rel="noreferrer" referrerPolicy="no-referrer">
-            {item.titleOverride || url.href}
+            {item.title || url.href}
           </a>
         ) : (
-          item.titleOverride || "Link unavailable"
+          item.title || "Link unavailable"
         )}
       </h2>
       {url ? (

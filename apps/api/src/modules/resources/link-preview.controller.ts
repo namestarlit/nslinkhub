@@ -5,14 +5,20 @@ import { appError } from "../../common/errors/app-exception";
 import { AuthGuard } from "../../common/guards/auth.guard";
 import { apiOk } from "../../common/utils/response.util";
 import { canonicalizeUrl, publicLinkUrl } from "../../common/utils/url.util";
-import { fetchPageTitle, linkTitlesEnabled } from "./page-title";
+import { PrismaService } from "../../database/prisma.service";
+import { fetchPageMetadata, linkTitlesEnabled } from "./page-metadata";
 
-// Looks up a link's title before it is saved, so the save form can show it. Signed-in only, read-only (never under the write lock), with its
-// own small request budget ("lookup"); the fetch has the same SSRF guards as
-// background lookups. Disabled under test unless LINK_TITLES=on.
+// Looks up a link's title before it is saved, so the save form can show it.
+// Signed-in only, never under the write lock, with its own small request
+// budget ("lookup"). Stored metadata answers first; otherwise the page is
+// fetched (same SSRF guards as background lookups) and the result kept in the
+// shared metadata, so saving the link needs no second fetch. Disabled under
+// test unless LINK_TITLES=on.
 @Controller("api/v1/link-preview")
 @UseGuards(AuthGuard)
 export class LinkPreviewController {
+  constructor(private readonly prisma: PrismaService) {}
+
   @Get()
   async preview(@Query("url") raw: unknown) {
     let url: string;
@@ -26,13 +32,25 @@ export class LinkPreviewController {
       throw appError("bad_request");
     }
     url = publicLinkUrl(url);
-    const title = linkTitlesEnabled() ? await fetchPageTitle(url) : null;
+    const title = linkTitlesEnabled() ? await this.title(url) : null;
     const preview: LinkPreview = {
       url,
       title,
       status: title ? "found" : (await hostMissing(url)) ? "no_domain" : "untitled",
     };
     return apiOk(preview);
+  }
+
+  private async title(url: string) {
+    const known = await this.prisma.linkMetadata.findUnique({ where: { url } });
+    if (known?.state === "ready" && known.title) return known.title;
+    const metadata = await fetchPageMetadata(url);
+    if (!metadata) return null;
+    const ready = { ...metadata, state: "ready", attempts: 0, fetchedAt: new Date() };
+    await this.prisma.linkMetadata
+      .upsert({ where: { url }, create: { url, ...ready }, update: ready })
+      .catch(() => undefined); // A concurrent insert of the same address is fine.
+    return metadata.title;
   }
 }
 

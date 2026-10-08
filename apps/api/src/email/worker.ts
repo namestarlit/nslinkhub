@@ -8,6 +8,11 @@ import {
 import { validateEnv } from "../config/env.validation";
 import { readSecret } from "../config/secret";
 import { PrismaClient } from "../generated/prisma/client";
+import {
+  LinkMetadataLookup,
+  startLinkMetadataQueue,
+} from "../modules/resources/link-metadata-lookup";
+import { linkTitlesEnabled } from "../modules/resources/page-metadata";
 import { emailConfig } from "./config";
 import { EmailDelivery, startEmailQueue } from "./delivery";
 import { CaptureProvider, ResendProvider } from "./provider";
@@ -31,6 +36,11 @@ async function main() {
     config.redisUrl,
     config.prefix,
   );
+  // Link metadata lookups share the worker process and Redis (not under test
+  // unless LINK_TITLES=on, never when LINK_TITLES=off).
+  const metadata = linkTitlesEnabled()
+    ? startLinkMetadataQueue(new LinkMetadataLookup(prisma), config.redisUrl, config.prefix)
+    : null;
   emitEvent("email.worker_started");
   let stopping = false;
   async function stop(failed = false) {
@@ -38,7 +48,7 @@ async function main() {
     stopping = true;
     const deadline = setTimeout(() => process.exit(1), 10_000);
     try {
-      await runtime.close();
+      await Promise.all([runtime.close(), metadata?.close()]);
       await prisma.$disconnect();
       emitEvent("email.worker_stopped");
       await shutdownTelemetry();

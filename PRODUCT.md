@@ -290,7 +290,9 @@ at scale. Status: Planned (today the API imports in one shot);
 design: `docs/design-docs/bulk-import.md`, ADR-0012.
 
 - Sources: a browser bookmarks file, one documented CSV layout (`url`,
-  optional `tags`, optional `folder`), or a pasted list.
+  optional `tags`, optional `folder`), or a pasted list. Only the link and its
+  destination are needed; a title in the file is a hint for human readers and is
+  ignored — everything about the page is fetched from the link.
 - Everything becomes a **draft** first. Titles resolve from the pages like any
   save (source titles are ignored); each row shows Ready, Failed with a reason,
   Duplicate or Already saved, with a summary and filters.
@@ -329,7 +331,8 @@ details Built; organizing items API only.
 ### 6.4 Link Previews And Notes
 
 Purpose: tell similar links apart and give them context, without leaving the
-collection. Status: Planned.
+collection. Status: link metadata Built (the worker looks it up; the web shows
+titles); preview cards and notes Planned.
 
 - **Link metadata:** each link stores its title, description and site name,
   looked up in the background. Text only: no images or icons are fetched or
@@ -642,7 +645,8 @@ Nothing is deployed; everything built runs and is verified locally. The API
 | 6.3 Collections: reading, details | Built | Built |
 | 6.3 Organizing items, sections, references | Not yet | Built |
 | 6.3 Attribution and history | Planned | Management audit only |
-| 6.4 Link metadata, previews, notes | Planned | Planned |
+| 6.4 Link metadata (title, description, site name) | Shown as titles | Built |
+| 6.4 Preview cards, notes | Planned | Planned |
 | 6.5 Sharing, publishing, transfer | Not yet | Built |
 | 6.5 Access requests, targeted invitations | Planned | Planned |
 | 6.6 Discover | Built | Built |
@@ -662,10 +666,10 @@ Nothing is deployed; everything built runs and is verified locally. The API
 
 Delivery order (everything is built; what to charge for is chosen after):
 
-1. **Link metadata foundation** — background lookups (the worker queue), stored
-   title, description and site name per link, a shared fetch cache; the first
-   step of the [internals pass](docs/exec-plans/active/final-pass-internals.md).
-   Bulk import and previews depend on it.
+1. **Link metadata foundation** — done
+   ([deliver-link-metadata](docs/exec-plans/completed/deliver-link-metadata.md)):
+   background lookups in the worker, title, description and site name stored
+   once per address. Bulk import and previews build on it.
 2. **Activity and attribution** (§6.3) —
    [attribution-and-activity](docs/design-docs/attribution-and-activity.md).
 3. **Manage** for hub owners (§6.9) —

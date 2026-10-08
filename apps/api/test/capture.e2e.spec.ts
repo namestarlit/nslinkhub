@@ -114,6 +114,10 @@ describe("atomic private link capture", () => {
       [urls[0], null, ["guide"]],
       [urls[1], null, ["video"]],
     ]);
+    // Each address has a pending metadata lookup, requested in the same save.
+    expect(
+      (await prisma.linkMetadata.findMany({ where: { url: { in: urls } } })).map((m) => m.state),
+    ).toEqual(["pending", "pending"]);
     // The same address twice in one save is saved once.
     const twice = await send({
       ...input(collectionId),

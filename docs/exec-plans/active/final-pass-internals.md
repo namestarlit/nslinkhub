@@ -12,7 +12,11 @@ the only blocker is a change to behaviour, business workflow or UX.)
 
 ## Progress
 
-- [ ] M1 Link titles: own storage, durable lookup jobs, shared fetch cache.
+- [x] M1 Link titles: own storage, durable lookup jobs, shared fetch cache —
+  delivered by [deliver-link-metadata](../completed/deliver-link-metadata.md) with a simpler
+  shape than sketched below: one shared `link_metadata` row per address is the
+  storage, the outbox job and the cache (no Redis cache), and the wire field is
+  renamed to `title`.
   (2026-10-08: delivered first, as the link-metadata foundation — title,
   description and site name, text only — ahead of bulk import; see
   `PRODUCT.md` §11.)
@@ -47,7 +51,7 @@ None yet.
 
 ## Context And Orientation
 
-- Titles: `apps/api/src/modules/resources/{resources.service,page-title,
+- Titles: `apps/api/src/modules/resources/{resources.service,page-metadata,
   link-preview.controller}.ts`; capture in `modules/collections/capture.service.ts`;
   the web list re-read in `apps/web/src/components/paginated-list.tsx`.
 - Jobs: the email outbox (`apps/api/src/email/outbox.ts`) and its BullMQ worker
@@ -62,7 +66,7 @@ None yet.
 
 ## Plan Of Work
 
-**M1 — Link titles.** Add `resources.page_title` (nullable) and
+**M1 — Link titles** (superseded; see Progress). Add `resources.page_title` (nullable) and
 `resources.title_status` (`pending | found | none`, CHECK constraint) plus
 `title_checked_at`; headings keep their text in `title_override`, links stop
 writing it. The wire `titleOverride` becomes the displayed title computed by the

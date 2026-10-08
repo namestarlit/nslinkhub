@@ -16,19 +16,32 @@ Collections have no structural parent. Resources are ordered rows with versions:
   tags and position; its title is the target's. Requires source write and target read,
   including cross-hub references. One reference per source/target pair; cycles
   and multiple incoming references are allowed. No copied target title by default.
-- `POST /collections/:id/resources/heading`: nonblank `titleOverride` and position.
+- `POST /collections/:id/resources/heading`: nonblank `title` and position.
   A heading groups resources without a collection or an access boundary.
 - `PATCH /collections/:id/resources/:resourceId`: tags and position only. To
   change an address or a heading, remove the item and add it again.
 
 A link must be a public web address (`isPublicLinkHost`, shared with the web):
 IP literals, single-label, local/internal and reserved example/test names are
-refused with `link_not_public`. Its title is looked up server-side after the
-write commits, and again whenever an untitled collection is read
-(`og:title`/`<title>`, YouTube oEmbed; SSRF-guarded, short deadline, small body
-cap); no lookup runs under the write lock. Imports resolve titles the same way
-through reviewed drafts ([bulk-import.md](bulk-import.md)); until that ships,
-the one-shot import endpoints still keep the source file's title.
+refused with `link_not_public`.
+
+## Link metadata
+
+Every link's page metadata — title, description, site name; text only — lives
+in `link_metadata`, one row per canonical address, shared by every item that
+links to it. Saving a link (Save a link, adding an item, importing) writes a
+pending row in the same transaction; the worker relays pending rows to its
+`link-metadata` queue, claims each with a lease, fetches the page
+(`og:title`/`<title>`, `og:description`/`description`, `og:site_name`; YouTube
+and Vimeo through oEmbed; SSRF-guarded, 3 s, 256 KB) and marks it ready, or
+retries at 1 minute, 10 minutes, 1 hour and 6 hours before marking it failed.
+Saving a failed address again retries it; reading a collection re-requests
+addresses with no row, failures a day after they gave up, and ready metadata older
+than 30 days. Nothing runs under the write lock, and a lookup never changes an
+item (no version bump). Items expose `title` (a link's page title, null until
+found; a section's text; a readable reference's target title), `description`
+and `siteName`. The Save a link preview answers from stored metadata first and
+stores what it fetches. Imports ignore titles in the source file.
 
 Reference edits, reorders and removal require only source write access. The
 viewer-filtered `linkedCollection` payload is `{ id, title }` or null; it never

@@ -1,8 +1,8 @@
 import { describe, expect, it, spyOn } from "bun:test";
 import http from "node:http";
-import { extractTitle, fetchPageTitle, isPublicAddress } from "./page-title";
+import { extractMetadata, extractTitle, fetchPageTitle, isPublicAddress } from "./page-metadata";
 
-describe("page titles for saved links", () => {
+describe("page metadata for saved links", () => {
   it("prefers og:title, then twitter:title, then <title>, decoded and collapsed", () => {
     expect(
       extractTitle(
@@ -15,6 +15,29 @@ describe("page titles for saved links", () => {
     );
     expect(extractTitle("<p>No title here</p>")).toBeNull();
     expect(extractTitle(`<title>${"x".repeat(400)}</title>`)?.length).toBe(255);
+  });
+
+  it("reads description and site name as text, never images", () => {
+    expect(
+      extractMetadata(
+        `<head><title>T</title><meta name="description" content="Plain">` +
+          `<meta property="og:description" content="Graph &amp; more">` +
+          `<meta property="og:site_name" content=" MDN  Web Docs ">` +
+          `<meta property="og:image" content="https://cdn.example/x.png"></head>`,
+      ),
+    ).toEqual({ title: "T", description: "Graph & more", siteName: "MDN Web Docs" });
+    expect(extractMetadata(`<meta name="description" content="Fallback">`).description).toBe(
+      "Fallback",
+    );
+    expect(extractMetadata(`<meta name="application-name" content="App">`).siteName).toBe("App");
+    expect(
+      extractMetadata(`<meta name="description" content="${"d".repeat(900)}">`).description?.length,
+    ).toBe(500);
+    expect(extractMetadata("<p>nothing</p>")).toEqual({
+      title: null,
+      description: null,
+      siteName: null,
+    });
   });
 
   it("only treats public unicast addresses as reachable", () => {

@@ -229,13 +229,16 @@ The API enforces it through `publicLinkUrl` on capture, add-link, imports
 form applies the same rule for early feedback. This is a product rule, not the
 SSRF boundary: title fetches still check every resolved address below.
 
-## Outbound fetches for link titles
+## Outbound fetches for link metadata
 
-The API fetches a saved link's page only to read its title
-(`apps/api/src/modules/resources/page-title.ts`): after a save, when a
-collection with untitled links is opened (at most 5 per read, each URL at most
-once an hour per process), and for the signed-in save form through
-`GET /api/v1/link-preview` (its own 30/min request budget). YouTube addresses
+A saved link's page is fetched only to read its text metadata — title,
+description and site name, never images or icons
+(`apps/api/src/modules/resources/page-metadata.ts`). The worker does it for
+pending `link_metadata` rows (written by saves, imports and reads of links
+without metadata; at most one request per site per second per worker, retries
+at 1 minute, 10 minutes, 1 hour and 6 hours), and the API does it for the
+signed-in save form through `GET /api/v1/link-preview` (its own 30/min request
+budget), which answers from stored metadata first. YouTube addresses
 are asked through YouTube's oEmbed endpoint (a small JSON document, 64 KB cap)
 under the same guards. Because the URL is
 user-supplied, the fetch is treated as an SSRF surface: http(s) only, default
@@ -247,5 +250,6 @@ address so DNS rebinding cannot redirect it. Redirects are followed manually
 waiting, all redirects and body consumption, with a 256 KB body cap. Expiry
 closes the active socket; a late DNS answer cannot start a connection,
 and only `text/html` (or, for oEmbed, JSON) responses are parsed. The request carries no cookies,
-tokens or user identity. Nothing but the title is stored. `LINK_TITLES=off`
+tokens or user identity. Nothing but the title, description and site name is
+stored, once per address. `LINK_TITLES=off`
 disables it; tests disable it unless `LINK_TITLES=on`.
