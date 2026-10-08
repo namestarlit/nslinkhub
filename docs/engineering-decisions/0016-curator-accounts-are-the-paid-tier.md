@@ -45,6 +45,8 @@ is decided after the everyday product is built:
 - API access acts as the account through the same API authorization; keys are
   scoped and revocable, never a privileged path. Higher rate limits are a plan
   setting, never an exemption from them.
+- AI curation proposes; people decide. Its results arrive as a reviewable
+  draft (ADR-0012) and never rewrite titles (ADR-0007).
 
 ## Links
 

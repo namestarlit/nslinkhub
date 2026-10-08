@@ -554,7 +554,8 @@ Next, in order (everything is to be built; what to charge for is chosen after):
 16. **Curator accounts** — the professional account people opt into, like a
     business account on Instagram: analytics and engagement, members-only
     collections, bigger bulk work, link health, API access (keys for
-    integrations and data), a curator profile; then
+    integrations and data), AI curation (send everything, get back a curated
+    draft to review), a curator profile; then
     pricing (ADR-0016, `docs/design-docs/monetization.md`).
 
 ## 10. Open decisions

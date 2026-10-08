@@ -9,6 +9,10 @@ summary of what changed after completed work has been promoted out of `ref/`.
 
 ## Unreleased
 
+- Curator account direction gains **AI curation**: send everything in one
+  bucket and get back a reviewable draft with proposed collections, sections,
+  tags and notes, and duplicates, dead links and unsafe sites flagged; nothing
+  lands without the person's review, and titles still come from the pages.
 - Product direction: everyone's library stays free, and professional curators
   (educators, researchers, community and learning-program leaders) opt into a
   paid **Curator account** with analytics, members-only collections, bigger

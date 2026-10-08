@@ -32,6 +32,15 @@ Candidates for what the account adds:
   and per-account rate budgets as every other client, and are revocable.
   Rate limits are part of the plan: heavier work can buy higher limits sized to
   it.
+- **AI curation**: send everything in one bucket (file, list or API) and get it
+  back curated — grouped into proposed collections and sections, tagged,
+  annotated with short notes, with duplicates, dead links and unsafe sites
+  flagged. It arrives as a [bulk-import draft](bulk-import.md) with the AI's
+  proposals marked, so the person accepts, adjusts or rejects before anything
+  lands; titles still come from the pages. To settle when built: reading page
+  text transiently for analysis (never stored), consent and a data-processing
+  agreement with the AI provider, metered pricing per link, and whether
+  accepted AI notes stay marked.
 - **A curator profile**: a verified label and a richer hub page.
 
 ## Starting point
