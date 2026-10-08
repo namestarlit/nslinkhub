@@ -20,7 +20,7 @@ contract and delivery sequence, not running admin pages or database changes.
   isolated copy; reviewed the diff for claims of implemented operator behavior.
 - [x] (2026-10-06) User accepted the scope and requested its implementation.
   Closed this design plan; implementation continues in
-  `docs/exec-plans/active/deliver-service-operations.md`. Commit/guide repinning
+  `docs/exec-plans/completed/deliver-service-operations.md`. Commit/guide repinning
   remain part of the reviewed milestone workflow.
 
 ## Surprises & Discoveries

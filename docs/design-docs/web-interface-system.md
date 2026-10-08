@@ -456,7 +456,7 @@ carries a small back chevron; operator section navigation does not. The account
 menu popup and the landing example are the only elevated surfaces. Hub and
 collection layouts add no row separators or container borders. Exact values live in
 [DESIGN.md](../../DESIGN.md); the change is tracked in
-`docs/exec-plans/active/unify-web-visual-system.md`.
+`docs/exec-plans/completed/unify-web-visual-system.md`.
 
 
 ## Round 2 behavior (2026-10-07)

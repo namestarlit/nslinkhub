@@ -16,7 +16,7 @@ updates next. Preserve the completed, uncommitted invitation work.
 - [x] (2026-10-06) Deliver editable own profile, working appearance settings and invitation notifications.
 - [x] (2026-10-06) Verified backend/form boundaries and browser journeys in both themes and without JavaScript.
 - [x] (2026-10-06) Updated changelog and acceptance evidence; implementation ready for review.
-- [ ] User reviews the milestone before commit/push.
+- [x] (2026-10-08) User reviews the milestone before commit/push. Done: reviewed and committed.
 
 ## Decision Log
 

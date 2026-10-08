@@ -350,7 +350,7 @@ account journey through the web origin.
 - Idempotency, concurrency, jobs, data rules →
   [RELIABILITY.md](../RELIABILITY.md)
 - Engineering principles → [CORE_BELIEFS.md](../CORE_BELIEFS.md)
-- nsauth / "Continue with namestarlit" SSO direction →
+- ns-series single sign-on (nsauth, a centralized IAM) →
   [identity-sso.md](../design-docs/identity-sso.md)
 - Observability direction (LogTape/Sentry + shared Alloy) →
   [observability.md](../design-docs/observability.md)

@@ -22,7 +22,8 @@ Design: [bulk-import.md](../../design-docs/bulk-import.md). Decision:
 - [x] (2026-10-08) Design, decision (ADR-0012) and this plan written; Save a
   link's "Bulk import links" fake door confirmed the demand.
 - [ ] M1 — Draft model and parsing (API).
-- [ ] M2 — Background title lookups and revalidation (worker).
+- [ ] M2 — Background title lookups and revalidation (worker), on the
+  link-metadata foundation's lookup queue (built first; `PRODUCT.md` §9).
 - [ ] M3 — Folder destinations and commit (API).
 - [ ] M4 — Web `/import` start and preview pages.
 - [ ] M5 — Remove one-shot import, expiry cleanup, docs and acceptance.

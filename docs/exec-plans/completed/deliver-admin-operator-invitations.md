@@ -24,8 +24,8 @@ docs. Personal collection management follows this complete milestone.
   Startup invitation is pending; provider delivery is recorded as sent (one
   attempt), bootstrap audit exists, and no admin grant exists before acceptance.
 - [x] (2026-10-06) Reconciled plans, runbook, changelog and handoff; ready for review.
-- [ ] Recipient completes their own invitation acceptance; user reviews milestone
-  before commit/push. Personal collection management remains the next milestone.
+- [x] (2026-10-08) Recipient completes their own invitation acceptance; user reviews milestone
+  before commit/push. Personal collection management remains the next milestone. Done: reviewed and committed.
 
 ## Surprises & Discoveries
 
@@ -84,7 +84,7 @@ Backend: `apps/api/src/modules/operations`, `src/auth/delivery-auth.ts`,
 `src/auth/revoke-account.ts`, `src/email/outbox.ts`, Prisma schema/migrations.
 Web: native forms under `apps/web/src/app/forms`, `/ops` pages and session nav.
 Shared contracts: `packages/types/src/operations.ts`; mail: `packages/email`.
-Existing plan: `docs/exec-plans/active/deliver-service-operations.md`.
+Existing plan: `docs/exec-plans/completed/deliver-service-operations.md`.
 
 ## Plan Of Work
 

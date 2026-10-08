@@ -13,7 +13,7 @@ right. Signed-in wordmarks still open the person's own hub.
 - [x] (2026-10-06) Implement landing, discovery routing, navigation and neutral palette.
 - [x] (2026-10-06) Verify production browser flows, responsive layout, contrast and full gate.
 - [x] (2026-10-06) Prepare the complete verified milestone for review.
-- [ ] User review, then commit/push.
+- [x] (2026-10-08) User review, then commit/push. Done: reviewed and committed.
 
 ## Decision Log
 
@@ -80,7 +80,7 @@ to Main navigation. Production behavior was correct; the corrected suite passed
 ## Outcomes & Retrospective
 
 Landing, discovery routing, right-grouped navigation and neutral palettes are
-complete. Commit and push remain subject to milestone review.
+complete. Reviewed, committed and pushed.
 
 
 ### Final combined acceptance — 2026-10-06

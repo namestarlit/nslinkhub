@@ -145,8 +145,8 @@ loses their order and context, and every update means sending them again.
 
 **What belongs to an item stays as saved**: a link's address and its resolved
 title, a reference's target, a heading's text. People change only what they add
-to it (tags, order; personal notes are planned). A wrong link is removed and
-added again.
+to it (tags, order, and a curator's note — planned). A wrong link is removed
+and added again.
 
 ## 5. Journeys
 
@@ -185,6 +185,22 @@ collection is opened. People who can edit see **Add a link** and **Edit** in the
 header; editing changes the name, description, tags and whether comments are
 on, in place. A share row offers LinkedIn, X, WhatsApp and **Share link**
 (copies the permanent address and says "Link copied to clipboard").
+
+### Preview, annotate and reuse a link *(planned)*
+
+Hovering a link (or focusing it with the keyboard; on phones, a small details
+button) shows a preview card, like a link card in Google Docs or a social post:
+site icon, title, domain, the page's image and a short description, then the
+curator's note. People who can edit get the actions there: copy, edit note and
+tags, remove. Opening the card shows the full item in a dialog with its own
+address (metadata, note, tags, actions), which also works without JavaScript.
+
+The **curator's note** is a short piece of context the owner or an editor writes
+about a link (why it's here, what to look for); every reader sees it. Page
+images and icons are fetched once by the server and served from nslinkhub, so
+readers' browsers never contact the linked sites just by viewing a collection.
+Signed-in readers can **Add to my collection** from the card: Save a link opens
+with the address filled in, for one of their own collections.
 
 ### Share and collaborate *(API only today)*
 
@@ -312,8 +328,9 @@ delete accounts. The full contract (permissions, recovery, retention) is in
 - Sign-in is passwordless: email, then an eight-digit emailed code. Sign-in
   emails carry codes only, never sign-in links. There are no passwords and no
   usernames. Browsers use cookie sessions; API clients and the extension use
-  bearer tokens. "Continue with namestarlit" single sign-on is planned for the
-  ns series; authenticator-app codes and recovery codes are a later follow-up.
+  bearer tokens. Single sign-on through the ns series' own centralized identity
+  service (one account across ns products) is planned; authenticator-app codes
+  and recovery codes are a later follow-up.
 - Settings: full name, email and member-since; hub name, handle, description
   and permanent id; whether to show the name on the hub. Changes save as they
   are made. Appearance (system, light, dark) is a header control.
@@ -387,10 +404,10 @@ delete accounts. The full contract (permissions, recovery, retention) is in
   deliberately excludes.
 - Organizations, teams and shared workspaces. Collaboration stays per
   collection.
-- Item-level saves, explore ranking beyond recency, vanity handles, sharing to
-  people without an account, and full-text search (deferred, see §10).
-- Billing. Monetization ideas (`docs/design-docs/monetization.md`) are notes
-  under review, not decisions.
+- A separate saved-items list: reusing someone's link is "Add to my
+  collection" instead.
+- Billing, until the features are built and monetization is chosen
+  (`docs/design-docs/monetization.md`).
 
 ## 9. Current state
 
@@ -415,27 +432,53 @@ and `web-interface-system.md`; the visual system is `DESIGN.md`.
 | Export, import | Not yet | Built |
 | Email change (account handover) | Not yet | Built |
 | Browser extension | Planned | Uses existing API |
-| Search, single sign-on, account deletion | Planned | Planned |
+| Link metadata, preview cards, curator's notes | Planned | Planned |
+| Discover search and tag filters, full-text search | Planned | Planned |
+| Comment notifications, comment moderation in operations | Planned | Planned |
+| Single sign-on (ns-series identity service), account deletion | Planned | Planned |
 
-Next:
+Next, in order (everything is to be built; what to charge for is chosen after):
 
-- **Internals pass** — [final-pass-internals](docs/exec-plans/active/final-pass-internals.md).
-- **W3, remaining journeys** — item management (remove, reorder, sections with
-  headings and references), sharing/publishing/transfer, saved and shared
-  lists, export, the web import page, email change, richer link details and
-  notes.
-- **W4 — Browser extension.** `apps/extension` (MV3) capture companion.
-- **Before public release** — live email provider and webhook acceptance,
-  browser and worker telemetry, deployment (`docs/design-docs/infra-deployment.md`).
-- **Phase E (deferred)** — "Continue with namestarlit" SSO; Discover search by
-  tags and text and full-text search; pending shares for people without an
-  account; item-level saves; account deletion with export and retention rules.
+1. **Link metadata foundation** — durable background lookups (the worker
+   queue), stored title, description, site name, icon and image thumbnail per
+   link, and a shared fetch cache. Bulk import and preview cards both depend on
+   it; it absorbs the first step of the
+   [internals pass](docs/exec-plans/active/final-pass-internals.md).
+2. **Bulk import** — [deliver-bulk-import](docs/exec-plans/active/deliver-bulk-import.md).
+3. **Preview cards, item details and curator's notes**, with Add to my
+   collection.
+4. **Managing a collection in the web** — remove and reorder items, sections
+   (headings) and references, sharing (Can view / Can edit, link sharing),
+   publishing, transfer, saved and shared lists, export.
+5. **Discussion follow-ups** — comment notifications (a general notifications
+   table) and comment moderation in operations; creator and contributors in
+   the collection header once contributor attribution is decided.
+6. **Discover** — search by text and tags, tag filters, then full-text search
+   across collections and items.
+7. **Rest of the internals pass** — fewer queries, one write-lock opt-out per
+   controller, the forms route as an action table, Save a link drafts in Redis,
+   focus rings.
+8. **Account** — email change in the web, account deletion with export and
+   retention rules, optional authenticator-app codes.
+9. **Browser extension** (W4) — capture into a chosen collection.
+10. **Direct shares to people without an account yet** — granting an email
+    address Can view or Can edit before they sign up, activated when they do.
+    (Reading without an account already works through link sharing and
+    publishing.)
+11. **ns-series single sign-on** — a centralized identity service for all ns
+    products (`docs/design-docs/identity-sso.md`); nslinkhub is its first
+    consumer.
+12. **Before public release** — live email provider and webhook acceptance,
+    browser and worker telemetry, deployment
+    (`docs/design-docs/infra-deployment.md`).
 
 ## 10. Open decisions
 
 - **Sections in the web.** How people add headings and place links under them.
-- **Richer link details and notes.** More page metadata to tell similar links
-  apart, and personal notes on an item.
+- **Preview card details.** Which actions live on the card versus the dialog,
+  note length, and whether readers see the page description or only the note.
+- **Contributor attribution** — whether the collection header names its creator
+  and editors.
 - **Requesting access** to a collection someone can't open.
 - **Account deletion** with export, and its retention rules.
 - **Monetization**, per the notes under review, including whether bulk import
@@ -443,4 +486,5 @@ Next:
 
 Settled since this list was written: role names stay `reader`/`editor` with
 labels chosen per surface (ADR-0013); imports resolve titles through reviewed
-drafts (ADR-0012, design in `docs/design-docs/bulk-import.md`).
+drafts (ADR-0012, design in `docs/design-docs/bulk-import.md`); link metadata,
+preview cards and curator's notes are the chosen direction (§5).

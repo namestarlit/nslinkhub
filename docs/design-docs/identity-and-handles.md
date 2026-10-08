@@ -24,7 +24,7 @@ and [ADR-0004](../engineering-decisions/0004-passwordless-email-codes.md).
 - **Login direction: code-first, from the get-go.** The primary sign-in is
   Substack-style passwordless — continue with email → enter the emailed code
   (email codes only; no direct authentication links or passwords). There is no
-  username. "Continue with namestarlit" SSO can join later without reshaping
+  username. ns-series single sign-on (a centralized IAM) can join later without reshaping
   this. The web presents it as one verification flow (see [email-verification.md](email-verification.md)): a single code field that accepts pasted spaces or
   dashes. Live provider acceptance remains before release. Optional
   TOTP/recovery codes are a later follow-up.

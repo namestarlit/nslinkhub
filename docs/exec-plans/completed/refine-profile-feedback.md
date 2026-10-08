@@ -15,7 +15,7 @@ delayed recovery, while still hiding stale private content during revalidation.
 - [x] (2026-10-06) Enhance profile save in place with native no-JavaScript fallback.
 - [x] (2026-10-06) Verify errors, live validation, loading recovery and final full gate.
 - [x] (2026-10-06) Prepare the complete verified milestone for review.
-- [ ] User review, then commit/push.
+- [x] (2026-10-08) User review, then commit/push. Done: reviewed and committed.
 
 ## Decision Log
 

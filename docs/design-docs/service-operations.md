@@ -2,8 +2,8 @@
 
 Status: operator and admin/invitation workflows implemented and locally verified
 (2026-10-06); milestone awaiting review. See
-[admin invitations](../exec-plans/active/deliver-admin-operator-invitations.md).
-See the [implementation plan](../exec-plans/active/deliver-service-operations.md)
+[admin invitations](../exec-plans/completed/deliver-admin-operator-invitations.md).
+See the [implementation plan](../exec-plans/completed/deliver-service-operations.md)
 and [operator runbook](../runbooks/service-operations.md).
 This is the product-owned service-operator contract. It adds account operations
 and public-content moderation to the individual hub model; it does not add hub

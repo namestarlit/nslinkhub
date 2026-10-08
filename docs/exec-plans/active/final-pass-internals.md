@@ -13,6 +13,9 @@ the only blocker is a change to behaviour, business workflow or UX.)
 ## Progress
 
 - [ ] M1 Link titles: own storage, durable lookup jobs, shared fetch cache.
+  (2026-10-08: delivered first, as the link-metadata foundation — title,
+  description, site name, icon and thumbnail — ahead of bulk import; see
+  `PRODUCT.md` §9.)
 - [ ] M2 Fewer queries: batched reference access, batched comment replies,
   comment writes reuse loaded rows.
 - [ ] M3 One write-lock opt-out per controller.

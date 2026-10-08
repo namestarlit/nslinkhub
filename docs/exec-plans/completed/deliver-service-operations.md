@@ -51,7 +51,7 @@ gain private-content access. The authoritative contract is
   Full gate passed 141 tests, browser passed 23 and the filter-based dev loop
   passed. Startup sent the authorized admin invitation; acceptance remains the
   recipient's action. Direct grant commands are removed.
-- [ ] User review, then milestone commit and guide-only repinning follow-up.
+- [x] (2026-10-08) User review, then milestone commit and guide-only repinning follow-up. Done: reviewed and committed.
 
 ## Surprises & Discoveries
 

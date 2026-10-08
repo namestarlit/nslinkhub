@@ -14,7 +14,7 @@ grid shapes, FNV-1a hash and finalizer from the disposable avatar handoff.
 - [x] (2026-10-06) Connect menu/profile images and verify real image loading without JavaScript.
 - [x] (2026-10-06) Update documentation and pass source/browser verification.
 - [x] (2026-10-06) Prepare the complete verified milestone for review.
-- [ ] User review, then commit/push.
+- [x] (2026-10-08) User review, then commit/push. Done: reviewed and committed.
 
 ## Decision Log
 

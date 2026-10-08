@@ -69,11 +69,10 @@ User feedback on the first pass, with decisions:
   owner/editor marks the answer); owners can switch comments off (on by
   default). Schema, policy-reusing API, native-form UI in the side column,
   e2e + browser journeys.
-- [ ] Slice F2: comment notifications (needs a general notifications table) and
-  `/ops` comment moderation.
-- [ ] Slice G, needs a privacy decision: collection creator and contributors in
-  the header metadata (creator is stored but not exposed; contributors need edit
-  attribution).
+- [x] (2026-10-08) Closed. Slice F2 (comment notifications, `/ops` comment
+  moderation) and slice G (creator and contributors in the header; the API now
+  returns the creator for attribution, contributors still need edit attribution
+  and a privacy decision) moved to the product backlog in `PRODUCT.md` §9.
 - Discovered: the user's dev API watcher exited on an intermediate edit (an
   import added then removed within a minute). It was restarted with the dev
   stack's environment; edits to watched API files must stay valid at each save.

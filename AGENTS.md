@@ -57,8 +57,8 @@ authoritative.
   and handles, collections and resources, discussion, email verification,
   exports, web experience and interface, operations, and more.
 - `docs/design-docs/conventions.md`: API/persistence casing and envelope rules.
-- `docs/design-docs/identity-sso.md`: ns-series IAM direction (nsauth,
-  "Continue with namestarlit") — built as an IAM, first slice ships AuthN+SSO;
+- `docs/design-docs/identity-sso.md`: ns-series single sign-on — a centralized
+  IAM for all ns products (nsauth); its first slice ships AuthN+SSO;
   domain authorization stays product-owned; constraints current work respects.
 - `docs/design-docs/infra-deployment.md`: ns-series deployment (namestarlit VPS,
   Dokploy Stack mode, GHCR images, topology-file conventions).

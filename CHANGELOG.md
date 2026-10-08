@@ -9,6 +9,13 @@ summary of what changed after completed work has been promoted out of `ref/`.
 
 ## Unreleased
 
+- Backlog brought up to date: seven finished plans closed; `PRODUCT.md` §9 now
+  lists everything still to build, in order (link metadata, bulk import,
+  preview cards with curator's notes and Add to my collection, collection
+  management in the web, discussion follow-ups, Discover search, the rest of
+  the internals pass, account work, the extension, direct shares to people
+  without an account, ns-series single sign-on, release). Item-level saves are
+  replaced by Add to my collection; monetization is chosen after the build.
 - Discussion replies from a collection's owner or editors are all badged
   Curator. Permission roles stay `reader`/`editor`; labels are chosen per
   surface (ADR-0013). Bulk import is designed as Save a link at scale — a
