@@ -10,7 +10,7 @@ People bring their existing links in bulk — a browser bookmarks export, a CSV,
 or a pasted list — and review everything before it lands: titles resolved from
 the pages, failures explained and fixable in place, and folders mapped either
 to sections of one collection or to separate collections. Observe it by
-uploading a bookmarks file with folders at Manage › Import (`/manage/import`), splitting two folders into
+uploading a bookmarks file with folders at Manage › Import & export (`/manage/import-export`), splitting two folders into
 new collections, fixing one failed address, importing the ready rows, and
 finding the remaining failure still waiting in the draft.
 
@@ -25,7 +25,7 @@ Design: [bulk-import.md](../../design-docs/bulk-import.md). Decision:
 - [ ] M2 — Background title lookups and revalidation (worker), on the
   link-metadata foundation's lookup queue (built first; `PRODUCT.md` §9).
 - [ ] M3 — Folder destinations and commit (API).
-- [ ] M4 — Web start and preview pages under Manage (`/manage/import`), after
+- [ ] M4 — Web start and preview pages under Manage (`/manage/import-export`), after
   the Manage workspace exists (`PRODUCT.md` §9).
 - [ ] M5 — Remove one-shot import, expiry cleanup, docs and acceptance.
 
@@ -95,8 +95,8 @@ lock: create new private collections, headings for section folders in tree
 order, resources for Ready rows; mark rows Imported with their resource id so a
 retry never duplicates. Return per-destination counts.
 
-**M4 — Web.** `/manage/import` (open drafts; upload, CSV or paste; start) and
-`/manage/import/:id` (structure panel, summary, filters, paginated table, row edit and
+**M4 — Web.** `/manage/import-export` (open drafts; upload, CSV or paste; start) and
+`/manage/import-export/:id` (structure panel, summary, filters, paginated table, row edit and
 drop, bulk actions, Import N ready). Reuse Save a link's address state, tag
 pills and destination picker. Native forms first; JavaScript adds polling and
 in-place updates. "Bulk import links" on Save a link links here.

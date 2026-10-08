@@ -7,11 +7,11 @@
 
 Collections are built by several people: the creator, the owner, editors. Readers
 should see who contributed and who added what; owners need an audit of their
-hub. Separately maintained contributor lists and audit logs would drift apart.
+hub. Separately maintained curator lists and audit logs would drift apart.
 
 ## Options considered
 
-- Store contributor lists and per-item authors as separate mutable fields.
+- Store curator lists and per-item authors as separate mutable fields.
 - Record every change as an activity entry and derive attribution from it,
   as GitHub derives contributors from commits.
 
@@ -20,7 +20,8 @@ hub. Separately maintained contributor lists and audit logs would drift apart.
 Every change to a hub's content and settings is recorded as an append-only
 activity entry (actor, action, target, time), written in the same transaction
 as the change. Attribution is derived from those entries: the collection's
-creator, who added each item, and a collection's contributors. The same entries
+creator, who added each item, and a collection's curators (everyone who
+shaped its content). The same entries
 are the hub's audit trail. The creator remains a record, never a role
 (ADR-0013). What is recorded and shown:
 [attribution-and-activity.md](../design-docs/attribution-and-activity.md).

@@ -26,9 +26,8 @@ hub happens in [Manage](manage-workspace.md), not here.
 ## Following
 
 Following a hub is like subscribing to a YouTube channel: it adds the hub to
-your Following list and its new published collections to your feed. Owners see
+your Following list, its new published collections to your feed, and sends you
+a notification when it publishes. Each followed hub has a notifications toggle
+(on by default, like YouTube's bell), so you can keep following without the
+notices. Owners see
 their followers in Manage › People; a blocked account cannot follow.
-
-## Open questions
-
-- Whether following also sends a notification when a followed hub publishes.

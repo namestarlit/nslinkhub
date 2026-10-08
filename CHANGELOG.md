@@ -14,9 +14,12 @@ summary of what changed after completed work has been promoted out of `ref/`.
   (collections, comments, people and blocking, import, activity) and operators
   and admins keep the service sections (ADR-0014); **activity and
   attribution**, GitHub-style, where every change is recorded and drives the
-  creator, contributors, "added by" and the hub audit (ADR-0015); and **your
+  creator, curators, "added by" and the hub audit (ADR-0015); and **your
   home and following**: My collections, Shared with me, Saved and Following,
-  with Follow on public hub pages.
+  with Follow on public hub pages. Everyone who shapes a collection is shown as a
+  curator; Manage's Import & export section holds bulk import and multi-
+  collection export, while a collection page offers Download; following
+  notifies with a per-hub toggle; blocking stops participation only.
 - Backlog brought up to date: seven finished plans closed; `PRODUCT.md` §9 now
   lists everything still to build, in order (link metadata, bulk import,
   preview cards with curator's notes and Add to my collection, collection

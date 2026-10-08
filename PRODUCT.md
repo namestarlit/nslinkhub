@@ -189,8 +189,8 @@ on, in place. A share row offers LinkedIn, X, WhatsApp and **Share link**
 *(Planned)* Like commits and contributors on GitHub, every change is recorded
 as "who did what to which item", and attribution comes from those records: the
 collection's metadata names its **creator** (who created it — distinct from the
-owner, who owns the hub) and its **contributors** ("Paul John and 2
-contributors"); each item's details say who added it and when; owners and
+owner, who owns the hub) and its **curators**, everyone who has shaped its
+content ("Paul John and 2 curators"); each item's details say who added it and when; owners and
 editors can open the collection's history.
 
 ### Preview and annotate a link *(planned)*
@@ -243,8 +243,9 @@ email.
 **Discover** lists published collections, newest first, continuing page by page
 (no popularity score, recommendations or sort options yet). Opening one shows
 which hub published it. Signed-in readers can **follow** a hub *(planned)*,
-like subscribing to a YouTube channel: the hub joins their Following list and
-its new published collections appear there. They can also **save** a published
+like subscribing to a YouTube channel: the hub joins their Following list,
+its new published collections appear there, and they're notified when it
+publishes (each followed hub has a notifications toggle, on by default). They can also **save** a published
 collection to keep it *(API only today)*, like saving a document in Google
 Drive; a save goes
 dormant if the collection is unpublished — it keeps its place, labelled
@@ -282,12 +283,14 @@ pasted with spaces or dashes work. An action interrupted by sign-in or
 confirmation continues by itself afterwards, and only for the person it
 belongs to.
 
-### Export *(API only today)*
+### Download and export *(API only today)*
 
-Signed-in readers export one or more collections as Markdown, PDF or Word
-(several at once arrive as a zip). The collection title and description lead,
+Like File › Download in Google Docs, a signed-in reader can **Download** a
+collection as a document (Word, Markdown or PDF; formats to be settled). To
+export several collections at once (one document each, in a zip), hub owners
+use **Import & export** in Manage. The collection title and description lead,
 headings become sections, and references stay links unless the reader asks to
-include readable referenced collections one level deep. Nothing is fetched from
+include readable referenced collections one level deep — an expanded guide. Nothing is fetched from
 linked pages and nothing is stored. Unavailable references get a generic
 notice that reveals no title or content. Signed-out readers can only browse.
 
@@ -298,8 +301,10 @@ roles *(planned; today it is the service-operations console)*:
 
 - **Every hub owner** manages their own hub: all collections as a table,
   comments across the hub (hide, show, mark answers), people (who has access,
-  followers, blocking someone from the hub), bulk import, and the hub's
-  activity — its audit trail.
+  followers, blocking someone from taking part in the hub), **Import &
+  export** (bulk import, exporting several collections), and the hub's
+  activity — its audit trail. Blocking never hides published collections:
+  what is published is public to everyone.
 - **Service operators** find an account by email or handle and restrict it
   (suspend, reactivate, sign out everywhere); look up a public collection by
   its link and hold or release it, or moderate its comments; and review the
@@ -464,7 +469,7 @@ and `web-interface-system.md`; the visual system is `DESIGN.md`.
 | Browser extension | Planned | Uses existing API |
 | Link metadata, preview cards, curator's notes | Planned | Planned |
 | Following hubs, your home (My collections, Shared with me, Saved, Following) | Planned | Planned |
-| Activity records, creator and contributors, hub audit | Planned | Partial (management audit) |
+| Activity records, creator and curators, hub audit | Planned | Partial (management audit) |
 | Manage for hub owners (collections, comments, people, blocking, import, activity) | Planned | Planned |
 | Discover search and tag filters, full-text search | Planned | Planned |
 | Comment notifications, comment moderation in operations | Planned | Planned |
@@ -478,7 +483,7 @@ Next, in order (everything is to be built; what to charge for is chosen after):
    it; it absorbs the first step of the
    [internals pass](docs/exec-plans/active/final-pass-internals.md).
 2. **Activity and attribution** — every change recorded as an activity entry;
-   creator, contributors and "added by" shown; the hub audit
+   creator, curators and "added by" shown; the hub audit
    ([attribution-and-activity](docs/design-docs/attribution-and-activity.md)).
 3. **Manage** — the operations console becomes one workspace scoped by role,
    adding the hub-owner sections: collections, comments, people and blocking,
@@ -521,10 +526,7 @@ Next, in order (everything is to be built; what to charge for is chosen after):
 - **Sections in the web.** How people add headings and place links under them.
 - **Preview card details.** Note length, and whether the card shows the page
   description when a note exists.
-- **Following notifications.** Whether following also sends a notice when a
-  followed hub publishes.
-- **Blocking and public pages.** Whether a blocked account, signed in, is also
-  denied the hub's published collections, or only participation.
+- **Download formats.** Which document formats to offer (Word, Markdown, PDF).
 - **Requesting access** to a collection someone can't open.
 - **Account deletion** with export, and its retention rules.
 - **Monetization**, per the notes under review, including whether bulk import
@@ -536,4 +538,6 @@ drafts (ADR-0012, design in `docs/design-docs/bulk-import.md`); link metadata,
 preview cards and curator's notes are the chosen direction (§5); one Manage
 workspace scoped by role (ADR-0014); attribution and the hub audit come from
 activity records (ADR-0015); following works like YouTube subscriptions and
-saved collections like saved Drive documents.
+saved collections like saved Drive documents; following notifies by default
+with a per-hub toggle; blocking only stops taking part, never public reading;
+everyone who shapes a collection is a curator.

@@ -9,7 +9,7 @@ collections.
 
 ## Journey
 
-1. **Start** (Manage › Import, `/manage/import`, also reached from Save a
+1. **Start** (Manage › Import & export, `/manage/import-export`, also reached from Save a
    link's "Bulk import links"): upload
    a bookmarks file (HTML, as every browser exports it) or a CSV, or paste a list
    of links, one per line. Nothing is saved to any collection yet.
@@ -84,8 +84,8 @@ removed (pre-deployment, no compatibility).
 
 ## Web
 
-`/manage/import` (a section of [Manage](manage-workspace.md)) lists open drafts
-and starts a new one. `/manage/import/:id` is the preview:
+`/manage/import-export` (a section of [Manage](manage-workspace.md)) lists open
+drafts and starts a new one. `/manage/import-export/:id` is the preview:
 structure panel, summary, filters and the paginated table, with native forms
 for every action (works without JavaScript; the page refreshes to show progress,
 and polls with JavaScript). Reuses Save a link's pieces: blue/red address

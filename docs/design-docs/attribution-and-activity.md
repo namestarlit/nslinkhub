@@ -21,11 +21,11 @@ transaction. Actions cover:
 
 ## What readers see
 
-Modelled on GitHub's commits and contributors:
+Modelled on GitHub's commits and contributors, labelled **curators** here:
 
 - **Collection metadata:** the **creator** (who created it, kept through
-  transfers, distinct from the owner) and **contributors** ("Paul John and 2
-  contributors"), derived from the entries of people who changed its content.
+  transfers, distinct from the owner) and its **curators** ("Paul John and 2
+  curators"), derived from the entries of people who changed its content.
 - **Item details:** "Added by @handle · Oct 7".
 - **History** (owner and editors): the collection's entries, newest first —
   "@handle added a link · 2 hours ago".
@@ -41,5 +41,5 @@ collection, person and action ([manage-workspace.md](manage-workspace.md)).
 ## Data
 
 Items gain `addedByUserId` set from the entry that created them (a direct column
-for cheap reads; the entry stays the record). Contributors are a grouped query
+for cheap reads; the entry stays the record). Curators are a grouped query
 over a collection's content entries.
