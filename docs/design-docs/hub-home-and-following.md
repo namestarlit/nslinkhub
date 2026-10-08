@@ -30,7 +30,7 @@ your Following list, its new published collections to your feed, and sends you
 a notification when it publishes. Each followed hub has a notifications toggle
 (on by default, like YouTube's bell), so you can keep following without the
 notices. A follow belongs to the hub, not its owner: it is keyed by the hub's
-immutable id and stays when the hub changes hands (account handover), until the
+immutable id, so it survives handle and name changes, until the
 follower unfollows. Settings live with the rest of the
 [notification settings](notifications.md). Owners see
 their followers in Manage › People; a blocked account cannot follow.

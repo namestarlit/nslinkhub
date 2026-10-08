@@ -113,7 +113,8 @@ export class CaptureService {
     for (const link of links)
       resourceIds.push(
         existing.find((row) => row.url === link.url)?.id ??
-          (await this.resources.insertExternal(id, link.url, link.tags, position++)).id,
+          (await this.resources.insertExternal(collection, user, link.url, link.tags, position++))
+            .id,
       );
     await this.prisma.captureReceipt.create({
       data: { userId: user.userId, operationId: dto.operationId, collectionId: id, fingerprint },

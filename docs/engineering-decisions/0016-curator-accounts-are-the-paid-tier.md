@@ -25,7 +25,7 @@ The everyday library — saving, organizing, sharing, publishing, following,
 discussion — stays free for everyone. Professional curators opt into a
 **Curator account**, which adds the tools their work needs and is what
 nslinkhub charges for. "Curator" names that account type; per collection,
-owners and editors are maintainers. What a Curator account includes and costs
+owners and editors are contributors. What a Curator account includes and costs
 is decided after the everyday product is built:
 [monetization.md](../design-docs/monetization.md).
 

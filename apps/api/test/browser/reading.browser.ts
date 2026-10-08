@@ -589,7 +589,7 @@ describe("explore to resource: production browser journey", () => {
         await ready(page, `/@${handle}?view=public&s=discovery-must-ignore-this`);
         await browserExpect(page.locator("h1")).toHaveText(publicHubName);
         await browserExpect(page).toHaveTitle(`${publicHubName} · nslinkhub`);
-        await browserExpect(page.locator(".hub-identity")).toHaveText(`Reader@${handle}`);
+        await browserExpect(page.locator(".hub-identity")).toHaveText(`@${handle} by Reader`);
         await browserExpect(page.locator(".hub-collections-heading .meta")).toHaveText("25");
         await browserExpect(page.locator(".hub-heading time")).toHaveCount(0);
         await browserExpect(page.locator(".hub-heading")).not.toContainText("Created");
@@ -763,7 +763,7 @@ describe("explore to resource: production browser journey", () => {
         await page.getByRole("link", { name: "A useful collection", exact: true }).click();
         expect(new URL(page.url()).pathname).toBe(`/c/${targetId}`);
         await browserExpect(page.locator("h1")).toHaveText("A useful collection");
-        await page.getByRole("link", { name: `Reader @${handle}`, exact: true }).click();
+        await page.getByRole("link", { name: `@${handle}`, exact: true }).click();
         await page.getByRole("link", { name: longTitle }).click();
         await page.getByRole("link", { name: "Open the reference" }).click();
         await browserExpect(page.locator("body")).toHaveText("External reference opened");
@@ -870,7 +870,7 @@ describe("explore to resource: production browser journey", () => {
       await ready(page, `/c/${sourceId}`);
       await browserExpect(page.locator("h1")).toHaveText(longTitle);
       await browserExpect(
-        page.getByRole("link", { name: `Reader @${renamed}`, exact: true }),
+        page.getByRole("link", { name: `@${renamed}`, exact: true }),
       ).toBeVisible();
       for (const path of [`/@${handle}/reading-guide`, `/@${renamed}/reading-guide`]) {
         await ready(page, path);
@@ -919,9 +919,9 @@ describe("explore to resource: production browser journey", () => {
       await browserExpect(page.locator("body")).not.toContainText("PRIVATE HUB DETAIL");
       await ready(page, `/c/${sourceId}`);
       await browserExpect(page.locator("h1")).toHaveText(longTitle);
-      await browserExpect(
-        page.getByRole("link", { name: `Reader @${handle}`, exact: true }),
-      ).toHaveCount(0);
+      await browserExpect(page.getByRole("link", { name: `@${handle}`, exact: true })).toHaveCount(
+        0,
+      );
       hubMode = "timeout";
       await ready(page, `/@${handle}`);
       await browserExpect(page.locator("h1")).toHaveText("We couldn't load this page.");
@@ -943,7 +943,7 @@ describe("explore to resource: production browser journey", () => {
         });
       });
       await ready(page, `/@${handle}/reading-guide`);
-      await page.getByRole("link", { name: `Reader @${handle}`, exact: true }).click();
+      await page.getByRole("link", { name: `@${handle}`, exact: true }).click();
       await change(sourceId, "unpublish");
       await page.goBack();
       await browserExpect(page.locator("h1")).toHaveText("This collection isn't available.");
@@ -955,7 +955,7 @@ describe("explore to resource: production browser journey", () => {
       await browserExpect(address).toHaveValue(`${origin}/c/${sourceId}?s=${linkToken}`);
       await page.keyboard.press("Escape");
       await browserExpect(
-        page.getByRole("link", { name: `Reader @${handle}`, exact: true }),
+        page.getByRole("link", { name: `@${handle}`, exact: true }),
       ).toHaveAttribute("href", `/h/${hubId}`);
       expect(
         hubReads
@@ -2873,8 +2873,8 @@ it("shows collection descriptions and hub attribution without repeated separator
 }, 15000);
 
 describe("collection discussion", () => {
-  it("prompts signed-out readers, lets signed-in readers post and reply, shows the maintainer's answer and honours the switch, with and without JavaScript", async () => {
-    // Earlier journeys end the shared owner's session; this one has its own maintainer.
+  it("prompts signed-out readers, lets signed-in readers post and reply, shows the contributor's answer and honours the switch, with and without JavaScript", async () => {
+    // Earlier journeys end the shared owner's session; this one has its own contributor.
     const curator = (
       await signInWithCode(app.getHttpServer(), {
         email: `curator-${crypto.randomUUID()}@example.com`,
@@ -3016,7 +3016,7 @@ describe("collection discussion", () => {
         await browserExpect(composer).toHaveValue("Draft retained while browsing");
         await composer.fill("");
 
-        // The maintainer (owner) marks the reader's reply as the answer.
+        // The contributor (owner) marks the reader's reply as the answer.
         const reply = await prisma.collectionComment.findFirstOrThrow({
           where: { collectionId: id, parentId: { not: null } },
         });
@@ -3024,7 +3024,20 @@ describe("collection discussion", () => {
           .post(`/api/v1/comments/${reply.id}/accept`)
           .auth(curator, { type: "bearer" })
           .expect(200);
+        await request(app.getHttpServer())
+          .post(`/api/v1/collections/${id}/comments`)
+          .auth(curator, { type: "bearer" })
+          .send({ body: `From the contributor (${js})` })
+          .expect(201);
         await page.reload();
+        // TikTok-style: "@handle · Contributor", then the age leads the actions.
+        const mine = discussion.locator(".comment", { hasText: `From the contributor (${js})` });
+        await browserExpect(mine.locator(".comment-head .comment-role")).toHaveText("Contributor");
+        await browserExpect(mine.locator(".comment-head")).not.toContainText("Curator");
+        await browserExpect(mine.locator(".comment-actions .comment-time")).toHaveText(
+          /^(now|\d+s|\d+m)$/,
+        );
+        if (js) await mine.screenshot({ path: "/tmp/comment-contributor.png" });
         await browserExpect(discussion.locator(".comment.accepted")).toContainText(
           "Start with the first section.",
         );
@@ -3139,7 +3152,7 @@ it("preserves a throttled resend journey beyond the normal resend interval", asy
 it("continues replies on an older question page with the share token and answer intact", async () => {
   const signed = await signInWithCode(app.getHttpServer(), {
     email: `reply-pages-${crypto.randomUUID()}@example.com`,
-    name: "Reply maintainer",
+    name: "Reply contributor",
   });
   const bearer = signed.headers["set-auth-token"] as string;
   const result = await request(app.getHttpServer())
@@ -3313,3 +3326,73 @@ it("folds the collection introduction before scrolling links", async () => {
     await close();
   }
 }, 30000);
+
+describe("activity and attribution", () => {
+  it("shows contributors and a History of who changed what, for contributors only", async () => {
+    const login = async (label: string, name: string) => {
+      const email = `${label}-${crypto.randomUUID()}@example.com`;
+      const res = await signInWithCode(app.getHttpServer(), { email, name });
+      return { email, token: res.headers["set-auth-token"] as string };
+    };
+    const owner = await login("history-owner", "Hana Owner");
+    const editor = await login("history-editor", "Eli Editor");
+    const created = await request(app.getHttpServer())
+      .post("/api/v1/collections")
+      .auth(owner.token, { type: "bearer" })
+      .send({ slug: `history-${crypto.randomUUID().slice(0, 8)}`, title: "Shared guide" })
+      .expect(201);
+    const id = created.body.data.id as string;
+    await request(app.getHttpServer())
+      .post(`/api/v1/collections/${id}/shares`)
+      .auth(owner.token, { type: "bearer" })
+      .send({ email: editor.email, role: "editor" })
+      .expect(201);
+    await request(app.getHttpServer())
+      .post(`/api/v1/collections/${id}/resources/heading`)
+      .auth(editor.token, { type: "bearer" })
+      .send({ title: "Basics", position: 0 })
+      .expect(201);
+    // The owner acts last: the header still names the owner once.
+    const current = await request(app.getHttpServer())
+      .get(`/api/v1/collections/${id}`)
+      .auth(owner.token, { type: "bearer" });
+    await request(app.getHttpServer())
+      .patch(`/api/v1/collections/${id}`)
+      .auth(owner.token, { type: "bearer" })
+      .send({ description: "Notes for the team.", version: current.body.data.version })
+      .expect(200);
+    const { page, close } = await freshPage();
+    try {
+      await browserSignIn(page, editor.email, `/c/${id}`);
+      await browserExpect(page.locator("h1")).toHaveText("Shared guide");
+      await browserExpect(page.locator(".row-meta .contributors")).toHaveText("2 contributors");
+      await page.screenshot({ path: "/tmp/attribution-header-desktop.png" });
+      await page.setViewportSize({ width: 390, height: 844 });
+      await page.screenshot({ path: "/tmp/attribution-header-mobile.png" });
+      // The share panel opens within a phone screen.
+      await page.locator(".collection-actions .share-menu > summary").click();
+      const panel = await page.locator(".collection-actions .share-panel").boundingBox();
+      expect(panel?.x).toBeGreaterThanOrEqual(0);
+      expect((panel?.x ?? 0) + (panel?.width ?? 0)).toBeLessThanOrEqual(390);
+      await page.screenshot({ path: "/tmp/attribution-share-mobile.png" });
+      await page.locator(".collection-actions .share-menu > summary").click();
+      await page.setViewportSize({ width: 1280, height: 800 });
+      await page.getByRole("link", { name: "History", exact: true }).click();
+      await browserExpect(page.locator("h1")).toHaveText("History");
+      const latest = page.locator(".history-list li").first();
+      await browserExpect(latest).toContainText("@hana-owner");
+      await browserExpect(latest).toContainText("changed the collection's details");
+      const section = page.locator(".history-list li", { hasText: "added a section" });
+      await browserExpect(section).toContainText("@eli-editor");
+      await browserExpect(section).toContainText("Basics");
+      await browserExpect(page.locator(".history-list")).toContainText("created the collection");
+      // Sharing is the owner's to see.
+      await browserExpect(page.locator(".history-list")).not.toContainText("shared the collection");
+      await page.screenshot({ path: "/tmp/attribution-history.png", fullPage: true });
+      await page.emulateMedia({ colorScheme: "dark" });
+      await page.screenshot({ path: "/tmp/attribution-history-dark.png", fullPage: true });
+    } finally {
+      await close();
+    }
+  }, 60000);
+});

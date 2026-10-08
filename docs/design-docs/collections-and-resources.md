@@ -66,6 +66,9 @@ characters) is shown in full in the item's details; whether a short version
 also appears on the card is decided once the screen is built. The card offers
 **View** (details) and, for the owner and editors, **Edit** (tags, note, section,
 remove).
+Item details open over the collection at `?item=<itemId>` on either of its
+addresses (`/c/<id>?item=…`, `/@handle/<slug>?item=…`), so the link to one item
+is shareable and works without JavaScript.
 
 ## Tags
 

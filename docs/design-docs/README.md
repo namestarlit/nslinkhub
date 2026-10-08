@@ -12,7 +12,7 @@ implementation work in [../exec-plans/active/](../exec-plans/active/).
   direct share → active link → published), service-operation restrictions,
   ownership transfer, publication and discovery.
 - [identity-and-handles.md](identity-and-handles.md): hub handles and names,
-  the account's name, code-first sign-in, email-change handover and the web
+  the account's name, code-first sign-in, email change and the web
   URL scheme.
 - [collections-and-resources.md](collections-and-resources.md): item kinds and
   their API, link titles and public addresses, tags, and the Save a link
@@ -22,7 +22,7 @@ implementation work in [../exec-plans/active/](../exec-plans/active/).
 - [email-verification.md](email-verification.md): the one verification flow and
   interrupted actions.
 - [attribution-and-activity.md](attribution-and-activity.md): activity
-  entries, creator, maintainers, "added by" and the hub audit (designed).
+  entries, creator, contributors, "added by" and the hub audit (designed).
 - [manage-workspace.md](manage-workspace.md): Manage — one workspace scoped by
   role (hub owner, operator, admin), blocking (designed).
 - [notifications.md](notifications.md): one inbox for every kind, scoped by

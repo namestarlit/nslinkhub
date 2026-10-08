@@ -19,9 +19,15 @@ export function PublicHub({
       <div className="page-heading hub-heading">
         <div className="hub-introduction">
           <h1>{hub.name}</h1>
+          {/* The handle is the hub's; "by Name" only when the owner shows it. */}
           <p className="hub-identity meta">
-            {ownerName && <span className="person-name">{ownerName}</span>}
             <span className="person-handle">@{hub.handle}</span>
+            {ownerName && (
+              <>
+                {" by "}
+                <span className="person-name">{ownerName}</span>
+              </>
+            )}
           </p>
           {hub.description && <p className="description">{hub.description}</p>}
           <div className="hub-share-actions">

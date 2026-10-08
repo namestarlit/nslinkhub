@@ -17,6 +17,8 @@ export interface Resource {
   /** A link's page description and site name; null for other kinds. */
   description: string | null;
   siteName: string | null;
+  /** Who added the item; null when unknown (added before attribution). */
+  addedBy: import("./envelope.js").PersonRef | null;
   tags: string[];
   position: number;
   version: number;

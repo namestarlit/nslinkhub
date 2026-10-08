@@ -6,6 +6,7 @@ export interface AuditInput {
   actorUserId: string;
   collectionId?: string;
   targetUserId?: string;
+  resourceId?: string;
   action: AuditAction;
   role?: "reader" | "editor";
 }

@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { relativeTime } from "../lib/time";
+import { relativeTime, shortTime } from "../lib/time";
 
 type Variant = "datetime" | "date";
 const formats: Record<Variant, Intl.DateTimeFormatOptions> = {
@@ -46,6 +46,21 @@ export function Updated({ at }: { at: string }) {
   return (
     <time dateTime={at} title={exact} suppressHydrationWarning>
       {relativeTime(at, zone)}
+    </time>
+  );
+}
+
+// The compact age ("53m", "2d", "Oct 7"); the exact time shows on hover.
+export function ShortTime({ at }: { at: string }) {
+  const [zone, setZone] = useState<string | undefined>("UTC");
+  useEffect(() => setZone(undefined), []);
+  const exact = new Date(at).toLocaleString(zone ? "en-GB" : undefined, {
+    ...formats.datetime,
+    timeZone: zone,
+  });
+  return (
+    <time dateTime={at} title={exact} suppressHydrationWarning>
+      {shortTime(at, zone)}
     </time>
   );
 }

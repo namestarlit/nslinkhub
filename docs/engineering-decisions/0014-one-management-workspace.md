@@ -1,6 +1,8 @@
 # ADR-0014: One management workspace, scoped by role
 
-**Status:** accepted  
+**Status:** accepted, amended 2026-10-08: **Manage** (`/manage`) is the hub
+owner's workspace; running the service is a separate console, `/platform`
+(renamed from `/ops`), for admins and operators  
 **Date:** 2026-10-08
 
 ## Context

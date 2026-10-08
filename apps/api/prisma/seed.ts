@@ -41,6 +41,7 @@ async function main() {
     data: { name: seedHub.hubName, description: seedHub.description },
   });
   await prisma.collection.deleteMany({ where: { hubId: hub.id } });
+  await prisma.auditRecord.deleteMany({ where: { hubId: hub.id } });
 
   const links = seedCollections.flatMap((c) =>
     c.items.filter((item): item is Extract<SeedItem, ["l", ...unknown[]]> => item[0] === "l"),
@@ -61,6 +62,15 @@ async function main() {
       },
     });
     ids.set(c.slug, created.id);
+    // Attribution comes from activity entries, as for anything saved in the app.
+    await prisma.auditRecord.create({
+      data: {
+        hubId: hub.id,
+        actorUserId: user.id,
+        collectionId: created.id,
+        action: "collection.created",
+      },
+    });
   }
   let resolved = 0;
   for (const c of seedCollections) {
@@ -68,7 +78,13 @@ async function main() {
     for (const [position, item] of c.items.entries()) {
       if (item[0] === "h") {
         await prisma.resource.create({
-          data: { collectionId, position, kind: "heading", titleOverride: item[1] },
+          data: {
+            collectionId,
+            position,
+            kind: "heading",
+            titleOverride: item[1],
+            addedByUserId: user.id,
+          },
         });
       } else if (item[0] === "c") {
         const target = ids.get(item[1]);
@@ -80,6 +96,7 @@ async function main() {
             kind: "collection_link",
             linkedCollectionId: target,
             tags: item[2] ?? [],
+            addedByUserId: user.id,
           },
         });
       } else {
@@ -87,7 +104,14 @@ async function main() {
         const page = metadata.get(url);
         if (page?.title) resolved++;
         await prisma.resource.create({
-          data: { collectionId, position, kind: "external_link", url, tags: item[3] ?? [] },
+          data: {
+            collectionId,
+            position,
+            kind: "external_link",
+            url,
+            tags: item[3] ?? [],
+            addedByUserId: user.id,
+          },
         });
         // Only text read from the page enters the shared metadata; a page that
         // couldn't be read stays pending for the worker (the curated text is

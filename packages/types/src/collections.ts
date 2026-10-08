@@ -2,11 +2,15 @@ import type { ShareRole, ShareSource } from "./common.js";
 import type { IsoTimestamp } from "./envelope.js";
 
 export interface Collection {
-  hub?: { id: string; handle: string; name: string; ownerName: string | null };
+  hub?: { id: string; handle: string; name: string };
   // Who created the collection (immutable provenance; may differ from the owner
   // after a transfer). Present on single-collection reads; null if unavailable.
   creator?: import("./envelope.js").PersonRef | null;
-  capabilities?: { canManage: boolean };
+  // Everyone who has shaped its content, most recent first (up to five), and
+  // how many there are. Present on single-collection reads.
+  contributors?: { people: import("./envelope.js").PersonRef[]; total: number };
+  /** canManage: the owner; canEdit: a contributor (owner or editor). */
+  capabilities?: { canManage: boolean; canEdit: boolean };
   restriction?: { reason: import("./operations.js").OperationReason; supportUrl: string };
   id: string;
   hubId: string;

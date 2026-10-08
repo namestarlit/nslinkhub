@@ -341,6 +341,8 @@ main:focus-visible {
 }
 .context[aria-label="Collection context"] a::before {
   content: "";
+  display: inline-block;
+  vertical-align: 0.0625em;
   width: 0.4375rem;
   height: 0.4375rem;
   border-left: 1.5px solid currentColor;
@@ -1298,6 +1300,53 @@ html[data-revalidating="true"] .session-nav {
 .share-menu {
   position: relative;
 }
+/* In the collection bar the panel anchors to the whole button group, which
+   ends at the bar's edge, so it never runs off a phone screen. */
+.collection-actions .share-menu {
+  position: static;
+}
+/* Contributors' History and Edit: buttons on wide screens; below, one button
+   that expands them in place in the bar and collapses them again. */
+.collection-more {
+  display: flex;
+  flex-direction: row-reverse;
+  align-items: center;
+  gap: 0.5rem;
+}
+.collection-more > summary {
+  list-style: none;
+  min-width: var(--control);
+  justify-content: center;
+  font-size: 1.125rem;
+}
+.collection-more > summary::-webkit-details-marker {
+  display: none;
+}
+.collection-more-items {
+  display: flex;
+  gap: 0.5rem;
+}
+.collection-more:not([open]) .collection-more-items {
+  display: none;
+}
+.collection-more .more-close,
+.collection-more[open] .more-open {
+  display: none;
+}
+.collection-more[open] .more-close {
+  display: inline;
+}
+.collection-actions .wide-action {
+  display: none;
+}
+@media (min-width: 1024px) {
+  .collection-actions .wide-action {
+    display: inline-flex;
+  }
+  .collection-actions .collection-more {
+    display: none;
+  }
+}
 .share-menu > summary {
   list-style: none;
 }
@@ -1469,18 +1518,23 @@ html[data-revalidating="true"] .session-nav {
   border-radius: 1rem 1rem 0 0;
 }
 .sheet-bar .context {
+  flex: 1 1 auto;
   margin: 0;
   min-width: 0;
 }
+/* One line: a long hub name ends in an ellipsis rather than wrapping. */
 .sheet-bar .context :is(a, span) {
-  min-height: var(--control);
-  display: inline-flex;
-  align-items: center;
+  display: block;
+  overflow: hidden;
+  line-height: var(--control);
+  white-space: nowrap;
+  text-overflow: ellipsis;
   color: var(--color-muted);
   font-size: 0.9375rem;
   font-weight: 500;
 }
 .collection-actions {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -1529,13 +1583,15 @@ html[data-revalidating="true"] .session-nav {
   padding-inline: 0.75rem;
   border-radius: var(--radius-control);
 }
-.page-heading .add-resource {
-  align-self: flex-start;
-  margin-top: 1rem;
-}
-.add-resource span {
+.add-resource > span[aria-hidden] {
   font-size: 1.125rem;
   line-height: 1;
+}
+/* On phones the bar's Add a link is just "+", like the site header's. */
+@media (max-width: 639px) {
+  .add-resource .add-label {
+    display: none;
+  }
 }
 .collection-sheet > .continuation {
   margin-block: 0.5rem 1rem;
@@ -1700,7 +1756,17 @@ html[data-revalidating="true"] .session-nav {
   font-weight: 600;
   color: var(--color-ink);
 }
-.comment-role,
+/* "@handle · Contributor": the role is accent text after a dot. */
+.comment-role {
+  color: var(--color-primary);
+  font-weight: 600;
+}
+.comment-role::before {
+  content: "·" / "";
+  margin-inline-end: 0.375rem;
+  color: var(--color-muted);
+  font-weight: 400;
+}
 .comment-answer {
   font-size: 0.75rem;
   font-weight: 600;
@@ -1715,7 +1781,12 @@ html[data-revalidating="true"] .session-nav {
   color: var(--color-canvas);
 }
 .comment-time {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--control);
   color: var(--color-muted);
+  font-size: var(--text-meta);
+  font-variant-numeric: tabular-nums;
 }
 .comment-body {
   margin: 0.25rem 0 0;
@@ -2652,7 +2723,8 @@ main .ops-filters select {
   .row-meta {
     column-gap: 0.875rem;
   }
-  .row-meta > :not(:last-child)::after {
+  /* As specific as the separator rule, so the dot really goes. */
+  .row-meta > :not(:last-child):not(:has(+ .tags))::after {
     content: none;
   }
   .collection-browser .collection-list {
@@ -2809,4 +2881,34 @@ main .ops-filters select {
 }
 .verify .resend-row {
   margin-top: 1rem;
+}
+
+/* Collection history: one line per change, newest first; time on the right. */
+.history-page .lede {
+  margin: 0 0 1.5rem;
+  color: var(--color-muted);
+}
+.history-list {
+  margin: 0 0 1.5rem;
+  padding: 0;
+  list-style: none;
+}
+.history-list li {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.25rem 1rem;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--color-divider);
+}
+.history-change {
+  overflow-wrap: anywhere;
+}
+.history-change q {
+  font-weight: 550;
+}
+.history-time {
+  color: var(--color-muted);
+  font-size: var(--text-meta);
+  white-space: nowrap;
 }

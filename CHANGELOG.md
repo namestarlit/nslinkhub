@@ -9,6 +9,29 @@ summary of what changed after completed work has been promoted out of `ref/`.
 
 ## Unreleased
 
+- Scope settled: nslinkhub stays a personal product. One person has one hub
+  (shown as "Hub Name, by @handle"), the hub is never transferred (only
+  collections are), people follow people, and collaboration is per collection
+  with **contributors** and **viewers** (renamed from editors and readers next).
+  An email change is only an email change. Hubs as organizations with members
+  were explored and rejected (ADR-0017); GitHub-style organizations remain a
+  later option. The credit for shaping a collection is "contributors"; the
+  platform console will move to `/platform`; items open by `?item=` links. A hub
+  page reads "@handle", or "@handle by Owner Name" when the owner shows it.
+- People appear everywhere by their @handle; a name shows only on the person's
+  own hub page (if they choose), and the API no longer sends names anywhere
+  else. Comments read TikTok-style: "@handle · Contributor", then the age
+  leading the actions ("53m  Reply"). The collection header keeps the owner,
+  contributors and update time on one line, with Add a link moved up into the
+  top bar; on narrow screens History and Edit fold behind a button that expands
+  them in place, and the phone share panel stays on screen.
+- Activity and attribution: every content change — a collection created or
+  its details changed; links, references and sections added; items edited,
+  removed, reordered or imported; comments hidden, shown or answered — is an
+  activity entry written with the change. Collections show their contributors
+  ("Paul John and 2 contributors"), items record who added them, and
+  contributors get a History page of who did what. The hub audit includes the
+  same entries; existing collections got a backfilled creation entry.
 - Link metadata foundation: every link's page title, description and site name
   (text only) is stored once per address in `link_metadata` and shared across
   collections. Saving writes a pending lookup in the same transaction; the
@@ -35,8 +58,8 @@ summary of what changed after completed work has been promoted out of `ref/`.
   bulk work, link health and API access — also for people collecting resources
   from the open web at scale who use it as a curation layer, with rate limits
   sized to their plan (ADR-0016; details after the everyday build).
-  Per collection, owners and editors are now **Maintainers**: the discussion
-  badge, hidden-comment notes and "Paul John and 2 maintainers" attribution.
+  Per collection, owners and editors are now **Contributors**: the discussion
+  badge, hidden-comment notes and "Paul John and 2 contributors" attribution.
   The link annotation is simply the **note**.
 - Closed open product decisions: sections are added and assigned in a
   collection's edit view; preview cards show the page description (the

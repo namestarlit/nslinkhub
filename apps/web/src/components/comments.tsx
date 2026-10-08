@@ -2,7 +2,7 @@ import type { CommentThreads, CommentView } from "@nslinkhub/types";
 import type { ReactNode } from "react";
 import { CommentFocus } from "./comment-focus";
 import { FormNotice } from "./form-notice";
-import { Updated } from "./local-time";
+import { ShortTime } from "./local-time";
 import { Person } from "./primitives";
 
 // The discussion beside a collection. Everything is a native form posting to
@@ -82,8 +82,8 @@ function Comment({
   canReply: boolean;
 }) {
   // Readers only need to know the reply comes from someone who maintains the
-  // collection; owner and editors are all maintainers to them.
-  const role = comment.author?.role ? "Maintainer" : null;
+  // collection; owner and editors are all contributors to them.
+  const role = comment.author?.role ? "Contributor" : null;
   const live = comment.state === "visible";
   return (
     <article
@@ -98,22 +98,23 @@ function Comment({
         )}
         {role && <span className="comment-role">{role}</span>}
         {comment.accepted && <span className="comment-answer">Answer</span>}
-        <span className="comment-time">
-          <Updated at={comment.createdAt} />
-          {comment.editedAt && " · edited"}
-        </span>
       </header>
       {comment.body !== null && comment.state !== "deleted" ? (
         <p className="comment-body">{comment.body}</p>
       ) : (
         <p className="comment-body comment-gone">
-          {comment.state === "deleted" ? "This comment was deleted." : "Hidden by a maintainer."}
+          {comment.state === "deleted" ? "This comment was deleted." : "Hidden by a contributor."}
         </p>
       )}
       {comment.state === "hidden" && comment.body !== null && (
-        <p className="comment-note">Hidden from readers. Only maintainers see it.</p>
+        <p className="comment-note">Hidden from readers. Only contributors see it.</p>
       )}
+      {/* TikTok-style: the comment's age leads its actions ("53m  Reply"). */}
       <div className="comment-actions">
+        <span className="comment-time">
+          <ShortTime at={comment.createdAt} />
+          {comment.editedAt && " · edited"}
+        </span>
         {canReply && !comment.parentId && comment.state !== "deleted" && (
           <details className="comment-more">
             <summary className="text-button">Reply</summary>
@@ -175,7 +176,8 @@ function Comment({
             </button>
           </ActionForm>
         )}
-        {comment.canModerate && comment.state !== "deleted" && (
+        {/* Moderation is for others' comments; authors delete their own. */}
+        {comment.canModerate && !comment.canEdit && comment.state !== "deleted" && (
           <ActionForm
             action={comment.state === "hidden" ? "comment-show" : "comment-hide"}
             id={comment.id}

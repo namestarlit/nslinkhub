@@ -1,10 +1,11 @@
 import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
-import type { CommentAuthor, CommentThreads, CommentView } from "@nslinkhub/types";
+import type { AuditAction, CommentAuthor, CommentThreads, CommentView } from "@nslinkhub/types";
+import { recordAudit } from "src/common/audit";
 import { appError } from "src/common/errors/app-exception";
 import type { AuthUser } from "src/common/interfaces/auth-user.interface";
 import { decodeCursor, encodeCursor } from "src/common/utils/cursor.util";
 import { PrismaService } from "src/database/prisma.service";
-import type { Collection, CollectionComment } from "src/generated/prisma/client";
+import type { Collection, CollectionComment, Prisma } from "src/generated/prisma/client";
 import { CollectionPolicyService } from "../hubs/collection-policy.service";
 import type { CreateCommentDto, UpdateCommentDto } from "./dto/comment.dto";
 
@@ -211,7 +212,7 @@ export class CommentsService {
     };
   }
 
-  // Authors appear as everywhere else: handle always, name only if they show it.
+  // Authors appear as everywhere else: by their @handle.
   private async authors(collection: Collection, rows: CollectionComment[]) {
     const ids = [...new Set(rows.flatMap((row) => (row.authorUserId ? [row.authorUserId] : [])))];
     if (!ids.length) return new Map<string, CommentAuthor>();
@@ -220,8 +221,6 @@ export class CommentsService {
         where: { id: { in: ids } },
         select: {
           id: true,
-          name: true,
-          showNameOnHub: true,
           hub: { select: { id: true, handle: true } },
         },
       }),
@@ -250,7 +249,6 @@ export class CommentsService {
                   id: user.id,
                   hubId: user.hub.id,
                   handle: user.hub.handle,
-                  name: user.showNameOnHub ? user.name.trim() || null : null,
                   role:
                     hub?.ownerUserId === user.id
                       ? "owner"
@@ -352,7 +350,7 @@ export class CommentsService {
 
   async setHidden(id: string, user: AuthUser, hidden: boolean) {
     const row = await this.comment(id);
-    await this.requireModerator(row, user);
+    const collection = await this.requireModerator(row, user);
     if (row.state === "deleted") throw appError("conflict");
     await this.prisma.collectionComment.update({
       where: { id },
@@ -365,13 +363,14 @@ export class CommentsService {
           }
         : { state: "visible", hiddenByUserId: null, version: { increment: 1 } },
     });
+    await this.record(collection, user, hidden ? "comment.hidden" : "comment.shown", row);
     return this.single(id, user);
   }
 
   // One accepted answer per question; marking another replaces it.
   async setAccepted(id: string, user: AuthUser, accepted: boolean) {
     const row = await this.comment(id);
-    await this.requireModerator(row, user);
+    const collection = await this.requireModerator(row, user);
     if (!row.parentId || row.state !== "visible") throw appError("bad_request");
     await this.prisma.$transaction(async (tx) => {
       if (accepted)
@@ -383,7 +382,32 @@ export class CommentsService {
         where: { id },
         data: { accepted, version: { increment: 1 } },
       });
+      await this.record(
+        collection,
+        user,
+        accepted ? "comment.answer_marked" : "comment.answer_unmarked",
+        row,
+        tx,
+      );
     });
     return this.single(id, user);
+  }
+
+  // Moderation is part of the collection's activity (ADR-0015); the comment's
+  // author is the target person.
+  private record(
+    collection: Collection,
+    user: AuthUser,
+    action: AuditAction,
+    comment: CollectionComment,
+    tx: Prisma.TransactionClient = this.prisma as unknown as Prisma.TransactionClient,
+  ) {
+    return recordAudit(tx, {
+      hubId: collection.hubId,
+      actorUserId: user.userId,
+      collectionId: collection.id,
+      ...(comment.authorUserId ? { targetUserId: comment.authorUserId } : {}),
+      action,
+    });
   }
 }

@@ -90,7 +90,8 @@ Read, in this order:
    access to their destinations; a resource's kind is
    set by *how it was added*, never URL inspection; tags are plain arrays;
    sharing = link / direct / publish; export reads like a Google Doc;
-   sign-in is code-first; account handover = double-verified email change.
+   sign-in is code-first; hubs are entities with members, so handing one over is
+   adding a new owner (an email change is only an email change).
 2. [ARCHITECTURE.md](../../ARCHITECTURE.md) — the domain model, codemap,
    runtime and architectural invariants.
 3. [tenancy-and-access.md](../design-docs/tenancy-and-access.md) — the access

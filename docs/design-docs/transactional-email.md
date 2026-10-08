@@ -20,7 +20,7 @@ Implemented messages:
 
 - sign-in code (continue-with-email);
 - account-email change (confirmation to the current address, then
-  verification to the new address — the handover flow).
+  verification to the new address).
 
 Other message kinds require their own product workflow and template work:
 
@@ -138,8 +138,8 @@ never carries the code):
 - **sign-in code** (`renderLoginCode`) — continue-with-email sign-in.
 - **email-change confirmation** (`renderEmailChangeConfirmation`) — to the
   **current** address, naming the target address; step one of the
-  double-verified account-email change (the account/hub handover —
-  [identity-and-handles.md](identity-and-handles.md)). Ignoring it changes
+  double-verified account-email change
+  ([identity-and-handles.md](identity-and-handles.md)). Ignoring it changes
   nothing.
 - **new-email verification** (`renderNewEmailVerification`) — to the **new**
   address; completing it applies the change and revokes all sessions.

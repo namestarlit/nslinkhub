@@ -49,7 +49,15 @@ const collectionShape = {
   creator: (v: unknown) =>
     v === undefined ||
     v === null ||
-    (typeof v === "object" && "hubId" in v && "handle" in v && "name" in v),
+    (typeof v === "object" && "hubId" in v && "handle" in v && !("name" in v)),
+  contributors: (v: unknown) =>
+    v === undefined ||
+    (typeof v === "object" &&
+      v !== null &&
+      "people" in v &&
+      Array.isArray(v.people) &&
+      "total" in v &&
+      number(v.total)),
   id: uuid,
   hubId: uuid,
   slug: string,
@@ -89,6 +97,8 @@ const resourceShape = {
   title: nullableString,
   description: nullableString,
   siteName: nullableString,
+  addedBy: (v: unknown) =>
+    v === null || (typeof v === "object" && v !== null && "hubId" in v && "handle" in v),
   tags: strings,
   position: number,
   version: number,
@@ -119,6 +129,7 @@ const auditShape = {
   actorUserId: uuid,
   collectionId: (v) => v === null || uuid(v),
   targetUserId: (v) => v === null || uuid(v),
+  resourceId: (v) => v === null || uuid(v),
   action: (v) => auditActions.some((a) => a === v),
   role: (v) => v === null || role(v),
   createdAt: iso,
@@ -126,7 +137,14 @@ const auditShape = {
 function shape(
   actual: Record<string, unknown>,
   fields: Record<string, (v: unknown) => boolean>,
-  optional: string[] = ["restriction", "hub", "capabilities", "linkedCollection", "creator"],
+  optional: string[] = [
+    "restriction",
+    "hub",
+    "capabilities",
+    "linkedCollection",
+    "creator",
+    "contributors",
+  ],
 ) {
   expect(Object.keys(actual).sort()).toEqual(
     Object.keys(fields)

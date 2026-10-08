@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
-import type { Resource as WireResource } from "@nslinkhub/types";
+import type { AuditAction, PersonRef, Resource as WireResource } from "@nslinkhub/types";
 import { CursorQueryDto } from "src/common/dto/cursor-query.dto";
 import { ResourceKind } from "src/common/enums/resource-kind.enum";
 import { AuthUser } from "src/common/interfaces/auth-user.interface";
@@ -7,8 +7,10 @@ import { decodeCursor, encodeCursor } from "src/common/utils/cursor.util";
 import { normalizeTags } from "src/common/utils/tags.util";
 import { publicLinkUrl } from "src/common/utils/url.util";
 import { PrismaService } from "src/database/prisma.service";
-import { Collection, Resource } from "src/generated/prisma/client";
+import { Collection, Prisma, Resource } from "src/generated/prisma/client";
+import { recordAudit } from "../../common/audit";
 import { appError } from "../../common/errors/app-exception";
+import { personRefs } from "../../common/people";
 import { wireToken } from "../../common/utils/wire-token";
 import { CollectionPolicyService } from "../hubs/collection-policy.service";
 import {
@@ -40,25 +42,50 @@ export class ResourcesService {
       throw appError("duplicate_resource");
     }
 
-    const saved = await this.insertExternal(collection.id, url, dto.tags ?? [], dto.position);
-    return this.toPublicResource(saved, await readLinkMetadata(this.prisma, [url]));
+    const saved = await this.insertExternal(collection, user, url, dto.tags ?? [], dto.position);
+    return this.toPublicResource(saved, await this.context([saved]));
   }
 
   // Inserts a canonical, non-duplicate link into a collection the caller has
-  // already authorized, and requests its page metadata in the same
-  // transaction; the worker looks it up once the save commits.
-  async insertExternal(collectionId: string, url: string, tags: string[], position: number) {
+  // already authorized, records who added it, and requests its page metadata
+  // in the same transaction; the worker looks it up once the save commits.
+  async insertExternal(
+    collection: Pick<Collection, "id" | "hubId">,
+    user: AuthUser,
+    url: string,
+    tags: string[],
+    position: number,
+  ) {
     const saved = await this.prisma.resource.create({
       data: {
-        collectionId,
+        collectionId: collection.id,
         kind: ResourceKind.EXTERNAL_LINK,
         url,
         tags: normalizeTags(tags),
         position,
+        addedByUserId: user.userId,
       },
     });
     await requestLinkMetadata(this.prisma, [url]);
+    await this.record(collection, user, "item.link_added", saved.id);
     return saved;
+  }
+
+  // Every content change is an activity entry in the change's own transaction
+  // (ADR-0015): attribution and the hub audit are derived from these.
+  async record(
+    collection: Pick<Collection, "id" | "hubId">,
+    user: AuthUser,
+    action: AuditAction,
+    resourceId?: string,
+  ) {
+    await recordAudit(this.prisma as unknown as Prisma.TransactionClient, {
+      hubId: collection.hubId,
+      actorUserId: user.userId,
+      collectionId: collection.id,
+      action,
+      ...(resourceId ? { resourceId } : {}),
+    });
   }
 
   async createCollectionLink(
@@ -86,24 +113,27 @@ export class ResourcesService {
         linkedCollectionId: target.id,
         position: dto.position,
         tags: normalizeTags(dto.tags),
+        addedByUserId: user.userId,
       },
     });
-    return this.resourceView(resource, user);
+    await this.record(collection, user, "item.reference_added", resource.id);
+    return this.resourceView(resource, user, await this.context([resource]));
   }
 
   async createHeading(collectionId: string, user: AuthUser, dto: CreateHeadingResourceDto) {
-    await this.requireWritableCollection(collectionId, user);
+    const collection = await this.requireWritableCollection(collectionId, user);
     await this.ensurePositionAvailable(collectionId, dto.position);
-    return this.toPublicResource(
-      await this.prisma.resource.create({
-        data: {
-          collectionId,
-          kind: ResourceKind.HEADING,
-          titleOverride: dto.title.trim(),
-          position: dto.position,
-        },
-      }),
-    );
+    const heading = await this.prisma.resource.create({
+      data: {
+        collectionId,
+        kind: ResourceKind.HEADING,
+        titleOverride: dto.title.trim(),
+        position: dto.position,
+        addedByUserId: user.userId,
+      },
+    });
+    await this.record(collection, user, "item.section_added", heading.id);
+    return this.toPublicResource(heading, await this.context([heading]));
   }
 
   async getByCollection(
@@ -140,15 +170,15 @@ export class ResourcesService {
     const nextCursor =
       rows.length > limit ? encodeCursor({ p: items[items.length - 1].position }) : null;
 
-    const metadata = await readLinkMetadata(this.prisma, linkUrls(items));
+    const context = await this.context(items);
     return {
-      items: await Promise.all(items.map((item) => this.resourceView(item, viewer, metadata))),
+      items: await Promise.all(items.map((item) => this.resourceView(item, viewer, context))),
       meta: { limit, nextCursor },
     };
   }
 
   async update(collectionId: string, resourceId: string, user: AuthUser, dto: UpdateResourceDto) {
-    await this.requireWritableCollection(collectionId, user);
+    const collection = await this.requireWritableCollection(collectionId, user);
 
     const resource = await this.prisma.resource.findFirst({
       where: { id: resourceId, collectionId },
@@ -176,11 +206,12 @@ export class ResourcesService {
       },
     });
 
-    return this.resourceView(saved, user, await readLinkMetadata(this.prisma, linkUrls([saved])));
+    await this.record(collection, user, "item.updated", saved.id);
+    return this.resourceView(saved, user, await this.context([saved]));
   }
 
   async remove(collectionId: string, resourceId: string, user: AuthUser) {
-    await this.requireWritableCollection(collectionId, user);
+    const collection = await this.requireWritableCollection(collectionId, user);
 
     const resource = await this.prisma.resource.findFirst({
       where: { id: resourceId, collectionId },
@@ -190,12 +221,13 @@ export class ResourcesService {
     }
 
     await this.prisma.resource.delete({ where: { id: resource.id, collectionId } });
+    await this.record(collection, user, "item.removed", resource.id);
 
     return { id: resource.id, deleted: true };
   }
 
   async reorder(collectionId: string, user: AuthUser, dto: ReorderResourcesDto) {
-    await this.requireWritableCollection(collectionId, user);
+    const collection = await this.requireWritableCollection(collectionId, user);
 
     const resources = await this.prisma.resource.findMany({
       where: { collectionId },
@@ -254,6 +286,7 @@ export class ResourcesService {
       }
     });
 
+    await this.record(collection, user, "items.reordered");
     return { reordered: true, count: dto.items.length };
   }
 
@@ -304,12 +337,24 @@ export class ResourcesService {
     }
   }
 
+  // Link metadata and the people who added the items, for one page of items.
+  private async context(items: Resource[]): Promise<ItemContext> {
+    const [metadata, people] = await Promise.all([
+      readLinkMetadata(this.prisma, linkUrls(items)),
+      personRefs(
+        this.prisma,
+        items.map((item) => item.addedByUserId),
+      ),
+    ]);
+    return { metadata, people };
+  }
+
   private async resourceView(
     resource: Resource,
     viewer: AuthUser | null,
-    metadata = new Map<string, LinkMeta>(),
+    context: ItemContext,
   ): Promise<WireResource> {
-    const base = this.toPublicResource(resource, metadata);
+    const base = this.toPublicResource(resource, context);
     if (resource.kind !== ResourceKind.COLLECTION_LINK) return base;
     const target = resource.linkedCollectionId
       ? await this.prisma.collection.findUnique({ where: { id: resource.linkedCollectionId } })
@@ -329,12 +374,9 @@ export class ResourcesService {
 
   // A link's title, description and site name come from its page metadata; a
   // section's title is its text; a reference's title is its target's (above).
-  private toPublicResource(
-    resource: Resource,
-    metadata = new Map<string, LinkMeta>(),
-  ): WireResource {
+  private toPublicResource(resource: Resource, context: ItemContext): WireResource {
     const link = resource.kind === ResourceKind.EXTERNAL_LINK;
-    const meta = metadataFor(metadata, resource.url);
+    const meta = metadataFor(context.metadata, resource.url);
     return {
       id: resource.id,
       collectionId: resource.collectionId,
@@ -348,6 +390,7 @@ export class ResourcesService {
           : null,
       description: link ? meta.description : null,
       siteName: link ? meta.siteName : null,
+      addedBy: (resource.addedByUserId && context.people.get(resource.addedByUserId)) || null,
       tags: resource.tags,
       position: resource.position,
       version: Number(resource.version),
@@ -355,6 +398,11 @@ export class ResourcesService {
       updatedAt: resource.updatedAt.toISOString(),
     };
   }
+}
+
+interface ItemContext {
+  metadata: Map<string, LinkMeta>;
+  people: Map<string, PersonRef>;
 }
 
 function linkUrls(items: Resource[]) {

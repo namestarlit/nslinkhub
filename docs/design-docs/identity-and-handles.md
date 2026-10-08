@@ -1,7 +1,7 @@
 # Identity and handles
 
 Status: implemented (web email-change screens pending). Hub identity, the
-account's name, passwordless sign-in, email-change handover and the web URL
+account's name, passwordless sign-in, email change and the web URL
 scheme. Settled in [ADR-0002](../engineering-decisions/0002-immutable-identities.md)
 and [ADR-0004](../engineering-decisions/0004-passwordless-email-codes.md).
 
@@ -17,10 +17,12 @@ and [ADR-0004](../engineering-decisions/0004-passwordless-email-codes.md).
   edited in Account → Hub. The profile API uses `hubDescription`; historical
   `User.bio` values remain stored but are neither edited nor published.
 - **Full name** — `user.name`, the account holder’s name (exposed as `displayName`
-  in the existing profile API). Published collections may attribute their current
-  owner by this name when `user.showNameOnHub` is enabled (default true).
-  Opting out returns null owner attribution on public hubs and collections; the
-  private profile retains the name. Email is never public attribution.
+  in the existing profile API). It appears only on the person's own hub page,
+  as "@handle by Name", when `user.showNameOnHub` is enabled (default true) —
+  otherwise the hub is identified by its handle alone; everywhere else —
+  collections, comments, contributors, history, notifications, audits — people
+  appear by their @handle, and the API never sends the name there. Opting out
+  leaves the name a private profile detail. Email is never public attribution.
 - **Login direction: code-first, from the get-go.** The primary sign-in is
   Substack-style passwordless — continue with email → enter the emailed code
   (email codes only; no direct authentication links or passwords). There is no
@@ -28,9 +30,9 @@ and [ADR-0004](../engineering-decisions/0004-passwordless-email-codes.md).
   this. The web presents it as one verification flow (see [email-verification.md](email-verification.md)): a single code field that accepts pasted spaces or
   dashes. Live provider acceptance remains before release. Optional
   TOTP/recovery codes are a later follow-up.
-- **Account/hub handover** is done by **changing the account email**, not a
-  transfer model — a hub is 1:1 with its account, so handing over the account
-  hands over the hub. The locally implemented flow is double-verified:
+- **Email change** is only ever the same person updating their address — never
+  a way to hand over a hub. A hub is never transferred (it is its owner's
+  fingerprint); collections are. It is double-verified:
   1. the signed-in owner sets the new email;
   2. a **confirmation** goes to the **current** address, naming the target
      address — nothing changes unless it is confirmed (email code);

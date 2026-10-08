@@ -18,9 +18,15 @@ export async function OwnedHub({ profile, cursor }: { profile: Profile; cursor?:
       <div className="page-heading hub-heading">
         <div className="hub-introduction">
           <h1>{hub.hubName ?? "Your hub"}</h1>
+          {/* The handle is the hub's; "by Name" only when the owner shows it. */}
           <p className="hub-identity meta">
-            {ownerName && <span className="person-name">{ownerName}</span>}
             {hub.handle && <span className="person-handle">@{hub.handle}</span>}
+            {ownerName && (
+              <>
+                {" by "}
+                <span className="person-name">{ownerName}</span>
+              </>
+            )}
           </p>
           {hub.hubDescription && <p className="description">{hub.hubDescription}</p>}
           {hub.hubId && (

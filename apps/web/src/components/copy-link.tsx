@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { permalink } from "../lib/http";
+import { useDismissible } from "./dismissible";
 import { showToast } from "./toast";
 
 type Kind = "collection" | "hub";
@@ -129,24 +130,7 @@ const ShareIcon = () => (
 // Compact disclosure for collections below the wide layout.
 export function ShareMenu(props: ShareProps) {
   const menu = useRef<HTMLDetailsElement>(null);
-  useEffect(() => {
-    const outside = (event: PointerEvent) => {
-      if (event.target instanceof Node && menu.current && !menu.current.contains(event.target))
-        menu.current.open = false;
-    };
-    const onEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && menu.current?.open) {
-        menu.current.open = false;
-        menu.current.querySelector("summary")?.focus();
-      }
-    };
-    document.addEventListener("pointerdown", outside);
-    document.addEventListener("keydown", onEscape);
-    return () => {
-      document.removeEventListener("pointerdown", outside);
-      document.removeEventListener("keydown", onEscape);
-    };
-  }, []);
+  useDismissible(menu);
   return (
     <details className="share-menu" ref={menu}>
       <summary className="button">

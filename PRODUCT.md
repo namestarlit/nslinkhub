@@ -17,7 +17,7 @@ product
 A reader arrives through a link or discovers recently updated collections,
 understands what a collection covers, then opens a useful resource. An owner
 returns to their own hub to save links one at a time, in the middle of other
-work, and to share one durable address. A maintainer reads or edits one
+work, and to share one durable address. A contributor reads or edits one
 specific collection; they never join a hub. Typical scene: someone opens a
 colleague's collection on a phone beside a bright window, scans several links,
 then continues on a laptop.
@@ -126,7 +126,7 @@ Needs:
 - Share or publish the good ones; manage who has access.
 - Find again what they saved, shared with them, or followed.
 
-### Maintainer
+### Contributor
 
 Someone the owner granted Can edit on one collection (role `editor`). Works on
 that collection from their own hub, without joining anything.
@@ -188,12 +188,18 @@ invented here.
 
 ### Hub Model
 
-Every person owns exactly one **hub**, their personal space (like a Google
-Drive), created at first sign-in. It has a public **name**, an optional
-**description** and a unique, changeable **handle** (`@handle`), all
-independent of the owner's own name and email. Its permanent identity is an
-immutable id, so renaming the handle breaks no link; a hub resolves by id or
-handle. Nobody joins anyone else's hub: there are no memberships or hub roles.
+Every person has exactly one **hub**, their personal space — like My Drive in
+a Google account — created at first sign-in. The hub has its own **name**,
+optional **description** and **handle** (`@handle`), and belongs to its owner,
+as do its followers. Its page reads "Hub Name" over "@handle" — or "@handle by
+Owner Name" when the owner chooses to show their name; elsewhere people appear
+by @handle, which leads to their hub. The hub's permanent identity is an immutable id, so renaming the
+handle breaks no link. A hub has one owner and is never transferred — it is its
+owner's fingerprint; collections can be transferred between people. People
+follow people (their hub), and collaborate on collections (below). There are
+no memberships or organizations; if they are ever needed, they follow GitHub:
+people own organizations and transfer collections into them (ADR-0017,
+rejected for now).
 
 ### Collections And Items
 
@@ -228,12 +234,16 @@ Roles come in two separate scopes (ADR-0013):
 
 | Role | Scope | Can |
 | --- | --- | --- |
-| Owner | Every collection in their hub (moves with a transfer) | Everything, including managing the hub |
-| Editor — "Can edit" | One collection | Change its content; never publish, share or delete |
-| Reader — "Can view" | One collection | Read |
-| Operator, Admin | The service, site-wide | Run the service; never read private content |
+| Owner | Their hub and every collection in it | Everything |
+| Contributor — "Can contribute" | One collection | Change its content; never publish, share or delete |
+| Viewer — "Can view" | One collection | Read |
+| Operator, Admin | The service (`/platform`) | Run the service; never read private content |
 
-Per collection, the owner and editors are its **maintainers** (the discussion
+Contributors and viewers are a collection's **collaborators**, invited by name;
+unlike a share link, their access can't be forwarded. *(The roles are renamed
+from editor and reader in the next slice.)*
+
+Per collection, everyone who can change its content is a **contributor** (the discussion
 badge, attribution). The collection's **creator** is a record of who created
 it, kept through transfers, never a role. "Curator" names the professional
 account type, not a role.
@@ -307,12 +317,12 @@ design: `docs/design-docs/bulk-import.md`, ADR-0012.
 
 ### 6.3 Collections And Guides
 
-Purpose: read and keep a collection current as a guide. Status: reading and
-details Built; organizing items API only.
+Purpose: read and keep a collection current as a guide. Status: reading,
+details and attribution Built; organizing items API only.
 
 - A collection page shows its title, description, tags, owner and last update,
   then its items in order. Missing titles are resolved when it is opened.
-- Maintainers see **Add a link** and **Edit** in the header. Editing changes the
+- Contributors see **Add a link** and **Edit** in the header. Editing changes the
   name, description, tags and whether comments are on, in place.
 - A share row offers LinkedIn, X, WhatsApp and **Share link** ("Link copied to
   clipboard").
@@ -322,10 +332,10 @@ details Built; organizing items API only.
   Section".
 - Reorders and edits use version checks; a stale edit is rejected, never
   silently overwritten.
-- **Attribution** *(planned; ADR-0015)*: like commits and contributors on
+- **Attribution** (ADR-0015): like commits and contributors on
   GitHub, every change is recorded as "who did what to which item". The
-  collection shows its **creator** and its **maintainers** ("Paul John and 2
-  maintainers"); each item says who added it and when; maintainers can open
+  collection shows its **creator** and its **contributors** ("Paul John and 2
+  contributors"); each item says who added it and when; contributors can open
   the collection's history.
 
 ### 6.4 Link Previews And Notes
@@ -342,9 +352,9 @@ titles); preview cards and notes Planned.
   the resource is about, like a link card in Google Docs.
 - The card has at most two actions: **View** (anyone who can read) opens the
   item's details, which have their own address and work without JavaScript;
-  **Edit** (maintainers) opens the item's edit form — tags, note, section,
+  **Edit** (contributors) opens the item's edit form — tags, note, section,
   remove.
-- **Note:** up to 280 characters of context a maintainer writes about a link —
+- **Note:** up to 280 characters of context a contributor writes about a link —
   why it's here, what to look for. Readers see it in full in the details;
   whether part of it shows on the card is decided once the screen is built.
 
@@ -373,8 +383,8 @@ only; access requests and targeted invitations Planned.
   collection exists.
 - **Transfer:** a collection moves to one of its editors' hubs; references are
   untouched, the previous owner becomes an editor, the creator stays on
-  record. Handing over a whole hub is changing the account's email (§6.11),
-  since a hub belongs to exactly one account.
+  record. Handing over a whole hub is adding the new person as its owner and
+  leaving (hub membership, §5); a person's own access never moves with it.
 
 ### 6.6 Discover, Following And Your Home
 
@@ -405,8 +415,8 @@ Purpose: questions and answers next to the resources. Status: Built.
 - Every collection can carry a discussion: questions or notes with one level of
   replies, readable by anyone who can read the collection.
 - Anyone signed in who can read it can comment and reply, so help never waits
-  on the maintainers; signed-out readers are invited to sign in.
-- Maintainers' replies are badged **Maintainer**; they can mark one reply per
+  on the contributors; signed-out readers are invited to sign in.
+- Contributors' replies are badged **Contributor**; they can mark one reply per
   question as the answer (shown first) and hide comments (still visible to
   them). Each question shows up to 100 replies, with **More replies**.
 - Authors edit or delete their own comments; a question with replies keeps a
@@ -429,12 +439,11 @@ notifications Built; the rest Planned (`docs/design-docs/notifications.md`).
 
 ### 6.9 Manage
 
-Purpose: one workspace to manage what you're responsible for, scoped by role
-(ADR-0014). Status: the service sections are Built (today's operations
-console); the hub-owner sections are Planned
-(`docs/design-docs/manage-workspace.md`).
+Purpose: the hub owner's workspace (`/manage`, ADR-0014). Status: Planned
+(`docs/design-docs/manage-workspace.md`). Running the service stays separate:
+the platform console, moving from `/ops` to `/platform` (§6.12).
 
-- **Every hub owner:** **Collections** (all collections as a table),
+- **The owner:** **Collections** (all collections as a table),
   **Comments** across the hub (hide, show, mark answers), **Access** (access
   requests, every share, link-shared collections; each collection's Manage
   access opens it filtered), **People** (followers and blocked accounts),
@@ -443,10 +452,6 @@ console); the hub-owner sections are Planned
   access request, a share — and is undone in People. A blocked account can't
   comment, follow, be shared into or open link-shared collections; published
   collections stay public to everyone.
-- **Operators:** Accounts (find by email or handle; suspend, reactivate, sign
-  out everywhere), Public collections (find by link; hold, release, moderate
-  comments) and the Service audit. **Admins** also manage the Team (invite,
-  resend, revoke). See §6.12.
 
 ### 6.10 Download And Export
 
@@ -479,7 +484,8 @@ deletion Planned.
 - **Settings:** full name, email and member-since; hub name, handle,
   description and permanent id; whether to show the name on the hub. Changes
   save as they are made. Appearance (System, Light, Dark) is a header control.
-- **Email change** (account handover): the current address confirms by code
+- **Email change** (only ever the same person updating their address): the
+  current address confirms by code
   (ignoring it changes nothing), the new address verifies by code, then every
   session is signed out.
 - **Account deletion** *(planned)*: self-service with an email code, a download
@@ -556,8 +562,8 @@ are scoped, revocable and rate-limited per plan.
 
 ### Privacy
 
-- Email addresses are never public; an owner's name shows on their hub only if
-  they choose to show it.
+- Email addresses are never public. People appear everywhere by their @handle;
+  a name shows only on that person's hub page, and only if they choose.
 - Saved links must be public addresses; link previews are text only and never
   make readers' browsers contact linked sites.
 - Activity records hold ids, never names, emails or authored text.
@@ -620,8 +626,8 @@ are scoped, revocable and rate-limited per plan.
   linked (an unlisted video, a recording), never uploaded. A course builder
   would need an editor, storage and teams, which the individual-scoped ns
   series deliberately excludes.
-- Organizations, teams and shared workspaces. Collaboration stays per
-  collection.
+- Organizations, teams and hub memberships (ADR-0017, rejected). Collaboration
+  is per collection; GitHub-style organizations only if ever needed.
 - A separate saved-items list: reusing someone's link is Add to my collection.
 - Billing, until Curator accounts are built and priced.
 
@@ -644,7 +650,7 @@ Nothing is deployed; everything built runs and is verified locally. The API
 | 6.2 Bulk import (reviewed drafts) | Planned | One-shot import built; drafts planned |
 | 6.3 Collections: reading, details | Built | Built |
 | 6.3 Organizing items, sections, references | Not yet | Built |
-| 6.3 Attribution and history | Planned | Management audit only |
+| 6.3 Attribution and history | Built | Built |
 | 6.4 Link metadata (title, description, site name) | Shown as titles | Built |
 | 6.4 Preview cards, notes | Planned | Planned |
 | 6.5 Sharing, publishing, transfer | Not yet | Built |
@@ -654,8 +660,7 @@ Nothing is deployed; everything built runs and is verified locally. The API
 | 6.6 Following, your home, search | Planned | Planned |
 | 6.7 Discussion | Built | Built |
 | 6.8 Notifications | Invitations only | Invitations only |
-| 6.9 Manage: service sections | Built | Built |
-| 6.9 Manage: hub-owner sections, blocking | Planned | Planned |
+| 6.9 Manage: hub sections, blocking | Planned | Planned |
 | 6.10 Download and export | Not yet | Built |
 | 6.11 Sign-in, verification, settings | Built | Built |
 | 6.11 Email change | Not yet | Built |
@@ -670,31 +675,35 @@ Delivery order (everything is built; what to charge for is chosen after):
    ([deliver-link-metadata](docs/exec-plans/completed/deliver-link-metadata.md)):
    background lookups in the worker, title, description and site name stored
    once per address. Bulk import and previews build on it.
-2. **Activity and attribution** (§6.3) —
-   [attribution-and-activity](docs/design-docs/attribution-and-activity.md).
-3. **Manage** for hub owners (§6.9) —
+2. **Activity and attribution** (§6.3) — done
+   ([attribution-and-activity](docs/design-docs/attribution-and-activity.md)).
+3. **Collaborators and routes** — collection roles become **viewer** and
+   **contributor** (renamed from reader and editor); the platform console moves
+   from `/ops` to `/platform`; items open by `?item=<id>` on a collection's
+   address.
+4. **Manage** for the hub owner (§6.9) —
    [manage-workspace](docs/design-docs/manage-workspace.md).
-4. **Bulk import** (§6.2) —
+5. **Bulk import** (§6.2) —
    [deliver-bulk-import](docs/exec-plans/active/deliver-bulk-import.md).
-5. **Notifications** (§6.8) —
+6. **Notifications** (§6.8) —
    [notifications](docs/design-docs/notifications.md).
-6. **Your home and following** (§6.6) —
+7. **Your home and following** (§6.6) —
    [hub-home-and-following](docs/design-docs/hub-home-and-following.md).
-7. **Link previews and notes** (§6.4), with Add to my collection.
-8. **Organizing and sharing in the web** (§6.3, §6.5, §6.10) — items,
+8. **Link previews and notes** (§6.4), with Add to my collection.
+9. **Organizing and sharing in the web** (§6.3, §6.5, §6.10) — items,
    sections, references, sharing, publishing, transfer, download.
-9. **Discover search** (§6.6).
-10. **Rest of the internals pass** — fewer queries, one write-lock opt-out per
+10. **Discover search** (§6.6).
+11. **Rest of the internals pass** — fewer queries, one write-lock opt-out per
     controller, the forms route as an action table, Save a link drafts in
     Redis, focus rings.
-11. **Account** (§6.11) — email change in the web, deletion, authenticator-app
+12. **Account** (§6.11) — email change in the web, deletion, authenticator-app
     codes.
-12. **Browser extension** (§7).
-13. **Targeted sharing by invitation** (§6.5).
-14. **ns-series single sign-on** (§6.11) — `docs/design-docs/identity-sso.md`.
-15. **Before public release** — live email provider and webhooks, browser and
+13. **Browser extension** (§7).
+14. **Targeted sharing by invitation** (§6.5).
+15. **ns-series single sign-on** (§6.11) — `docs/design-docs/identity-sso.md`.
+16. **Before public release** — live email provider and webhooks, browser and
     worker telemetry, deployment (`docs/design-docs/infra-deployment.md`).
-16. **Curator accounts** (§6.13), then pricing.
+17. **Curator accounts** (§6.13), then pricing.
 
 ## 12. References
 

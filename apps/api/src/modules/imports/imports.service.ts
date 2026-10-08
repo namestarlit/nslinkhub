@@ -4,6 +4,8 @@ import { ResourceKind } from "src/common/enums/resource-kind.enum";
 import { AuthUser } from "src/common/interfaces/auth-user.interface";
 import { canonicalizeUrl } from "src/common/utils/url.util";
 import { PrismaService } from "src/database/prisma.service";
+import type { Collection, Prisma } from "src/generated/prisma/client";
+import { recordAudit } from "../../common/audit";
 import { appError } from "../../common/errors/app-exception";
 import { CollectionPolicyService } from "../hubs/collection-policy.service";
 import { HubsService } from "../hubs/hubs.service";
@@ -31,8 +33,9 @@ export class ImportsService {
     }
 
     const headers = lines[0].split(",").map((header) => header.trim().toLowerCase());
+    // Only the address is read; any other column (a title, a note) is a hint
+    // for whoever reads the file. Titles always come from the page.
     const urlIdx = headers.indexOf("url");
-    const titleIdx = headers.indexOf("title");
 
     if (urlIdx < 0) {
       throw appError("invalid_import");
@@ -40,15 +43,12 @@ export class ImportsService {
 
     const rows = lines.slice(1);
     return this.ingestRows(
-      collection.id,
-      rows.map((row, index) => {
-        const columns = row.split(",").map((column) => column.trim());
-        return {
-          index: index + 2,
-          url: columns[urlIdx] ?? "",
-          title: titleIdx >= 0 ? columns[titleIdx] : undefined,
-        };
-      }),
+      collection,
+      user,
+      rows.map((row, index) => ({
+        index: index + 2,
+        url: row.split(",").map((column) => column.trim())[urlIdx] ?? "",
+      })),
     );
   }
 
@@ -58,27 +58,25 @@ export class ImportsService {
 
     const text = file.buffer.toString("utf8");
     const linkRegex = /<A\s+[^>]*HREF="([^"]+)"[^>]*>(.*?)<\/A>/gi;
-    const rows: Array<{ index: number; url: string; title?: string }> = [];
+    const rows: Array<{ index: number; url: string }> = [];
 
     let i = 1;
     let match = linkRegex.exec(text);
     while (match !== null) {
-      rows.push({ index: i, url: match[1], title: stripHtml(match[2]) });
+      rows.push({ index: i, url: match[1] });
       i += 1;
       match = linkRegex.exec(text);
     }
 
-    return this.ingestRows(collection.id, rows);
+    return this.ingestRows(collection, user, rows);
   }
 
   private async ingestRows(
-    collectionId: string,
-    rows: Array<{
-      index: number;
-      url: string;
-      title?: string;
-    }>,
+    collection: Pick<Collection, "id" | "hubId">,
+    user: AuthUser,
+    rows: Array<{ index: number; url: string }>,
   ) {
+    const collectionId = collection.id;
     const existingResources = await this.prisma.resource.findMany({
       where: { collectionId },
       select: { position: true, url: true },
@@ -124,6 +122,7 @@ export class ImportsService {
               kind: ResourceKind.EXTERNAL_LINK,
               url,
               position: nextPosition,
+              addedByUserId: user.userId,
             },
           });
           await requestLinkMetadata(tx, [url]);
@@ -141,6 +140,13 @@ export class ImportsService {
       }
     }
 
+    if (importedCount)
+      await recordAudit(this.prisma as unknown as Prisma.TransactionClient, {
+        hubId: collection.hubId,
+        actorUserId: user.userId,
+        collectionId,
+        action: "items.imported",
+      });
     return {
       totalRows: rows.length,
       processedRows: rows.length,
@@ -197,8 +203,4 @@ export class ImportsService {
       },
     });
   }
-}
-
-function stripHtml(value: string) {
-  return value.replace(/<[^>]*>/g, "").trim();
 }

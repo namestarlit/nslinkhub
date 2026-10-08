@@ -9,6 +9,7 @@ import {
   Patch,
   Post,
   Put,
+  Query,
   Req,
   Res,
   UseGuards,
@@ -16,6 +17,7 @@ import {
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import type { Request, Response } from "express";
 import { CurrentUser } from "src/common/decorators/current-user.decorator";
+import { CursorQueryDto } from "src/common/dto/cursor-query.dto";
 import { AuthGuard } from "src/common/guards/auth.guard";
 import { OptionalAuthGuard } from "src/common/guards/optional-auth.guard";
 import type { AuthUser } from "src/common/interfaces/auth-user.interface";
@@ -86,6 +88,17 @@ export class CollectionsController {
   }
 
   @ApiBearerAuth()
+  @UseGuards(AuthGuard)
+  @Get(":id/activity")
+  async activity(
+    @Param("id", new ParseUUIDPipe()) id: string,
+    @CurrentUser() user: AuthUser,
+    @Query() query: CursorQueryDto,
+  ) {
+    const result = await this.collectionsService.activity(id, user, query);
+    return apiOk(result.items, result.meta);
+  }
+
   @UseGuards(AuthGuard)
   @Get(":id/shares")
   async listShares(@Param("id", new ParseUUIDPipe()) id: string, @CurrentUser() user: AuthUser) {

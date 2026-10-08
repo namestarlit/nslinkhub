@@ -1,5 +1,5 @@
 import { createHash, randomBytes } from "node:crypto";
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import type {
   AuditEntry,
   CollectionShareView,
@@ -10,7 +10,7 @@ import type {
   SharedCollection,
   Collection as WireCollection,
 } from "@nslinkhub/types";
-import { auditActions } from "@nslinkhub/types";
+import { type ActivityEntry, auditActions, contentActions } from "@nslinkhub/types";
 import { isUUID } from "class-validator";
 import { CursorQueryDto } from "src/common/dto/cursor-query.dto";
 import { AuthUser } from "src/common/interfaces/auth-user.interface";
@@ -21,6 +21,7 @@ import { PrismaService } from "src/database/prisma.service";
 import { Collection, Hub, Prisma } from "src/generated/prisma/client";
 import { type AuditInput, recordAudit } from "../../common/audit";
 import { appError } from "../../common/errors/app-exception";
+import { personRefs } from "../../common/people";
 import { wireToken } from "../../common/utils/wire-token";
 import { emailConfig } from "../../email/config";
 import { availableCollections } from "../hubs/availability";
@@ -72,33 +73,39 @@ export class CollectionsService {
       }
     }
 
-    const saved = await this.mutateOwned(
-      collection,
-      user,
-      dto.published === undefined
-        ? undefined
-        : {
-            action: dto.published ? "collection.published" : "collection.unpublished",
-          },
-      async (tx) => {
-        const current = await tx.collection.findUniqueOrThrow({
-          where: { id: collection.id, hubId: collection.hubId },
-        });
-        if (current.version !== collection.version) throw appError("version_conflict");
-        return tx.collection.update({
-          where: { id: collection.id, hubId: collection.hubId, version: collection.version },
-          data: {
-            slug: dto.slug ?? collection.slug,
-            title: dto.title ?? collection.title,
-            description: dto.description ?? collection.description,
-            ...(dto.tags !== undefined ? { tags: normalizeTags(dto.tags) } : {}),
-            published: dto.published ?? collection.published,
-            commentsEnabled: dto.commentsEnabled ?? collection.commentsEnabled,
-            version: { increment: 1 },
-          },
-        });
-      },
-    );
+    // Details that shape the collection's content make its owner a contributor
+    // (ADR-0015); publishing is recorded on its own.
+    const detailsChanged =
+      (dto.slug !== undefined && dto.slug !== collection.slug) ||
+      (dto.title !== undefined && dto.title !== collection.title) ||
+      (dto.description !== undefined && dto.description !== collection.description) ||
+      (dto.tags !== undefined &&
+        normalizeTags(dto.tags).join("\u0000") !== collection.tags.join("\u0000")) ||
+      (dto.commentsEnabled !== undefined && dto.commentsEnabled !== collection.commentsEnabled);
+    const events: AuditEvent[] = [
+      ...(detailsChanged ? [{ action: "collection.updated" as const }] : []),
+      ...(dto.published === undefined || dto.published === collection.published
+        ? []
+        : [{ action: dto.published ? "collection.published" : "collection.unpublished" } as const]),
+    ];
+    const saved = await this.mutateOwned(collection, user, events, async (tx) => {
+      const current = await tx.collection.findUniqueOrThrow({
+        where: { id: collection.id, hubId: collection.hubId },
+      });
+      if (current.version !== collection.version) throw appError("version_conflict");
+      return tx.collection.update({
+        where: { id: collection.id, hubId: collection.hubId, version: collection.version },
+        data: {
+          slug: dto.slug ?? collection.slug,
+          title: dto.title ?? collection.title,
+          description: dto.description ?? collection.description,
+          ...(dto.tags !== undefined ? { tags: normalizeTags(dto.tags) } : {}),
+          published: dto.published ?? collection.published,
+          commentsEnabled: dto.commentsEnabled ?? collection.commentsEnabled,
+          version: { increment: 1 },
+        },
+      });
+    });
     return this.toPublicCollection(saved);
   }
 
@@ -539,20 +546,16 @@ export class CollectionsService {
     const creator = collection.creatorUserId
       ? await this.prisma.user.findFirst({
           where: { id: collection.creatorUserId, accountState: "active" },
-          select: { name: true, showNameOnHub: true, hub: { select: { id: true, handle: true } } },
+          select: { hub: { select: { id: true, handle: true } } },
         })
       : null;
+    const contributors = await this.contributors(collection.id);
     return {
       collection: {
         ...this.toPublicCollection(collection),
-        creator: creator?.hub
-          ? {
-              hubId: creator.hub.id,
-              handle: creator.hub.handle,
-              name: creator.showNameOnHub ? creator.name.trim() || null : null,
-            }
-          : null,
-        capabilities: { canManage: access.isOwner },
+        contributors,
+        creator: creator?.hub ? { hubId: creator.hub.id, handle: creator.hub.handle } : null,
+        capabilities: { canManage: access.isOwner, canEdit: access.canWriteContent },
         ...(reason
           ? {
               restriction: {
@@ -601,6 +604,7 @@ export class CollectionsService {
         actorUserId: row.actorUserId,
         collectionId: row.collectionId,
         targetUserId: row.targetUserId,
+        resourceId: row.resourceId,
         action: wireToken(row.action, auditActions),
         role: row.role === null ? null : wireToken(row.role, ["reader", "editor"]),
         createdAt: row.createdAt.toISOString(),
@@ -615,7 +619,7 @@ export class CollectionsService {
   private async mutateOwned<T>(
     collection: Collection,
     user: AuthUser,
-    event: Omit<AuditInput, "hubId" | "actorUserId" | "collectionId"> | undefined,
+    event: AuditEvent | AuditEvent[] | undefined,
     mutate: (tx: Prisma.TransactionClient) => Promise<T>,
   ): Promise<T> {
     return this.prisma.$transaction(async (tx) => {
@@ -625,15 +629,121 @@ export class CollectionsService {
           AND h.owner_user_id = ${user.userId}::uuid FOR UPDATE OF c`;
       if (locked.length !== 1) throw new NotFoundException("Collection not found");
       const result = await mutate(tx);
-      if (event)
+      for (const each of event === undefined ? [] : [event].flat())
         await recordAudit(tx, {
-          ...event,
+          ...each,
           hubId: collection.hubId,
           actorUserId: user.userId,
           collectionId: collection.id,
         });
       return result;
     });
+  }
+
+  // The collection's history for its contributors (owner and editors), newest
+  // first: who did what to which item (ADR-0015). Items show as they are now;
+  // a removed item keeps its entry with no item. Not found for those who
+  // can't read the collection; forbidden for readers. Editors see content and
+  // moderation only: sharing, link and transfer entries name who has access,
+  // which only the owner may see (listing shares is owner-only).
+  async activity(id: string, user: AuthUser, query: CursorQueryDto) {
+    const collection = await this.requireCollection(id);
+    const access = await this.policy.resolve(collection, user);
+    if (!access.canRead) throw new NotFoundException("Collection not found");
+    if (!access.canWriteContent) throw new ForbiddenException("Forbidden");
+    const limit = query.limit ?? 20;
+    const cursor = query.cursor ? decodeCursor<{ id: string }>(query.cursor) : null;
+    if (
+      query.cursor &&
+      (!cursor ||
+        typeof cursor.id !== "string" ||
+        !/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(cursor.id) ||
+        !(await this.prisma.auditRecord.findFirst({ where: { id: cursor.id, collectionId: id } })))
+    )
+      throw appError("invalid_cursor");
+    const rows = await this.prisma.auditRecord.findMany({
+      where: {
+        collectionId: id,
+        action: access.isOwner
+          ? { not: "audit.read" }
+          : { in: [...contentActions, ...moderationActions] },
+      },
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      take: limit + 1,
+      ...(cursor ? { cursor: { id: cursor.id }, skip: 1 } : {}),
+    });
+    const page = rows.slice(0, limit);
+    const [people, items] = await Promise.all([
+      personRefs(
+        this.prisma,
+        page.flatMap((row) => [row.actorUserId, row.targetUserId]),
+      ),
+      this.prisma.resource.findMany({
+        where: {
+          collectionId: id,
+          id: { in: page.flatMap((row) => (row.resourceId ? [row.resourceId] : [])) },
+        },
+      }),
+    ]);
+    const titles = new Map(
+      (
+        await this.prisma.linkMetadata.findMany({
+          where: { url: { in: items.flatMap((item) => (item.url ? [item.url] : [])) } },
+          select: { url: true, title: true },
+        })
+      ).map((row) => [row.url, row.title]),
+    );
+    const itemViews = new Map<string, NonNullable<ActivityEntry["item"]>>();
+    for (const item of items) {
+      let title: string | null = null;
+      if (item.kind === "heading") title = item.titleOverride;
+      else if (item.kind === "external_link") title = titles.get(item.url ?? "") ?? item.url;
+      else if (item.linkedCollectionId) {
+        const target = await this.prisma.collection.findUnique({
+          where: { id: item.linkedCollectionId },
+        });
+        if (target && (await this.policy.resolve(target, user)).canRead) title = target.title;
+      }
+      itemViews.set(item.id, {
+        id: item.id,
+        kind: wireToken(item.kind, ["external_link", "collection_link", "heading"]),
+        title,
+      });
+    }
+    return {
+      items: page.map(
+        (row): ActivityEntry => ({
+          id: row.id,
+          action: wireToken(row.action, auditActions),
+          actor: people.get(row.actorUserId) ?? null,
+          target: (row.targetUserId && people.get(row.targetUserId)) || null,
+          item: (row.resourceId && itemViews.get(row.resourceId)) || null,
+          createdAt: row.createdAt.toISOString(),
+        }),
+      ),
+      meta: {
+        limit,
+        nextCursor: rows.length > limit ? encodeCursor({ id: page.at(-1)?.id }) : null,
+      },
+    };
+  }
+
+  // Everyone who has shaped the collection's content (creation, details, items),
+  // most recent first, from its activity entries (ADR-0015). Suspended accounts
+  // are left out, as everywhere people are shown.
+  private async contributors(collectionId: string) {
+    const groups = await this.prisma.auditRecord.groupBy({
+      by: ["actorUserId"],
+      where: { collectionId, action: { in: [...contentActions] } },
+      _max: { createdAt: true },
+      orderBy: { _max: { createdAt: "desc" } },
+    });
+    const people = await personRefs(
+      this.prisma,
+      groups.map((group) => group.actorUserId),
+    );
+    const ordered = groups.flatMap((group) => people.get(group.actorUserId) ?? []);
+    return { people: ordered.slice(0, 5), total: ordered.length };
   }
 
   // --- internals ----------------------------------------------------------
@@ -662,13 +772,9 @@ export class CollectionsService {
           published: dto.published ?? false,
         },
       });
-      if (created.published)
-        await recordAudit(tx, {
-          hubId,
-          actorUserId: user.userId,
-          collectionId: created.id,
-          action: "collection.published",
-        });
+      const event = { hubId, actorUserId: user.userId, collectionId: created.id };
+      await recordAudit(tx, { ...event, action: "collection.created" });
+      if (created.published) await recordAudit(tx, { ...event, action: "collection.published" });
       return created;
     });
     return this.toPublicCollection(saved);
@@ -718,7 +824,6 @@ export class CollectionsService {
             id: true,
             handle: true,
             name: true,
-            owner: { select: { name: true, showNameOnHub: true } },
           },
         },
       },
@@ -740,7 +845,6 @@ export class CollectionsService {
           id: item.hub.id,
           handle: item.hub.handle,
           name: item.hub.name,
-          ownerName: item.hub.owner.showNameOnHub ? item.hub.owner.name.trim() || null : null,
         },
       })),
       meta: { limit, nextCursor },
@@ -785,3 +889,12 @@ export class CollectionsService {
     };
   }
 }
+
+type AuditEvent = Omit<AuditInput, "hubId" | "actorUserId" | "collectionId">;
+
+const moderationActions = [
+  "comment.hidden",
+  "comment.shown",
+  "comment.answer_marked",
+  "comment.answer_unmarked",
+] as const;

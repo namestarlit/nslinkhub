@@ -90,10 +90,14 @@ Resource        — an item in a collection; the smallest unit of content.
                   kind = external_link (its own canonical `url`, one per
                   collection) | collection_link (linkedCollectionId) | heading.
                   title_override holds a section's text (never a link's
-                  title), tags (text[]), position, version. What belongs to
+                  title), added_by_user_id (who added it), tags (text[]),
+                  position, version. What belongs to
                   an item (address, page title, target, section text) is
                   fixed; only what people add (tags, position; notes planned)
                   is editable.
+AuditRecord     — append-only activity per hub: actor, action, collection,
+                  item, target person (ids only). The hub audit and every
+                  attribution (creator, contributors, history) derive from it.
 LinkMetadata    — one row per canonical address: page title, description,
                   site name (text only); a pending row is the durable lookup
                   job the worker claims (docs/design-docs/collections-and-resources.md).

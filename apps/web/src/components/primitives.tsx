@@ -22,12 +22,11 @@ export function CollectionRow({ item, handle }: { item: Collection; handle?: str
     </li>
   );
 }
-// A person, the same way everywhere: their name (only when they show it) and
-// their hub handle, together linking to their hub.
+// A person, the same way everywhere: their @handle, linking to their hub (where
+// their name shows, if they choose).
 export function Person({ person }: { person: PersonRef }) {
   return (
     <a className="person" href={`/h/${encodeURIComponent(person.hubId)}`}>
-      {person.name && <span className="person-name">{person.name}</span>}
       <span className="person-handle">@{person.handle}</span>
     </a>
   );
@@ -41,14 +40,17 @@ export function CollectionMeta({
   handle?: string;
   compact?: boolean;
 }) {
-  const owner: PersonRef | null = item.hub
-    ? { hubId: item.hub.id, handle: item.hub.handle, name: item.hub.ownerName }
-    : null;
+  const owner: PersonRef | null = item.hub ? { hubId: item.hub.id, handle: item.hub.handle } : null;
   const creator =
     // Only when the owner is known and the creator is someone else.
     !compact && item.hub && item.creator && item.creator.hubId !== item.hub.id
       ? item.creator
       : null;
+  // Contributors, GitHub-style: "Paul John · 2 contributors · Updated …", shown
+  // when anyone besides the owner has shaped the collection.
+  const contributors = item.contributors;
+  const ownerShaped = contributors?.people.some((person) => person.hubId === item.hubId) ?? false;
+  const others = compact || !contributors ? 0 : contributors.total - (ownerShaped ? 1 : 0);
   return (
     <div className="row-meta">
       {owner ? (
@@ -64,6 +66,10 @@ export function CollectionMeta({
         <span>
           Created by <Person person={creator} />
         </span>
+      )}
+
+      {others > 0 && contributors && (
+        <span className="contributors">{contributors.total} contributors</span>
       )}
       <span>
         Updated <Updated at={item.updatedAt} />

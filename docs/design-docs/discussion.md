@@ -14,8 +14,10 @@ requires `canRead`; posting additionally requires a session, comments on and no
 active hold; hiding and marking answers require `canWriteContent` (owner or
 direct editor); edit/delete require authorship. Replies from the owner or an
 editor carry the role in the API (`author.role`: `owner` | `editor`) and are
-badged **Maintainer** in the web — one label for everyone who maintains the
-collection ([roles and labels](tenancy-and-access.md#roles-and-labels)). Routes:
+badged **Contributor** in the web — one label for everyone who maintains the
+collection ([roles and labels](tenancy-and-access.md#roles-and-labels)). Hide is moderation of
+others' comments (spam, abuse, off-topic) — contributors can't delete someone
+else's words; on their own comments they see Delete instead. Routes:
 `GET|POST /api/v1/collections/:id/comments` (share token accepted, cursor over
 questions newest first) and `PATCH|DELETE /api/v1/comments/:id`,
 `POST /api/v1/comments/:id/{hide,show,accept,unaccept}`.

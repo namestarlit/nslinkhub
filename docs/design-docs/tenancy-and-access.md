@@ -42,7 +42,7 @@ kept through transfers, shown only as attribution, never consulted for access.
 
 Role names are stable identifiers in the API and database; each surface picks
 its own label: the discussion badges replies from the owner or an editor as
-**Maintainer**, sharing reads **Can view** / **Can edit**, operations reads
+**Contributor**, sharing reads **Can view** / **Can edit**, operations reads
 "service operator" / "service admin". Changing a label never renames a role.
 
 ## Service operations

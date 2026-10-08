@@ -221,8 +221,10 @@ describe("Hub handles (e2e)", () => {
       expect(result.body.data.collections[0]).toMatchObject({
         description: "A focused reading list",
         tags: ["reading"],
-        hub: { name: "Field Notes", ownerName: "Owner Full Name" },
+        hub: { name: "Field Notes" },
       });
+      // A name shows only on the hub itself; collections carry the handle only.
+      expect(result.body.data.collections[0].hub.ownerName).toBeUndefined();
       expect(JSON.stringify(result.body)).not.toContain(email);
     }
     await request(app.getHttpServer())
@@ -265,7 +267,7 @@ describe("Hub handles (e2e)", () => {
       .expect(200);
     expect(
       discover.body.data.find((item: { id: string }) => item.id === collection.body.data.id).hub,
-    ).toMatchObject({ id, handle, name: "Field Notes", ownerName: "Next Owner" });
+    ).toEqual({ id, handle, name: "Field Notes" }); // the owner's name is only on the hub page
     await request(app.getHttpServer())
       .patch("/api/v1/profile")
       .auth(token, { type: "bearer" })
@@ -315,9 +317,7 @@ describe("Hub handles (e2e)", () => {
           handle,
           ownerName: enabled ? "Owner Attribution" : null,
         });
-        expect(result.body.data.collections[0].hub.ownerName).toBe(
-          enabled ? "Owner Attribution" : null,
-        );
+        expect(result.body.data.collections[0].hub.ownerName).toBeUndefined();
       }
       const discover = await request(app.getHttpServer())
         .get("/api/v1/discover?limit=100")
@@ -325,7 +325,7 @@ describe("Hub handles (e2e)", () => {
       expect(
         discover.body.data.find((item: { id: string }) => item.id === created.body.data.id).hub
           .ownerName,
-      ).toBe(enabled ? "Owner Attribution" : null);
+      ).toBeUndefined();
     }
     await patch({ displayName: "   " }).expect(200);
     const blank = await request(app.getHttpServer()).get(`/api/v1/hubs/${hubId}`).expect(200);

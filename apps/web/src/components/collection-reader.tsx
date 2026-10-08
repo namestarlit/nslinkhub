@@ -5,6 +5,7 @@ import { serverRead } from "../lib/server-api";
 import { readSession } from "../lib/session";
 import { CollectionFeedback } from "./collection-feedback";
 import { CollectionHeading } from "./collection-heading";
+import { CollectionMoreMenu } from "./collection-more-menu";
 import { Comments } from "./comments";
 import { ShareAside, ShareMenu } from "./copy-link";
 import { FormNotice } from "./form-notice";
@@ -65,16 +66,36 @@ export async function CollectionReader({
             <span />
           )}
           <div className="collection-actions">
+            {/* At the top of the page, so adding a link never needs a scroll. */}
+            {owner && (
+              <a
+                className="button add-resource"
+                href={`/capture?collection=${id}`}
+                aria-label="Add a link"
+              >
+                <span aria-hidden="true">+</span>
+                <span className="add-label">Add a link</span>
+              </a>
+            )}
             <ShareMenu
               id={id}
               token={token}
               title={collection.title}
               origin={webServerConfig().publicOrigin}
             />
-            {owner && (
-              <a className="button" href={`/c/${id}/edit`}>
-                Edit
-              </a>
+            {collection.capabilities?.canEdit && (
+              <>
+                {/* Wide screens show the buttons; narrow ones fold them into More. */}
+                <a className="button wide-action" href={`/c/${id}/history`}>
+                  History
+                </a>
+                {owner && (
+                  <a className="button wide-action" href={`/c/${id}/edit`}>
+                    Edit
+                  </a>
+                )}
+                <CollectionMoreMenu id={id} canManage={Boolean(owner)} />
+              </>
             )}
           </div>
         </header>
@@ -89,12 +110,6 @@ export async function CollectionReader({
           )}
           <Tags tags={collection.tags} />
           <CollectionMeta item={shown} />
-          {/* In the fixed header, so adding a link never needs a scroll. */}
-          {owner && (
-            <a className="button add-resource" href={`/capture?collection=${id}`}>
-              <span aria-hidden="true">+</span> Add a link
-            </a>
-          )}
           {collection.restriction && (
             <p className="form-notice">
               Distribution is on hold ({collection.restriction.reason.replaceAll("_", " ")}). You

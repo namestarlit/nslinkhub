@@ -496,12 +496,16 @@ collection layouts add no row separators or container borders. Exact values live
   follows the links. Native forms post through `/forms/comment-*` and return to
   the same collection URL (keeping an explicit share token) at the comment's
   anchor with a toast; errors show inside the discussion. Reply, Edit and Delete
-  (with a confirm step) are disclosures; maintainer replies carry a Maintainer
+  (with a confirm step) are disclosures; contributor replies carry a Contributor
   label and the accepted answer a green Answer marker. The frame never scrolls
   as a document: anchor jumps are pinned back so header and footer stay put.
-- People appear in one format everywhere (collection metadata, cards, comment
-  authors, hub identity): their name only when they chose “Show my name on my
-  hub”, always their `@handle`, together linking to `/h/:hubId` (not linked on
-  their own hub page). The API carries this as `PersonRef { hubId, handle, name }`;
-  single-collection reads include `creator`.
+- People appear in one format everywhere (collection metadata, comments,
+  contributors, history, notifications, audits): their `@handle`, linking to
+  `/h/:hubId`. A name appears only on the person's own hub page, and only when
+  they chose “Show my name on my hub”; otherwise it stays a private profile
+  detail. The API carries people as `PersonRef { hubId, handle }` and never
+  sends names elsewhere.
+- Comments read TikTok-style: "@handle · Contributor" (the role in the accent
+  color), the body, then the age leading the actions — "53m  Reply  Edit" —
+  as now, 53m, 23h, 2d, then a date ("Oct 7"); the exact time is on hover.
 - Discovery is `GET /api/v1/discover` (web `/discover`).
