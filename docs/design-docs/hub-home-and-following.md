@@ -29,5 +29,6 @@ Following a hub is like subscribing to a YouTube channel: it adds the hub to
 your Following list, its new published collections to your feed, and sends you
 a notification when it publishes. Each followed hub has a notifications toggle
 (on by default, like YouTube's bell), so you can keep following without the
-notices. Owners see
+notices. Settings live with the rest of the
+[notification settings](notifications.md). Owners see
 their followers in Manage › People; a blocked account cannot follow.

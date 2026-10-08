@@ -20,6 +20,10 @@ summary of what changed after completed work has been promoted out of `ref/`.
   curator; Manage's Import & export section holds bulk import and multi-
   collection export, while a collection page offers Download; following
   notifies with a per-hub toggle; blocking stops participation only.
+  Notifications are designed as one inbox for every kind (following,
+  comments, saves and follows, sharing, invitations, imports, service), scoped
+  by role, with settings on the Notifications page; they move up the build
+  order ahead of following.
 - Backlog brought up to date: seven finished plans closed; `PRODUCT.md` §9 now
   lists everything still to build, in order (link metadata, bulk import,
   preview cards with curator's notes and Add to my collection, collection

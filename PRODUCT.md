@@ -369,7 +369,10 @@ contracts: `docs/design-docs/manage-workspace.md` and
 - Settings: full name, email and member-since; hub name, handle, description
   and permanent id; whether to show the name on the hub. Changes save as they
   are made. Appearance (system, light, dark) is a header control.
-- Notifications currently cover invitations to service roles.
+- Notifications currently cover invitations to service roles. Planned: one
+  inbox for every kind that concerns you, scoped by role, with settings to turn
+  kinds (and individual followed hubs) off; invitations and security notices
+  stay on.
 
 ### Service operations
 
@@ -472,7 +475,7 @@ and `web-interface-system.md`; the visual system is `DESIGN.md`.
 | Activity records, creator and curators, hub audit | Planned | Partial (management audit) |
 | Manage for hub owners (collections, comments, people, blocking, import, activity) | Planned | Planned |
 | Discover search and tag filters, full-text search | Planned | Planned |
-| Comment notifications, comment moderation in operations | Planned | Planned |
+| Notifications for every kind, notification settings | Planned | Planned |
 | Single sign-on (ns-series identity service), account deletion | Planned | Planned |
 
 Next, in order (everything is to be built; what to charge for is chosen after):
@@ -490,16 +493,18 @@ Next, in order (everything is to be built; what to charge for is chosen after):
    activity ([manage-workspace](docs/design-docs/manage-workspace.md)).
 4. **Bulk import**, inside Manage —
    [deliver-bulk-import](docs/exec-plans/active/deliver-bulk-import.md).
-5. **Your home and following** — My collections, Shared with me, Saved,
+5. **Notifications** — one inbox for every kind (following, comments, saves
+   and follows, sharing, invitations, imports, service), scoped by role, with
+   per-kind and per-hub settings on the Notifications page
+   ([notifications](docs/design-docs/notifications.md)).
+6. **Your home and following** — My collections, Shared with me, Saved,
    Following; the public hub page with Follow
    ([hub-home-and-following](docs/design-docs/hub-home-and-following.md)).
-6. **Preview cards, item details and curator's notes** — View and Edit only,
+7. **Preview cards, item details and curator's notes** — View and Edit only,
    with Add to my collection in the details.
-7. **Managing a collection in the web** — remove and reorder items, sections
+8. **Managing a collection in the web** — remove and reorder items, sections
    (headings) and references, sharing (Can view / Can edit, link sharing),
    publishing, transfer, export.
-8. **Discussion follow-ups** — comment notifications (a general notifications
-   table) and comment moderation on public collections for operators.
 9. **Discover** — search by text and tags, tag filters, then full-text search
    across collections and items.
 10. **Rest of the internals pass** — fewer queries, one write-lock opt-out per
@@ -526,6 +531,7 @@ Next, in order (everything is to be built; what to charge for is chosen after):
 - **Sections in the web.** How people add headings and place links under them.
 - **Preview card details.** Note length, and whether the card shows the page
   description when a note exists.
+- **Notification email.** Which notification kinds, if any, also send email.
 - **Download formats.** Which document formats to offer (Word, Markdown, PDF).
 - **Requesting access** to a collection someone can't open.
 - **Account deletion** with export, and its retention rules.

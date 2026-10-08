@@ -25,6 +25,8 @@ implementation work in [../exec-plans/active/](../exec-plans/active/).
   entries, creator, curators, "added by" and the hub audit (designed).
 - [manage-workspace.md](manage-workspace.md): Manage — one workspace scoped by
   role (hub owner, operator, admin), blocking (designed).
+- [notifications.md](notifications.md): one inbox for every kind, scoped by
+  role, with per-kind and per-hub settings (designed).
 - [hub-home-and-following.md](hub-home-and-following.md): the public hub page,
   your home (My collections, Shared with me, Saved, Following) and following
   (designed).
