@@ -70,7 +70,10 @@ Rules that keep it drift-proof:
 - Collection references navigate directly to `/c/<id>` with no parent context.
 - **"Copy link" / share buttons always emit the `/c/<id>` permalink**, never
   the slug URL. Slug URLs are for address bars and link previews only.
-- Pretty URLs have exactly a handle and slug. Bare `/handle` paths are unsupported.
+- Pretty URLs have exactly a handle and slug. Bare `/name` paths are reserved
+  for people's profiles (`/username`, designed in
+  [people-and-hubs.md](people-and-hubs.md)); until that ships they are
+  unsupported.
 
 ## Account deletion (planned)
 

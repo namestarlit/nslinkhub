@@ -28,8 +28,9 @@ at most one hub, created when they first save or curate, owned by them and
 never transferred; the hub owns their collections and its subscribers.
 People act as themselves: they comment, contribute and are invited by email to
 view or contribute, with or without a hub. Others **subscribe to hubs**; people
-aren't followed. Usernames and hub handles share one namespace, so `/@x` is
-never ambiguous; a person's hub may reuse their username. Display, routes and
+aren't followed. Hubs live at `/@handle` and people at `/username` — two
+namespaces, so a person may give their hub their username or another handle;
+top-level usernames never take the app's own route names. Display, routes and
 data: [people-and-hubs.md](../design-docs/people-and-hubs.md).
 
 ## Rationale
@@ -44,8 +45,9 @@ data: [people-and-hubs.md](../design-docs/people-and-hubs.md).
 
 - At most one hub per person; hubs and collections are owned, people are never
   owned. Hubs aren't transferred; collections are.
-- One namespace for usernames and hub handles; durable references use ids
-  (ADR-0002).
+- Usernames and handles are separate namespaces with their own addresses
+  (`/username`, `/@handle`); reserved words protect app routes; durable
+  references use ids (ADR-0002).
 - Contributors and viewers are people, never hubs; access never comes from a
   username or handle.
 

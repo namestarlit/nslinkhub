@@ -188,7 +188,7 @@ invented here.
 
 ### Hub Model
 
-A **person** (the account) has an **@username** and a name. Their **hub** is
+A **person** (the account) has a **username** and a name. Their **hub** is
 their publishing space — like My Drive in a Google account, or a channel on
 YouTube — with its own **name**, optional **description** and **@handle**
 (ADR-0018). A person has at most one hub, created when they first save a link
@@ -196,8 +196,9 @@ or start a collection; someone who only reads or contributes by invitation
 needs none. The hub owns every collection in it and its subscribers, and is the
 face wherever those appear: its page reads "Hub name" over "@handle", or
 "@handle by Owner Name" when the owner shows their name. People act as
-themselves — commenting, contributing, invited by email — and appear by
-@username. Usernames and handles share one namespace. Permanent identities are
+themselves — commenting, contributing, invited by email — and appear by their
+username. Hubs live at `/@handle` and people at `/username` (separate
+namespaces; the app's route words are reserved). Permanent identities are
 immutable ids, so renaming breaks no link. A hub is never transferred (its
 owner's fingerprint); collections are. Others **subscribe** to hubs; people
 aren't followed. No memberships or organizations (ADR-0017, rejected).
@@ -683,7 +684,7 @@ Delivery order (everything is built; what to charge for is chosen after):
 2. **Activity and attribution** (§6.3) — done
    ([attribution-and-activity](docs/design-docs/attribution-and-activity.md)).
 3. **People and hubs** — separate identities: @username for people, the
-   optional hub with its own name and @handle, one namespace, the hub created
+   optional hub with its own name and @handle, `/username` and `/@handle`, the hub created
    on first save, subscriptions to hubs
    ([people-and-hubs](docs/design-docs/people-and-hubs.md)).
 4. **Collaborators and routes** — collection roles become **viewer** and
