@@ -9,6 +9,12 @@ summary of what changed after completed work has been promoted out of `ref/`.
 
 ## Unreleased
 
+- Designed people and hubs as separate identities (ADR-0018): a person has an
+  @username and a name; their hub — the face that owns their collections and
+  subscribers, with its own name and @handle — is optional and created on the
+  first saved link or collection. Sign in creates the account only; "Save your
+  first link" is sign in plus add the link. People subscribe to hubs; one
+  namespace serves usernames and handles.
 - Scope settled: nslinkhub stays a personal product. One person has one hub
   (shown as "Hub Name, by @handle"), the hub is never transferred (only
   collections are), people follow people, and collaboration is per collection

@@ -188,18 +188,19 @@ invented here.
 
 ### Hub Model
 
-Every person has exactly one **hub**, their personal space — like My Drive in
-a Google account — created at first sign-in. The hub has its own **name**,
-optional **description** and **handle** (`@handle`), and belongs to its owner,
-as do its followers. Its page reads "Hub Name" over "@handle" — or "@handle by
-Owner Name" when the owner chooses to show their name; elsewhere people appear
-by @handle, which leads to their hub. The hub's permanent identity is an immutable id, so renaming the
-handle breaks no link. A hub has one owner and is never transferred — it is its
-owner's fingerprint; collections can be transferred between people. People
-follow people (their hub), and collaborate on collections (below). There are
-no memberships or organizations; if they are ever needed, they follow GitHub:
-people own organizations and transfer collections into them (ADR-0017,
-rejected for now).
+A **person** (the account) has an **@username** and a name. Their **hub** is
+their publishing space — like My Drive in a Google account, or a channel on
+YouTube — with its own **name**, optional **description** and **@handle**
+(ADR-0018). A person has at most one hub, created when they first save a link
+or start a collection; someone who only reads or contributes by invitation
+needs none. The hub owns every collection in it and its subscribers, and is the
+face wherever those appear: its page reads "Hub name" over "@handle", or
+"@handle by Owner Name" when the owner shows their name. People act as
+themselves — commenting, contributing, invited by email — and appear by
+@username. Usernames and handles share one namespace. Permanent identities are
+immutable ids, so renaming breaks no link. A hub is never transferred (its
+owner's fingerprint); collections are. Others **subscribe** to hubs; people
+aren't followed. No memberships or organizations (ADR-0017, rejected).
 
 ### Collections And Items
 
@@ -267,11 +268,15 @@ Purpose: get a link into the right collection in seconds. Status: Built.
 
 - **First link (signed out):** the home page's main action is **Save your
   first link**. The person pastes one or two links (tags optional), then
-  verifies their email with an eight-digit code. Sending a code creates
-  nothing; verifying signs them in, creates their account and hub if new, and
-  saves the links into a new private collection named with the date ("Saved
-  links, Oct 7"), atomically and safe to retry. No profile, title or handle
-  setup comes first.
+  verifies their email with an eight-digit code — it is sign in plus add the
+  link. Sending a code creates nothing; verifying signs them in (creating the
+  account if new) and saves the links: with no hub yet, the hub is created on
+  the spot with a new private collection named with the date ("Saved links,
+  7 Oct"); with a hub that has collections, they choose where the links go.
+  Existing accounts are never turned away. Saving is atomic and safe to retry;
+  no profile, title or handle setup comes first. **Sign in** on its own creates
+  the account only — no hub until the first saved link or collection
+  (ADR-0018).
 - **Save a link (signed in):** always in the header. One or two links per save;
   each address turns blue when it is a valid public link and red when it isn't,
   and shows the page's title once found. Tags are optional, behind **Add
@@ -677,33 +682,37 @@ Delivery order (everything is built; what to charge for is chosen after):
    once per address. Bulk import and previews build on it.
 2. **Activity and attribution** (§6.3) — done
    ([attribution-and-activity](docs/design-docs/attribution-and-activity.md)).
-3. **Collaborators and routes** — collection roles become **viewer** and
+3. **People and hubs** — separate identities: @username for people, the
+   optional hub with its own name and @handle, one namespace, the hub created
+   on first save, subscriptions to hubs
+   ([people-and-hubs](docs/design-docs/people-and-hubs.md)).
+4. **Collaborators and routes** — collection roles become **viewer** and
    **contributor** (renamed from reader and editor); the platform console moves
    from `/ops` to `/platform`; items open by `?item=<id>` on a collection's
    address.
-4. **Manage** for the hub owner (§6.9) —
+5. **Manage** for the hub owner (§6.9) —
    [manage-workspace](docs/design-docs/manage-workspace.md).
-5. **Bulk import** (§6.2) —
+6. **Bulk import** (§6.2) —
    [deliver-bulk-import](docs/exec-plans/active/deliver-bulk-import.md).
-6. **Notifications** (§6.8) —
+7. **Notifications** (§6.8) —
    [notifications](docs/design-docs/notifications.md).
-7. **Your home and following** (§6.6) —
+8. **Your home and following** (§6.6) —
    [hub-home-and-following](docs/design-docs/hub-home-and-following.md).
-8. **Link previews and notes** (§6.4), with Add to my collection.
-9. **Organizing and sharing in the web** (§6.3, §6.5, §6.10) — items,
+9. **Link previews and notes** (§6.4), with Add to my collection.
+10. **Organizing and sharing in the web** (§6.3, §6.5, §6.10) — items,
    sections, references, sharing, publishing, transfer, download.
-10. **Discover search** (§6.6).
-11. **Rest of the internals pass** — fewer queries, one write-lock opt-out per
+11. **Discover search** (§6.6).
+12. **Rest of the internals pass** — fewer queries, one write-lock opt-out per
     controller, the forms route as an action table, Save a link drafts in
     Redis, focus rings.
-12. **Account** (§6.11) — email change in the web, deletion, authenticator-app
+13. **Account** (§6.11) — email change in the web, deletion, authenticator-app
     codes.
-13. **Browser extension** (§7).
-14. **Targeted sharing by invitation** (§6.5).
-15. **ns-series single sign-on** (§6.11) — `docs/design-docs/identity-sso.md`.
-16. **Before public release** — live email provider and webhooks, browser and
+14. **Browser extension** (§7).
+15. **Targeted sharing by invitation** (§6.5).
+16. **ns-series single sign-on** (§6.11) — `docs/design-docs/identity-sso.md`.
+17. **Before public release** — live email provider and webhooks, browser and
     worker telemetry, deployment (`docs/design-docs/infra-deployment.md`).
-17. **Curator accounts** (§6.13), then pricing.
+18. **Curator accounts** (§6.13), then pricing.
 
 ## 12. References
 

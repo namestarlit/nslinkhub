@@ -1,8 +1,8 @@
 # ADR-0001: Google-Drive tenancy: one hub per user, per-collection sharing
 
-**Status:** accepted (reaffirmed 2026-10-08 after
-[ADR-0017](0017-hubs-are-entities-with-members.md) was rejected: a hub is one
-person's space and is never transferred; collections are)  
+**Status:** accepted; amended by
+[ADR-0018](0018-people-and-hubs-are-separate.md) (a hub is optional, created on
+first use, still one per person and never transferred)  
 **Date:** 2026-10-07
 
 ## Context
