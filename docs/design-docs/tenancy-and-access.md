@@ -32,7 +32,7 @@ Roles come in two separate scopes ([ADR-0013](../engineering-decisions/0013-perm
 
 | Role | Scope | Comes from | Can |
 | --- | --- | --- | --- |
-| `owner` | Every collection in the hub | Owning the hub (`hub.ownerUserId`); moves with a collection transfer | Read, write content, manage |
+| `owner` | Every collection in the hub | Owning the hub (`hub.ownerUserId`); moves with a collection transfer | Read, write content, manage; manage the hub in [Manage](manage-workspace.md), including blocking accounts |
 | `editor` | One collection | A direct share (`CollectionShare`) | Read, write content |
 | `reader` | One collection | A direct share, or a recorded link share | Read |
 | `operator`, `admin` | The service, site-wide | An accepted, verified invitation (`OperatorGrant`, `AdminGrant`) | Run service operations; never read private collections ([service-operations.md](service-operations.md)) |

@@ -186,6 +186,13 @@ header; editing changes the name, description, tags and whether comments are
 on, in place. A share row offers LinkedIn, X, WhatsApp and **Share link**
 (copies the permanent address and says "Link copied to clipboard").
 
+*(Planned)* Like commits and contributors on GitHub, every change is recorded
+as "who did what to which item", and attribution comes from those records: the
+collection's metadata names its **creator** (who created it — distinct from the
+owner, who owns the hub) and its **contributors** ("Paul John and 2
+contributors"); each item's details say who added it and when; owners and
+editors can open the collection's history.
+
 ### Preview and annotate a link *(planned)*
 
 Hovering a link (or focusing it with the keyboard; on phones, a small details
@@ -235,8 +242,11 @@ email.
 
 **Discover** lists published collections, newest first, continuing page by page
 (no popularity score, recommendations or sort options yet). Opening one shows
-which hub published it, so readers can follow that hub. Signed-in readers can
-**save** a published collection to keep it *(API only today)*; a save goes
+which hub published it. Signed-in readers can **follow** a hub *(planned)*,
+like subscribing to a YouTube channel: the hub joins their Following list and
+its new published collections appear there. They can also **save** a published
+collection to keep it *(API only today)*, like saving a document in Google
+Drive; a save goes
 dormant if the collection is unpublished — it keeps its place, labelled
 "Currently unavailable", cannot be opened or exported but can be removed, and
 no snapshot is kept — and comes back when the collection is republished.
@@ -252,6 +262,13 @@ with replies keeps a placeholder); the owner and editors can hide comments,
 which stay visible to them. The owner can turn comments off, leaving existing
 ones readable; a collection on hold takes no new comments. Comments never grant
 access to anything.
+
+### Your home *(planned)*
+
+Your own hub page is your home, Google-Drive style: **My collections** (every
+collection in your hub), **Shared with me**, **Saved** and **Following**. A
+"View your public hub" link shows what visitors see: the hub's name, handle,
+description, Follow, the share row and its published collections.
 
 ### Verify email, wherever it's needed
 
@@ -274,15 +291,25 @@ include readable referenced collections one level deep. Nothing is fetched from
 linked pages and nothing is stored. Unavailable references get a generic
 notice that reveals no title or content. Signed-out readers can only browse.
 
-### Run the service
+### Manage your hub and the service
 
-Service operators work under **Operations**: find an account by email or
-handle and restrict it (suspend, reactivate, sign out everywhere); look up a
-public collection by its link and hold or release it; review the audit trail.
-Admins manage the operator team from a table (invite, resend, revoke).
-Sensitive actions ask the operator to confirm it's them with a fresh code.
-Operators never see private content, impersonate anyone, edit credentials or
-delete accounts. The full contract (permissions, recovery, retention) is in
+**Manage**, in the account menu, is one workspace whose sections follow your
+roles *(planned; today it is the service-operations console)*:
+
+- **Every hub owner** manages their own hub: all collections as a table,
+  comments across the hub (hide, show, mark answers), people (who has access,
+  followers, blocking someone from the hub), bulk import, and the hub's
+  activity — its audit trail.
+- **Service operators** find an account by email or handle and restrict it
+  (suspend, reactivate, sign out everywhere); look up a public collection by
+  its link and hold or release it, or moderate its comments; and review the
+  service audit. **Admins** also manage the operator team (invite, resend,
+  revoke).
+
+Sensitive service actions ask the operator to confirm it's them with a fresh
+code. Operators never see private content, impersonate anyone, edit
+credentials or delete accounts; owners manage only their own hub. Full
+contracts: `docs/design-docs/manage-workspace.md` and
 `docs/design-docs/service-operations.md`.
 
 ## 6. Product requirements
@@ -436,7 +463,9 @@ and `web-interface-system.md`; the visual system is `DESIGN.md`.
 | Email change (account handover) | Not yet | Built |
 | Browser extension | Planned | Uses existing API |
 | Link metadata, preview cards, curator's notes | Planned | Planned |
-| Following hubs | Planned | Planned |
+| Following hubs, your home (My collections, Shared with me, Saved, Following) | Planned | Planned |
+| Activity records, creator and contributors, hub audit | Planned | Partial (management audit) |
+| Manage for hub owners (collections, comments, people, blocking, import, activity) | Planned | Planned |
 | Discover search and tag filters, full-text search | Planned | Planned |
 | Comment notifications, comment moderation in operations | Planned | Planned |
 | Single sign-on (ns-series identity service), account deletion | Planned | Planned |
@@ -448,34 +477,42 @@ Next, in order (everything is to be built; what to charge for is chosen after):
    images or icons are fetched or stored), and a shared fetch cache. Bulk import and preview cards both depend on
    it; it absorbs the first step of the
    [internals pass](docs/exec-plans/active/final-pass-internals.md).
-2. **Bulk import** — [deliver-bulk-import](docs/exec-plans/active/deliver-bulk-import.md).
-3. **Preview cards, item details and curator's notes** — View and Edit only,
+2. **Activity and attribution** — every change recorded as an activity entry;
+   creator, contributors and "added by" shown; the hub audit
+   ([attribution-and-activity](docs/design-docs/attribution-and-activity.md)).
+3. **Manage** — the operations console becomes one workspace scoped by role,
+   adding the hub-owner sections: collections, comments, people and blocking,
+   activity ([manage-workspace](docs/design-docs/manage-workspace.md)).
+4. **Bulk import**, inside Manage —
+   [deliver-bulk-import](docs/exec-plans/active/deliver-bulk-import.md).
+5. **Your home and following** — My collections, Shared with me, Saved,
+   Following; the public hub page with Follow
+   ([hub-home-and-following](docs/design-docs/hub-home-and-following.md)).
+6. **Preview cards, item details and curator's notes** — View and Edit only,
    with Add to my collection in the details.
-4. **Managing a collection in the web** — remove and reorder items, sections
+7. **Managing a collection in the web** — remove and reorder items, sections
    (headings) and references, sharing (Can view / Can edit, link sharing),
-   publishing, transfer, saved and shared lists, export.
-5. **Discussion follow-ups** — comment notifications (a general notifications
-   table) and comment moderation in operations; creator and contributors in
-   the collection header once contributor attribution is decided.
-6. **Discover** — search by text and tags, tag filters, then full-text search
-   across collections and items; **following hubs** (alongside saving
-   collections).
-7. **Rest of the internals pass** — fewer queries, one write-lock opt-out per
-   controller, the forms route as an action table, Save a link drafts in Redis,
-   focus rings.
-8. **Account** — email change in the web, account deletion with export and
+   publishing, transfer, export.
+8. **Discussion follow-ups** — comment notifications (a general notifications
+   table) and comment moderation on public collections for operators.
+9. **Discover** — search by text and tags, tag filters, then full-text search
+   across collections and items.
+10. **Rest of the internals pass** — fewer queries, one write-lock opt-out per
+    controller, the forms route as an action table, Save a link drafts in
+    Redis, focus rings.
+11. **Account** — email change in the web, account deletion with export and
    retention rules, optional authenticator-app codes.
-9. **Browser extension** (W4) — capture into a chosen collection.
-10. **Targeted sharing by invitation** — sharing a collection with a specific
+12. **Browser extension** (W4) — capture into a chosen collection.
+13. **Targeted sharing by invitation** — sharing a collection with a specific
     email address as Can view or Can edit sends an invitation; the share
     activates once that person verifies their email and has an account. As in
     Google Drive, anyone can read through link sharing or publishing without an
     account, but a targeted share needs an identity to authorize, so it needs
     an account.
-11. **ns-series single sign-on** — a centralized identity service for all ns
+14. **ns-series single sign-on** — a centralized identity service for all ns
     products (`docs/design-docs/identity-sso.md`); nslinkhub is its first
     consumer.
-12. **Before public release** — live email provider and webhook acceptance,
+15. **Before public release** — live email provider and webhook acceptance,
     browser and worker telemetry, deployment
     (`docs/design-docs/infra-deployment.md`).
 
@@ -484,10 +521,10 @@ Next, in order (everything is to be built; what to charge for is chosen after):
 - **Sections in the web.** How people add headings and place links under them.
 - **Preview card details.** Note length, and whether the card shows the page
   description when a note exists.
-- **Following hubs.** What following gives you (a list of followed hubs, a
-  notice when they publish) and whether it's visible to the hub.
-- **Contributor attribution** — whether the collection header names its creator
-  and editors.
+- **Following notifications.** Whether following also sends a notice when a
+  followed hub publishes.
+- **Blocking and public pages.** Whether a blocked account, signed in, is also
+  denied the hub's published collections, or only participation.
 - **Requesting access** to a collection someone can't open.
 - **Account deletion** with export, and its retention rules.
 - **Monetization**, per the notes under review, including whether bulk import
@@ -496,4 +533,7 @@ Next, in order (everything is to be built; what to charge for is chosen after):
 Settled since this list was written: role names stay `reader`/`editor` with
 labels chosen per surface (ADR-0013); imports resolve titles through reviewed
 drafts (ADR-0012, design in `docs/design-docs/bulk-import.md`); link metadata,
-preview cards and curator's notes are the chosen direction (§5).
+preview cards and curator's notes are the chosen direction (§5); one Manage
+workspace scoped by role (ADR-0014); attribution and the hub audit come from
+activity records (ADR-0015); following works like YouTube subscriptions and
+saved collections like saved Drive documents.

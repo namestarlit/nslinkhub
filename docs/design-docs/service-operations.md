@@ -1,7 +1,11 @@
 # Service operations
 
+> **Direction (2026-10-08):** this console becomes the service scope of one
+> workspace, [Manage](manage-workspace.md), which also gives every hub owner
+> their own sections (ADR-0014). The authority below is unchanged.
+
 Status: operator and admin/invitation workflows implemented and locally verified
-(2026-10-06); milestone awaiting review. See
+(2026-10-06); reviewed and committed. See
 [admin invitations](../exec-plans/completed/deliver-admin-operator-invitations.md).
 See the [implementation plan](../exec-plans/completed/deliver-service-operations.md)
 and [operator runbook](../runbooks/service-operations.md).

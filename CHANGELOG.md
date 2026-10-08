@@ -9,6 +9,14 @@ summary of what changed after completed work has been promoted out of `ref/`.
 
 ## Unreleased
 
+- Designed three directions and added them to the build order: **Manage**, one
+  workspace scoped by role, where every hub owner manages their hub
+  (collections, comments, people and blocking, import, activity) and operators
+  and admins keep the service sections (ADR-0014); **activity and
+  attribution**, GitHub-style, where every change is recorded and drives the
+  creator, contributors, "added by" and the hub audit (ADR-0015); and **your
+  home and following**: My collections, Shared with me, Saved and Following,
+  with Follow on public hub pages.
 - Backlog brought up to date: seven finished plans closed; `PRODUCT.md` §9 now
   lists everything still to build, in order (link metadata, bulk import,
   preview cards with curator's notes and Add to my collection, collection

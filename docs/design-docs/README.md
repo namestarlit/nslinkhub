@@ -21,6 +21,13 @@ implementation work in [../exec-plans/active/](../exec-plans/active/).
   pagination.
 - [email-verification.md](email-verification.md): the one verification flow and
   interrupted actions.
+- [attribution-and-activity.md](attribution-and-activity.md): activity
+  entries, creator, contributors, "added by" and the hub audit (designed).
+- [manage-workspace.md](manage-workspace.md): Manage — one workspace scoped by
+  role (hub owner, operator, admin), blocking (designed).
+- [hub-home-and-following.md](hub-home-and-following.md): the public hub page,
+  your home (My collections, Shared with me, Saved, Following) and following
+  (designed).
 - [bulk-import.md](bulk-import.md): bulk import through reviewed drafts —
   statuses, fixing rows, folders as sections or separate collections, limits
   (designed; being built).

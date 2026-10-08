@@ -46,3 +46,5 @@ Number records sequentially (`NNNN-short-slug.md`) and list them below.
 - [0011-toolchain.md](0011-toolchain.md) — Toolchain: Bun, Biome, reviewed Prisma migrations.
 - [0012-bulk-import-through-reviewed-drafts.md](0012-bulk-import-through-reviewed-drafts.md) — Bulk import through reviewed drafts.
 - [0013-permission-roles-and-display-labels.md](0013-permission-roles-and-display-labels.md) — Permission roles are stable; display labels are chosen per surface.
+- [0014-one-management-workspace.md](0014-one-management-workspace.md) — One management workspace, scoped by role.
+- [0015-attribution-from-activity-records.md](0015-attribution-from-activity-records.md) — Attribution comes from activity records.
